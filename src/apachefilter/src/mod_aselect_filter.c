@@ -76,7 +76,7 @@ module AP_MODULE_DECLARE_DATA aselect_filter_module;
 //static handler_rec      aselect_filter_handlers[];
 static const command_rec    aselect_filter_cmds[];
 
-char *version_number = "====subversion_325====";
+char *version_number = "====subversion_411====";
 
 // -----------------------------------------------------
 // Functions 
@@ -309,8 +309,10 @@ char *aselect_filter_kill_ticket(request_rec *pRequest, pool *pPool, PASELECT_FI
 
     // Create the message
     TRACE("aselect_filter_kill_ticket");
-    pcSendMessage = ap_psprintf(pPool, "request=kill_ticket&ticket=%s&app_id=%s&usi=%s\r\n", 
-	    aselect_filter_url_encode(pPool, pcTicket), aselect_filter_url_encode(pPool, pConfig->pCurrentApp->pcAppId), timer_usi(pPool, pt));
+//    pcSendMessage = ap_psprintf(pPool, "request=kill_ticket&ticket=%s&app_id=%s&usi=%s\r\n",
+//	    aselect_filter_url_encode(pPool, pcTicket), aselect_filter_url_encode(pPool, pConfig->pCurrentApp->pcAppId), timer_usi(pPool, pt));
+    pcSendMessage = ap_psprintf(pPool, "request=kill_ticket&ticket=%s&app_id=%s&ip=%s&usi=%s\r\n",
+	    aselect_filter_url_encode(pPool, pcTicket), aselect_filter_url_encode(pPool, pConfig->pCurrentApp->pcAppId), pRequest->connection->remote_ip, timer_usi(pPool, pt));
     ccSendMessage = strlen(pcSendMessage);
 
     //TRACE2("request(%d): %s", ccSendMessage, pcSendMessage);
@@ -330,7 +332,7 @@ char *aselect_filter_auth_user(request_rec *pRequest, pool *pPool, PASELECT_FILT
 
     // Create the message
     TRACE("aselect_filter_auth_user");
-    pcSendMessage = ap_psprintf(pPool, "request=authenticate&app_url=%s&app_id=%s&forced_logon=%s%s%s%s%s%s%s&usi=%s\r\n", 
+    pcSendMessage = ap_psprintf(pPool, "request=authenticate&app_url=%s&app_id=%s&forced_logon=%s%s%s%s%s%s%s&ip=%s&usi=%s\r\n",
         aselect_filter_url_encode(pPool, pcAppUrl), 
         aselect_filter_url_encode(pPool, pConfig->pCurrentApp->pcAppId),
         pConfig->pCurrentApp->bForcedLogon ? "true" : "false",
@@ -339,7 +341,8 @@ char *aselect_filter_auth_user(request_rec *pRequest, pool *pPool, PASELECT_FILT
         pConfig->pCurrentApp->pcCountry,
         pConfig->pCurrentApp->pcLanguage,
         pConfig->pCurrentApp->pcRemoteOrg,
-        pConfig->pCurrentApp->pcExtra, timer_usi(pPool, pt));
+        pConfig->pCurrentApp->pcExtra,
+        pRequest->connection->remote_ip, timer_usi(pPool, pt));
     ccSendMessage = strlen(pcSendMessage);
     //TRACE2("request(%d): %s", ccSendMessage, pcSendMessage);
 
@@ -437,11 +440,11 @@ char *aselect_filter_verify_credentials(request_rec *pRequest, pool *pPool,
 		attrNames = getRequestedAttributes(pPool, pConfig);
     }
     // 20100521, Bauke: added, application args secured by Agent
-    pcSendMessage = ap_psprintf(pPool, "request=verify_credentials&aselect_app_args=%s&rid=%s&aselect_credentials=%s%s%s&usi=%s\r\n", 
+    pcSendMessage = ap_psprintf(pPool, "request=verify_credentials&aselect_app_args=%s&rid=%s&aselect_credentials=%s%s%s&ip=%s&usi=%s\r\n",
 			aselect_filter_url_encode(pPool, applicationArguments),
 			aselect_filter_url_encode(pPool, pcRID),
 			aselect_filter_url_encode(pPool, pcCredentials),
-			(attrNames)? "&saml_attributes=": "", (attrNames)? attrNames: "", timer_usi(pPool, pt));
+			(attrNames)? "&saml_attributes=": "", (attrNames)? attrNames: "", pRequest->connection->remote_ip, timer_usi(pPool, pt));
     ccSendMessage = strlen(pcSendMessage);
 
     //TRACE2("request(%d): %s", ccSendMessage, pcSendMessage);
@@ -465,7 +468,7 @@ char *aselect_filter_attributes(request_rec *pRequest, pool *pPool, PASELECT_FIL
     // Create the message
     //
     //pcSendMessage = ap_psprintf(pPool, "request=attributes&ticket=%s&uid=%s&organization=%s&usi=%s\r\n", 
-    pcSendMessage = ap_psprintf(pPool, "request=attributes&ticket=%s&usi=%s\r\n", aselect_filter_url_encode(pPool, pcTicket), timer_usi(pPool, pt));
+    pcSendMessage = ap_psprintf(pPool, "request=attributes&ticket=%s&ip=%s&usi=%s\r\n", aselect_filter_url_encode(pPool, pcTicket), pRequest->connection->remote_ip, timer_usi(pPool, pt));
     ccSendMessage = strlen(pcSendMessage);
 
     //TRACE2("request(%d): %s", ccSendMessage, pcSendMessage);
