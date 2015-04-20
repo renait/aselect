@@ -1245,7 +1245,20 @@ static int aselect_filter_handler(request_rec *pRequest)
 		if (strchr(pConfig->pcPassAttributes,'q')!=0 || strchr(pConfig->pcPassAttributes,'h')!=0 || strchr(pConfig->pcPassAttributes,'t')!=0) {
 			iError = aselect_filter_passAttributesInUrl(iError, pcAttributes, passUsiAttribute, pPool,
 					pRequest, pConfig, pcTicketIn, pcRequestLanguage, headers_in, &timer_data);
+
+			// Option to set overwrite attribute in aselectuid cookie
+			// only in combination with above strchr(pConfig->pcPassAttributes,'h')!=0 because we need the X-A-aselectuid-cookie in the headers_in
+			if (strchr(pConfig->pcPassAttributes,'C')!=0 && (ap_table_get(headers_in, "X-A-aselectuid-cookie") != NULL) ) {  // 20150417: Remy: added
+	//			TRACE1("X-A-aselectuid-cookie: %s", ap_table_get(headers_in, "X-A-aselectuid-cookie"));
+				// overwrite the cookie
+				pcCookie2 = ap_psprintf(pPool, "%s=%s; version=1; path=%s;%s", "aselectuid",
+						ap_table_get(headers_in, "X-A-aselectuid-cookie"), pcCookiePath, addedSecurity);
+				TRACE1("Set-Cookie: %s", pcCookie2);
+				ap_table_add(headers_out, "Set-Cookie", pcCookie2);
+				ap_table_unset(headers_in, "X-A-aselectuid-cookie"); // remove from headers
+			}
 		}
+
 		//iRet = DONE;
     }
 
