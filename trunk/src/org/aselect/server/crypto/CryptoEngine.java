@@ -93,6 +93,7 @@ import java.security.Provider;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.Signature;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.TreeSet;
@@ -601,6 +602,50 @@ public class CryptoEngine
 		return null;
 	}
 
+	
+	/**
+	 * RSA ecncrypt data for the (remote) authsp. <br>
+	 * <br>
+	 * <b>Description:</b> <br>
+	 * This method RSA encrypts  a block of data using the (remote) authsp public key<br>
+	 * 
+	 * @param sAlias
+	 *            The id of the authsp, which is also the alias under which the authsp's public key is stored in the
+	 *            keystore.
+	 * @param sData
+	 *            The data to be encrypted
+	 * @param sAlgorithm
+	 *            Which Algorithm to use, e.g. "RSA" or "RSA/ECB/PKCS1Padding"
+	 * @return <code>byte[]</code> if encryption was successful, <code>null</code> otherwise
+	 */
+	public synchronized byte[] RSAEncrypt(String sAlias, byte[] sData, String sAlgorithm)
+	{
+		String sMethod = "RSAEncrypt";
+		PublicKey oPublicKey = null;
+	    byte[] cipherText = null;
+		if (sAlgorithm == null) {	// defaults to RSA
+			sAlgorithm = "RSA";
+		}
+		try {
+			final Cipher cipher = Cipher.getInstance(sAlgorithm);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "==== ENCRYPT alias="+sAlias + " data="+Arrays.toString(sData));
+				sAlias = sAlias.toLowerCase();
+				oPublicKey = (PublicKey) _htAuthspSettings.get(sAlias + ".public_key");
+	
+				if (oPublicKey == null) {
+					_systemLogger.log(Level.FINE, MODULE, sMethod, "could not find public key with alias " + sAlias);
+				}
+				else {
+					// encrypt the plain text using the public key
+					cipher.init(Cipher.ENCRYPT_MODE, oPublicKey);
+					cipherText = cipher.doFinal(sData);
+				}
+		}
+		catch (Exception e) {
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "could not encrypt data for alias: " + sAlias, e);
+		}
+		return cipherText;
+	}
 	
 	/**
 	 * Generate a 3DES (symmetric) encrypted string using (remote) public key <br>
