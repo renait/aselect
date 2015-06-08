@@ -156,6 +156,9 @@ public class ASelectAgentConfigManager extends ConfigManager
 
 	// Send "upgrade_tgt" to server only after a number of seconds have elapsed:
 	int _upgradeTgtInterval = 0;
+	
+	// Verify ip client ip has not changed during session
+	private boolean _verify_client_ip = false;
 
 	public int getUpgradeTgtInterval() {
 		return _upgradeTgtInterval;
@@ -200,6 +203,10 @@ public class ASelectAgentConfigManager extends ConfigManager
 //			_upgradeTgtInterval = 60;  // seconds, value 0 means send always 
 			_upgradeTgtInterval = 0; 	//  for backward compatibility we now use default = 0 (always upgrade_tgt)
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "upgrade_tgt_interval="+_upgradeTgtInterval);
+
+		String s_verify_client_ip = Utils.getSimpleParam(this, _systemLogger, _oAgentSection, "verify_client_ip", false);
+		_verify_client_ip = Boolean.parseBoolean(s_verify_client_ip);
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "verify_client_ip="+_verify_client_ip);
 
 		loadCrypto();
 	}
@@ -518,5 +525,10 @@ public class ASelectAgentConfigManager extends ConfigManager
 				_systemLogger.log(Level.INFO, MODULE, sMethod, sbInfo.toString());
 			}
 		}
+	}
+
+	public synchronized boolean is_verify_client_ip()
+	{
+		return _verify_client_ip;
 	}
 }
