@@ -791,7 +791,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 			iOboRetries++;
 			if (iOboRetries > obo_maxRetries) {
 				_systemLogger.log(Level.WARNING, _sModule, sMethod, "Maximum nuber of retries reached for on behalf of");
-				// maybe be more user friendly here, prsent some other form
+				// user friendly form already shown, so now the ungraceful method
 				throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 			}
 			boolean oboK = false;
@@ -901,7 +901,9 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 					status = (String)jsonResponse.get((String)oboParms.get("wsserverresponse"));
 					// status can be null if request failed with error
 				} catch ( ASelectCommunicationException cex) {
-						status = "Deny"; 
+//						status = "Deny"; 	// RH, 20150529, o
+						status = null; 	// null for any (communication) problem	// RH, 20150529, n
+						
 				}
 				
 				_systemLogger.log(Level.FINER, MODULE, sMethod, "MachtigenClient returned status: " + status);
@@ -920,7 +922,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 				
 				ASelectEntrustmentLogger.getHandle().log((String)_htTGTContext.get("uid"), (String)_htTGTContext.get("client_ip"), (String)_htTGTContext.get("app_id"), sOBOId, status);
 			}
-			else {	// not a bsn or invalid obo
+			else {	// not a bsn or invalid obo or communication problem
 				_systemLogger.log(Level.INFO, _sModule, sMethod, "Invalid bsn for obo, status: " + status );
 				ASelectEntrustmentLogger.getHandle().log((String)_htTGTContext.get("uid"), (String)_htTGTContext.get("client_ip"), (String)_htTGTContext.get("app_id"), sOBOId, status);
 				_systemLogger.log(Level.FINEST, _sModule, sMethod, "Retrying, retry number:" +iOboRetries);
@@ -928,12 +930,23 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 				// store oriuid, OBOServiceId, OBOValidFrom in tgt
 				_tgtManager.updateTGT(sTgt, _htTGTContext);
 
-				// allow for re-entering obo from user
 				try {
 					String sSelectForm;
-					sSelectForm = org.aselect.server.utils.Utils.presentOnBehalfOf(_servletRequest, _configManager,
-							htServiceRequest, null, (String)_htTGTContext.get("language"), 2 /* step 2, retry obo */);
-					
+					// RH, 20150529, sn
+					if (status == null) {
+						sSelectForm = org.aselect.server.utils.Utils.presentOnBehalfOf(_servletRequest, _configManager,
+								htServiceRequest, null, (String)_htTGTContext.get("language"), 4 /* step 4, technical problem */);
+					} else {
+						if (iOboRetries < obo_maxRetries) {
+							// allow for re-entering obo from user
+							sSelectForm = org.aselect.server.utils.Utils.presentOnBehalfOf(_servletRequest, _configManager,
+								htServiceRequest, null, (String)_htTGTContext.get("language"), 2 /* step 2, retry obo */);
+						} else {
+							// RH, 20150529, en
+							sSelectForm = org.aselect.server.utils.Utils.presentOnBehalfOf(_servletRequest, _configManager,
+									htServiceRequest, null, (String)_htTGTContext.get("language"), 3 /* step 3, max_retries */);
+						}// RH, 20150529, sn
+					}// RH, 20150529, en
 					Tools.pauseSensorData(_configManager, _systemLogger, _htSessionContext);
 
 					pwOut.println(sSelectForm);
