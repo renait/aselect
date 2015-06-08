@@ -421,9 +421,19 @@ public class RequestHandler extends Thread
 				return;
 			}
 
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "REQ { T=" + System.currentTimeMillis() + " port="
-					+ port + ", t="+lMyThread + ": " + sRequest+", oInput=" + oInputMessage);
+			String sIP = null;
+			try {
+				sIP = oInputMessage.getParam(IP_ATTRIBUTE);
+			}
+			catch (Exception eX) { // IP_ATTRIBUTE may be null
+			}
 			
+
+//			_systemLogger.log(Level.INFO, MODULE, sMethod, "REQ { T=" + System.currentTimeMillis() + " port="
+//					+ port + ", t="+lMyThread + ": " + sRequest+", oInput=" + oInputMessage);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "REQ { T=" + System.currentTimeMillis() + " port="
+					+ port + ", t="+lMyThread + ": " + sRequest+", oInput=" + oInputMessage+", " + IP_ATTRIBUTE + "=" + sIP);
+
 			timerSensor.timerSensorStart(1/*level*/, 2/*agent*/, lMyThread);  // default is success
 			try {
 				sUsi = oInputMessage.getParam("usi");  // unique sensor id
@@ -689,9 +699,23 @@ public class RequestHandler extends Thread
 				_systemLogger.log(Level.FINE, MODULE, sMethod, "No optional parameter 'remote_organization' found.");
 				sRemoteOrg = null;
 			}
+
+			// RH, 20131128, sn
+			String sIP = null;
+			try {
+				sIP = oInputMessage.getParam(IP_ATTRIBUTE);
+			}
+			catch (ASelectCommunicationException eAC) {
+			}
+			// RH, 20131128, en
+
+			
+//			_systemLogger.log(Level.INFO, MODULE, sMethod, "AuthREQ sAppUrl=" + sAppUrl + ", sAppId=" + sAppId
+//					+ ", sUid=" + sUid + ", sAuthsp=" + sAuthsp + ", sForcedLogon=" + sForcedLogon + ", sRemoteOrg="
+//					+ sRemoteOrg);
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "AuthREQ sAppUrl=" + sAppUrl + ", sAppId=" + sAppId
 					+ ", sUid=" + sUid + ", sAuthsp=" + sAuthsp + ", sForcedLogon=" + sForcedLogon + ", sRemoteOrg="
-					+ sRemoteOrg);
+					+ sRemoteOrg +", " + IP_ATTRIBUTE + "=" + sIP);
 
 			// send an authenticate request to the A-Select Server
 			HashMap htRequest = new HashMap();
@@ -734,6 +758,8 @@ public class RequestHandler extends Thread
 
 			// 20111108, Bauke: Send unique session id too
 			htRequest.put("usi", timerSensor.getTimerSensorId());
+			// Send the client_ip as well
+			if (sIP != null) htRequest.put(IP_ATTRIBUTE, sIP);
 			HashMap htResponseParameters = sendToASelectServer(htRequest);
 			if (htResponseParameters.isEmpty()) {
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not reach A-Select Server.");
@@ -787,6 +813,10 @@ public class RequestHandler extends Thread
 			// 20120606, "usi" will do that now: timerSensor.setTimerSensorRid(sRid);  // Rid received from Server
 			// Saving the "usi" here can connect later sessions to this one
 			htSessionContext.put("usi", timerSensor.getTimerSensorId());  // 20120606: on Session Create
+
+			// Add client_ip to session
+			if (sIP != null) 
+				htSessionContext.put(IP_ATTRIBUTE, sIP);  // RH, 20131128, n
 
 			// Creates session with the same Rid as the server!!
 			if (!_sessionManager.createSession(sRid, htSessionContext)) {
@@ -1000,6 +1030,7 @@ public class RequestHandler extends Thread
 			String sSamlAttributes = null;
 			String sAppArgs = null;
 			String sInitialUsi = null;
+			String sIp = null;
 
 			try { // check parameters
 				sRid = oInputMessage.getParam("rid");
@@ -1036,8 +1067,14 @@ public class RequestHandler extends Thread
 			}
 			catch (ASelectCommunicationException e) { // ignore absence
 			}
+			try {
+				sIp = oInputMessage.getParam(IP_ATTRIBUTE);
+			}
+			catch (ASelectCommunicationException e) { // ignore absence
+			}
+
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "VerCRED rid=" + sRid + " server=" + sAsId +
-					" samlAttr="+sSamlAttributes+" appArgs="+sAppArgs);
+					" samlAttr="+sSamlAttributes+" appArgs="+sAppArgs+" sip="+sIp);
 
 			// send the verify_credentials request to the A-Select Server
 			HashMap htRequest = new HashMap();
@@ -1049,6 +1086,11 @@ public class RequestHandler extends Thread
 
 			// To the SERVER
 			htRequest.put("usi", timerSensor.getTimerSensorId());
+
+			if (sIp != null)
+				htRequest.put(IP_ATTRIBUTE, sIp);
+
+			
 			HashMap htResponseParameters = sendToASelectServer(htRequest);
 
 			if (htResponseParameters.isEmpty()) {
@@ -1142,6 +1184,9 @@ public class RequestHandler extends Thread
 			htTicketContext.put("tgt_exp_time", new Long(sTgtExp));
 			// Bauke: added to allow upgrading the server's TGT
 			htTicketContext.put("crypted_credentials", sCredentials);
+			
+			
+			
 			// 20100521, Bauke: added to save original application arguments
 			if (sAppArgs != null)
 				htTicketContext.put("aselect_app_args", sAppArgs);
@@ -1157,6 +1202,9 @@ public class RequestHandler extends Thread
 				// Store hash of attributes (we use this in verify_ticket)
 				BASE64Decoder b64d = new BASE64Decoder();
 				MessageDigest md = MessageDigest.getInstance("SHA1");
+
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "attributes:" + b64d.decodeBuffer(sAttributes));
+				
 				md.update(b64d.decodeBuffer(sAttributes));
 				htTicketContext.put("attributes_hash", org.aselect.system.utils.Utils.byteArrayToHexString(md.digest()));
 			}
@@ -1165,6 +1213,15 @@ public class RequestHandler extends Thread
 			
 			// And since we have a fresh ticket now:
 			htTicketContext.put("last_upgrade_tgt", Long.toString(System.currentTimeMillis()));
+
+			// Put client_ip in ticket here
+			if (sIp != null)
+				htTicketContext.put(IP_ATTRIBUTE, sIp );
+			
+//			///   this is not the right remote port yet
+//			htTicketContext.put("client_port", Integer.toString(_socket.getPort()));
+//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "SocketInfo, getInetAddress():" +  _socket.getInetAddress().getHostAddress()  + "getPort():"  + _socket.getPort()
+//												+ " getLocalAddress():" + _socket.getLocalAddress().getHostAddress() + " getLocalPort():" + _socket.getLocalPort());
 
 			// Create ticket
 			String sTicket = _ticketManager.createTicket(htTicketContext);
@@ -1360,7 +1417,7 @@ public class RequestHandler extends Thread
 			catch (ASelectCommunicationException e) {
 			}
 			try {
-				sIP = oInputMessage.getParam("ip");
+				sIP = oInputMessage.getParam(IP_ATTRIBUTE);
 			}
 			catch (ASelectCommunicationException e) {
 			}
@@ -1374,8 +1431,8 @@ public class RequestHandler extends Thread
 			}
 			catch (ASelectCommunicationException e) {
 			}
-			_systemLogger.log(Level.FINER, MODULE, sMethod, "VerTICKET attributes_hash="+sAttributesHash+
-					" req_uri=" + sReqURI+" reqAppId="+sReqAppId+" ip="+sIP);
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "VerTICKET attributes_hash=" + sAttributesHash
+					+ ", request_uri=" + sReqURI +" reqAppId="+sReqAppId + ", " + IP_ATTRIBUTE + "=" + sIP);
 
 			// 20120527, Bauke: Communicate our batch_size to the filter, if it's 0, the filter will disable LbSensor output
 			SendQueue hQueue = SendQueue.getHandle();
@@ -1393,7 +1450,21 @@ public class RequestHandler extends Thread
 			String sStoredUid = (String) htTicketContext.get("uid");
 			String sStoredOrg = (String) htTicketContext.get("organization");
 			String sStoredAttributes = (String) htTicketContext.get("attributes_hash");
-
+			
+			// Verify client_ip here
+			String client_ip = (String) htTicketContext.get(IP_ATTRIBUTE);
+			// Client port not implemented yet
+//			String client_port = (String) htTicketContext.get("client_port");
+//			_systemLogger.log(Level.FINER, MODULE, sMethod, "TICKET client_ip=" + client_ip
+//					+ ", client_port=" + client_port + ", ip=" + sIP);
+			_systemLogger.log(Level.FINER, MODULE, sMethod, "TICKET client_ip=" + client_ip + ", ip=" + sIP);
+			
+			if ( _configManager.is_verify_client_ip() && sIP != null && !sIP.equals(client_ip)) {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "TICKET client_ip does NOT equal remote ip");
+				_sErrorCode = Errors.ERROR_ASELECT_AGENT_INVALID_REQUEST;
+				return;
+			}			
+			
 			// 20120619, Bauke: removed "aselectuid" and "aselectorganization" cookies, and therefore the related checks
 //			// check uid match
 //			if (!sStoredUid.equals(sUid)) {
@@ -1482,6 +1553,9 @@ public class RequestHandler extends Thread
 				htRequest.put("a-select-server", sAselectServer);
 				// htRequest.put("rid",sRid);
 				htRequest.put("crypted_credentials", sCryptedCredentials);
+
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "VerTICKET setting ip:" + sIP);
+				if (sIP != null) htRequest.put(IP_ATTRIBUTE, sIP);
 
 				// 20091113, Bauke: added, to let the filter report the user's language to the A-Select server
 				if (sLanguage != null)
