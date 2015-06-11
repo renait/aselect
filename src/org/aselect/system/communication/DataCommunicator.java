@@ -65,7 +65,7 @@ public class DataCommunicator
 	public static String dataComSend(SystemLogger systemLogger, String sMessage, String sUrl)
 	throws MalformedURLException, ASelectCommunicationException
 	{
-		String sMethod = "send";
+		String sMethod = "dataComSend";
 		StringBuffer sbBuf = new StringBuffer();
 		StringBuffer sbBuffer;
 		HttpURLConnection connection = null;
