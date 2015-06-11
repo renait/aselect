@@ -445,6 +445,11 @@ public class ASelectServer extends ASelectHttpServlet
 				throw e;
 			}
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Successfully started A-Select server.");
+			Package pak = Package.getPackage("org.aselect.server");
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Version Information: "  + pak.getImplementationTitle() + " / "
+					+ pak.getImplementationVendor() +" / "
+					+ pak.getImplementationVersion()
+					);
 		}
 		catch (ASelectException eAS) {
 			String sErrorMessage = _configManager.getErrorMessage(MODULE, eAS.getMessage(), ""/*language*/, "");

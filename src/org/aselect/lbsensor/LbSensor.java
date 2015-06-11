@@ -61,7 +61,13 @@ public class LbSensor
 			oLbSensor.startServices();
 
 			System.out.println("Successfully started " + MODULE);
-			oLbSensorLogger.log(Level.INFO, MODULE, sMethod, "Successfully started LB Sensor");
+			oLbSensorLogger.log(Level.WARNING, MODULE, sMethod, "Successfully started LB Sensor");
+			Package pak = Package.getPackage("org.aselect.lbsensor");
+			oLbSensorLogger.log(Level.WARNING, MODULE, sMethod, "Version Information: "  + pak.getImplementationTitle() + " / "
+					+ pak.getImplementationVendor() +" / "
+					+ pak.getImplementationVersion()
+					);
+
 		}
 		catch (Exception e) {
 			System.out.println("Failed to start " + MODULE + ", exception=" + e);

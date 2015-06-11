@@ -389,6 +389,11 @@ public class AuthSPServlet extends ASelectHttpServlet
 			oServletContext.setAttribute("SessionManager", _oAuthSPSessionManager);
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "The SessionManager is set to the servlet context.");
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, "A-Select AuthSP Server is successfully initialized");
+			Package pak = Package.getPackage("org.aselect.authspserver");
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Version Information: "  + pak.getImplementationTitle() + " / "
+					+ pak.getImplementationVendor() +" / "
+					+ pak.getImplementationVersion()
+					);
 		}
 		catch (ASelectException eAS) {
 			_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Initializing failed", eAS);
