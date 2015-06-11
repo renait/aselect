@@ -218,12 +218,12 @@ public class AuthSPBrowserHandler extends AbstractBrowserRequestHandler
 			// 20120403, Bauke: get local rid name from handler, and read session first
 			String sRid = (String) htServiceRequest.get(oProtocolHandler.getLocalRidName());  // "rid" or "local_rid" for DigiD
 			if (sRid == null) {
-				_systemLogger.log(Level.WARNING, MODULE, sMethod, "AuthSP response does not contain our RID");
+				_systemLogger.log(Level.WARNING, _sModule, sMethod, "AuthSP response does not contain our RID");
 				throw new ASelectAuthSPException(Errors.ERROR_ASELECT_AUTHSP_INVALID_RESPONSE);
 			}
 			_htSessionContext = _sessionManager.getSessionContext(sRid);
 			if (_htSessionContext == null) {
-				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Bad AuthSP response: Session could not be retrieved");
+				_systemLogger.log(Level.WARNING, _sModule, sMethod, "Bad AuthSP response: Session could not be retrieved");
 				throw new ASelectAuthSPException(Errors.ERROR_ASELECT_SERVER_SESSION_EXPIRED);
 			}
 			// A session is available.
@@ -234,6 +234,8 @@ public class AuthSPBrowserHandler extends AbstractBrowserRequestHandler
 
 			if (_configManager.isTimerSensorConfigured()) {
 				String sUsi = (String)_htSessionContext.get("usi");
+				String sAppId = (String)_htSessionContext.get("app_id");					// RH, 20150608, n
+
 				// Report time spent by the user
 				if (Utils.hasValue(sPause)) {
 					// User was busy from "sPause" to "now"
@@ -242,6 +244,10 @@ public class AuthSPBrowserHandler extends AbstractBrowserRequestHandler
 					userTs.timerSensorStart(lPause, 1/*level used*/, 5/*type=remote*/, _lMyThreadId);
 					if (Utils.hasValue(sUsi))
 						userTs.setTimerSensorId(sUsi);
+					// RH, 20150608, sn
+					if (Utils.hasValue(sAppId))
+						userTs.setTimerSensorAppId(sAppId);
+					// RH, 20150608, en
 					userTs.timerSensorFinish(now, true);
 					SendQueue.getHandle().addEntry(userTs.timerSensorPack());
 				}
@@ -250,7 +256,7 @@ public class AuthSPBrowserHandler extends AbstractBrowserRequestHandler
 				_timerSensor.setTimerSensorLevel(1);  // enable measuring
 				if (Utils.hasValue(sUsi))
 					_timerSensor.setTimerSensorId(sUsi);
-				String sAppId = (String)_htSessionContext.get("app_id");
+//				String sAppId = (String)_htSessionContext.get("app_id");					// RH, 20150608, o
 				if (Utils.hasValue(sAppId))
 					_timerSensor.setTimerSensorAppId(sAppId);
 			}
@@ -320,6 +326,7 @@ public class AuthSPBrowserHandler extends AbstractBrowserRequestHandler
 			// e.g.	String next_authsp = _authSPHandlerManager.getNextAuthSP(sAuthSPId, app_id);;
 			String app_id = (String) _htSessionContext.get("app_id");
 			String next_authsp = null;
+			String next_authsp_server_id = null;
 			try {
 				// get authsps config and retrieve active resource from SAMAgent
 				String sResourceGroup = _configManager.getParam(authSPsection, "resourcegroup");
@@ -328,12 +335,21 @@ public class AuthSPBrowserHandler extends AbstractBrowserRequestHandler
 				Object objAuthSPResourceAppls = _configManager.getSection(objAuthSPResource, "applications");
 				Object objAppl = _configManager.getSection(objAuthSPResourceAppls, "application", "id=" + app_id);
 				next_authsp = _configManager.getParam(objAppl, "next_authsp");
+				// RH, 20150526, sn
+				try {
+					next_authsp_server_id = _configManager.getParam(objAppl, "next_authsp_server_id");
+				}
+				catch (ASelectConfigException ace) {
+					_systemLogger.log(Level.FINER, _sModule, sMethod, "No next_authsp_server_id defined for app_id: "+app_id + ", using server_id from previous request");
+				}
+				// RH, 20150526, en				
+				
 			}
 			catch (ASelectConfigException ace) {
-				_systemLogger.log(Level.INFO, MODULE, sMethod, "No next_authsp defined for app_id: "+app_id + ", continuing");
+				_systemLogger.log(Level.INFO, _sModule, sMethod, "No next_authsp defined for app_id: "+app_id + ", continuing");
 			}
 			catch (ASelectSAMException ase) {
-				_systemLogger.log(Level.INFO, MODULE, sMethod, "No next_authsp defined for app_id: "+app_id+ ", continuing");
+				_systemLogger.log(Level.INFO, _sModule, sMethod, "No next_authsp defined for app_id: "+app_id+ ", continuing");
 			}
 
 			HandlerTools.setRequestorFriendlyCookie(_servletResponse, _htSessionContext, _systemLogger);  // 20130825
@@ -341,17 +357,24 @@ public class AuthSPBrowserHandler extends AbstractBrowserRequestHandler
 			// 20111020, Bauke: split redirection from issueTGTandRedirect, so next_authsp variant will also set the TGT
 			TGTIssuer tgtIssuer = new TGTIssuer(_sMyServerId);
 			String sOldTGT = (String) htServiceRequest.get("aselect_credentials_tgt");
-			String sTgt = tgtIssuer.issueTGTandRedirect(sRid, _htSessionContext, sAuthSp, htAdditional, _servletRequest, _servletResponse, sOldTGT, false /* no redirect */);
+//			String sTgt = tgtIssuer.issueTGTandRedirect(sRid, _htSessionContext, sAuthSp, htAdditional, _servletRequest, _servletResponse, sOldTGT, false /* no redirect */);
+			String sTgt = tgtIssuer.issueTGTandRedirect(sRid, _htSessionContext, sAuthSp, htAdditional, _servletRequest, _servletResponse, sOldTGT, false /* no redirect */, oProtocolHandler);
 			// sTgt could be null
 			// Cookie was set on the 'servletResponse'
 
 			// If there is a next_authsp, "present" form to user (auto post) and do not set tgt 
 			if (next_authsp != null ) {
-				_systemLogger.log(Level.INFO, MODULE, sMethod, "Found next_authsp: "+ next_authsp + " defined for app_id: "+app_id);
+				_systemLogger.log(Level.INFO, _sModule, sMethod, "Found next_authsp: "+ next_authsp + " defined for app_id: "+app_id);
 				if (_servletResponse != null) {					// Direct user to next_authsp with form
 					String sNextauthspForm = _configManager.getHTMLForm("nextauthsp", _sUserLanguage, _sUserCountry);
 					sNextauthspForm = Utils.replaceString(sNextauthspForm, "[rid]", sRid);
-					sNextauthspForm = Utils.replaceString(sNextauthspForm, "[a-select-server]", (String)htServiceRequest.get("a-select-server"));
+					// RH, 20150526, sn
+					if (next_authsp_server_id == null) {
+						next_authsp_server_id = (String)htServiceRequest.get("a-select-server");	// backwards compatibility
+					}
+					sNextauthspForm = Utils.replaceString(sNextauthspForm, "[a-select-server]", next_authsp_server_id);	// RH, 20150526, o
+					// RH, 20150526, en
+//					sNextauthspForm = Utils.replaceString(sNextauthspForm, "[a-select-server]", (String)htServiceRequest.get("a-select-server"));	// RH, 20150526, o
 					sNextauthspForm = Utils.replaceString(sNextauthspForm, "[user_id]", sUid);
 					sNextauthspForm = Utils.replaceString(sNextauthspForm, "[authsp]", next_authsp);
 					sNextauthspForm = Utils.replaceString(sNextauthspForm, "[aselect_url]", (String)htServiceRequest.get("my_url"));
@@ -377,12 +400,17 @@ public class AuthSPBrowserHandler extends AbstractBrowserRequestHandler
 			if (sTgt != null && sTgt.length() > 0) _sessionManager.setDeleteSession(_htSessionContext, _systemLogger);  // RH, 20140924, n, if user has no tgt (yet) keep the session
 			// 20111020, Bauke: redirect is done below
 
-			String sAppUrl = (String) _htSessionContext.get("app_url");
-			if (_htSessionContext.get("remote_session") != null)
-				sAppUrl = (String) _htSessionContext.get("local_as_url");
-			String sLang = (String)_htSessionContext.get("language");
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "Redirect to " + sAppUrl);
-			tgtIssuer.sendTgtRedirect(sAppUrl, sTgt, sRid, _servletResponse, sLang);					
+			if (oProtocolHandler.isOutputAvailable()) {
+				String sAppUrl = (String) _htSessionContext.get("app_url");
+				if (_htSessionContext.get("remote_session") != null)
+					sAppUrl = (String) _htSessionContext.get("local_as_url");
+				String sLang = (String)_htSessionContext.get("language");
+				_systemLogger.log(Level.INFO, _sModule, sMethod, "Redirect to " + sAppUrl);
+				tgtIssuer.sendTgtRedirect(sAppUrl, sTgt, sRid, _servletResponse, sLang);		
+			} else {
+				_systemLogger.log(Level.FINER, _sModule, sMethod, "No outputstream available to redirect to so just return");
+				return;
+			}
 		}
 		catch (ASelectException e) {
 			throw e;

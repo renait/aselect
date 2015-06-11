@@ -47,7 +47,8 @@ import org.aselect.system.exception.ASelectAuthSPException;
  * 
  * @author Alfa & Ariss
  */
-public interface IAuthSPProtocolHandler
+//	public interface IAuthSPProtocolHandler
+public interface IAuthSPProtocolHandler extends IAuthSPConditions
 {	
 	/**
 	 * Gets the name we can use to get our own rid from the ServiceRequest.

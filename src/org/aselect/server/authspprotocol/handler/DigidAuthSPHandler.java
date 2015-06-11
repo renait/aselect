@@ -36,7 +36,7 @@ import org.aselect.system.utils.Utils;
  * 
  * @author Atos Origin
  */
-public class DigidAuthSPHandler implements IAuthSPProtocolHandler
+public class DigidAuthSPHandler  extends AbstractAuthSPProtocolHandler  implements IAuthSPProtocolHandler
 {
 	private final static String MODULE = "DigidAuthSPHandler";
 	private ASelectConfigManager _configManager;

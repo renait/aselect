@@ -162,7 +162,7 @@ import org.aselect.system.exception.ASelectConfigException;
  * 
  * @author Alfa & Ariss
  */
-public class Radius implements IAuthSPProtocolHandler
+public class Radius extends AbstractAuthSPProtocolHandler implements IAuthSPProtocolHandler
 {
 	private String _sAuthsp;
 	private String _sAuthspUrl;

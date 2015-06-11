@@ -412,6 +412,10 @@ public abstract class AbstractBrowserRequestHandler extends BasicRequestHandler 
 		htCredentials.put("aselect_credentials_tgt", sTgt);
 		htCredentials.put("aselect_credentials_uid", sUserId);
 		htCredentials.put("aselect_credentials_server_id", _sMyServerId); // Bauke 20080618 was: sServerId);
+		//
+		htCredentials.put("aselect_credentials_client_ip", (String) _htTGTContext.get("client_ip"));
+		_systemLogger.log(Level.FINEST, _sModule, sMethod, "TGT client_ip: " + (String) _htTGTContext.get("client_ip"));
+		//
 		return htCredentials;
 	}
 
@@ -469,19 +473,27 @@ public abstract class AbstractBrowserRequestHandler extends BasicRequestHandler 
 
 		htServiceRequest.put("my_url", servletRequest.getRequestURL().toString());
 		String sClientIp = servletRequest.getRemoteAddr();
+
+		_systemLogger.log(Level.FINER, _sModule, sMethod, "client_ip:" + sClientIp);
 		if (sClientIp != null)
 			htServiceRequest.put("client_ip", servletRequest.getRemoteAddr());
 		String sAgent = servletRequest.getHeader("User-Agent");
 		if (sAgent != null)
 			htServiceRequest.put("user_agent", sAgent);
 		
+		String aselect_credentials_client_ip = null;
+				
 		// Also reads TGT into _htTGTContext if available
 		HashMap htCredentials = getASelectCredentials(servletRequest);
 		if (htCredentials != null) {
+			aselect_credentials_client_ip = (String) htServiceRequest.get("aselect_credentials_client_ip");
+
 			htServiceRequest.put("aselect_credentials_tgt", htCredentials.get("aselect_credentials_tgt"));
 			htServiceRequest.put("aselect_credentials_uid", htCredentials.get("aselect_credentials_uid"));
 			htServiceRequest.put("aselect_credentials_server_id", _sMyServerId);
 		}
+		_systemLogger.log(Level.FINEST, _sModule, sMethod, "aselect_credentials_client_ip:" + aselect_credentials_client_ip);
+		_systemLogger.log(Level.FINEST, _sModule, sMethod, "remote ip and tgt ip do match: " + ( sClientIp != null && sClientIp.equals(aselect_credentials_client_ip ) ));
 		return htServiceRequest;
 	}
 

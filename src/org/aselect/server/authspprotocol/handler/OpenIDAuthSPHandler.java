@@ -105,7 +105,7 @@ import org.aselect.system.exception.ASelectException;
  * 
  * @author Alfa & Ariss
  */
-public class OpenIDAuthSPHandler implements IAuthSPProtocolHandler, IAuthSPDirectLoginProtocolHandler
+public class OpenIDAuthSPHandler extends AbstractAuthSPProtocolHandler implements IAuthSPProtocolHandler, IAuthSPDirectLoginProtocolHandler
 {
 	private final String MODULE = "OpenIDAuthSPHandler";
 
