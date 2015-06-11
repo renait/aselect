@@ -749,7 +749,9 @@ public class Tools
 		for (Iterator i = sortedSet.iterator(); i.hasNext();) {
 			String sKey = (String) i.next();
 			// 20130623, Bauke: added "usi" to exceptions
-			if ("request".equals(sKey) || "signature".equals(sKey) || "check-signature".equals(sKey) || "usi".equals(sKey))
+			// 20140112. RH, added ip to exceptions
+//			if ("request".equals(sKey) || "signature".equals(sKey) || "check-signature".equals(sKey) || "usi".equals(sKey))
+			if ("request".equals(sKey) || "signature".equals(sKey) || "check-signature".equals(sKey) || "usi".equals(sKey) || "ip".equals(sKey)) 
 				continue;
 			if (sKey != null)
 				sbCreateFrom.append(htRequest.get(sKey));
