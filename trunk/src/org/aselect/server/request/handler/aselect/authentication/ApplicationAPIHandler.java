@@ -344,7 +344,15 @@ public class ApplicationAPIHandler extends AbstractAPIRequestHandler
 			throw new ASelectCommunicationException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 		}
 		_systemLogger.log(Level.INFO, _sModule, sMethod, "ApplApiREQ request=" + sAPIRequest);
-
+		String sClientIp = null;
+		try {
+			sClientIp = oInputMessage.getParam("ip");
+		}
+		catch (ASelectCommunicationException eAC) {
+			_systemLogger.log(Level.FINER, _sModule, sMethod, "No client_ip in request");
+		}
+		_systemLogger.log(Level.FINER, _sModule, sMethod, "ApplApiREQ client_ip=" + sClientIp);
+		
 		if (sAPIRequest.equals("authenticate")) {
 			_timerSensor.setTimerSensorLevel(1);  // enable
 			handleAuthenticateRequest(oProtocolRequest, oInputMessage, oOutputMessage);
@@ -551,6 +559,11 @@ public class ApplicationAPIHandler extends AbstractAPIRequestHandler
 
 		// check if request should be signed
 		String sAppId = (String) htTGTContext.get("app_id");	// RH, 20100910, n
+		// RH, 20150610, sn
+		if (Utils.hasValue(sAppId))
+			_timerSensor.setTimerSensorAppId(sAppId);
+		// RH, 20150610, en
+
 
 //		if (_applicationManager.isSigningRequired()) {	// RH, 20100910, o
 		if (_applicationManager.isSigningRequired(sAppId)) {	// RH, 20100910, n
@@ -592,6 +605,7 @@ public class ApplicationAPIHandler extends AbstractAPIRequestHandler
 		String sEncTGT = null;
 		String sASelectServer = null;
 		String sLanguage = null;
+		String sClient_ip = null;
 
 		// Get mandatory parameters
 		try {
@@ -602,6 +616,16 @@ public class ApplicationAPIHandler extends AbstractAPIRequestHandler
 			_systemLogger.log(Level.WARNING, _sModule, sMethod, "Missing required parameters");
 			throw new ASelectCommunicationException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 		}
+
+		try {
+			sClient_ip = oInputMessage.getParam("ip");
+		}
+		catch (ASelectCommunicationException eAC) {
+			_systemLogger.log(Level.FINER, _sModule, sMethod, "Missing parameter ip");
+		}
+		_systemLogger.log(Level.FINER, _sModule, sMethod, "client_ip:" + sClient_ip);
+
+		
 		String sTgT = org.aselect.server.utils.Utils.decodeCredentials(sEncTGT, _systemLogger);
 		if (sTgT == null) {
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "Can not decode credentials");
@@ -729,7 +753,8 @@ public class ApplicationAPIHandler extends AbstractAPIRequestHandler
 		try {
 			oOutputMessage.setParam("result_code", sResult);
 			//	20141229, RH, sn
-			if (sResult == Errors.ERROR_ASELECT_SUCCESS) {	// on success try to update the saml_attribute_token as well (if present)
+//			if (sResult == Errors.ERROR_ASELECT_SUCCESS) {	// on success try to update the saml_attribute_token as well (if present)	//	20150610, RH, o
+			if ( Errors.ERROR_ASELECT_SUCCESS.equals(sResult)) {	// on success try to update the saml_attribute_token as well (if present)	//	20150610, RH, n
 				String sSaml2token = (String) htTGTContext.get("saml_attribute_token");	// still base64 encoded
 				if (bUpdateTokenIssueinstant && sSaml2token != null) {
 					Assertion saml2token = (Assertion)HandlerTools.base64DecodeAssertion(sSaml2token);
@@ -837,6 +862,11 @@ public class ApplicationAPIHandler extends AbstractAPIRequestHandler
 			_systemLogger.log(Level.WARNING, _sModule, sMethod, "invalid Application ID");
 			throw new ASelectCommunicationException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 		}
+
+		// RH, 20150610, sn
+		if (Utils.hasValue(sAppId))
+			_timerSensor.setTimerSensorAppId(sAppId);
+		// RH, 20150610, en
 
 		// Check if request should be signed
 //		if (_applicationManager.isSigningRequired()) {	// RH, 20100910, o

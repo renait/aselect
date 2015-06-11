@@ -38,7 +38,7 @@ import org.aselect.system.exception.ASelectAuthSPException;
  * <b>Concurrency issues:</b> <br>
  * - <br>
  */
-public class CookieAuthSP implements IAuthSPProtocolHandler
+public class CookieAuthSP extends AbstractAuthSPProtocolHandler implements IAuthSPProtocolHandler
 {
 	/**
 	 * The name of this module, that is used in the system logging.

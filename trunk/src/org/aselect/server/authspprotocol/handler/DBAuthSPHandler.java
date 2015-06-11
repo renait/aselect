@@ -98,7 +98,7 @@ import org.aselect.system.exception.ASelectConfigException;
  * 
  * @author Cristina Gavrila, BTTSD
  */
-public class DBAuthSPHandler implements IAuthSPProtocolHandler
+public class DBAuthSPHandler  extends AbstractAuthSPProtocolHandler implements IAuthSPProtocolHandler
 {
 
 	private final String MODULE = "DBAuthSPHandler";

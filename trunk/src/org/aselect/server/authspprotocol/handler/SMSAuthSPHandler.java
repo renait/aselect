@@ -95,7 +95,7 @@ import org.aselect.system.utils.Utils;
  * </tr>
  * </table>
  */
-public class SMSAuthSPHandler implements IAuthSPProtocolHandler
+public class SMSAuthSPHandler extends AbstractAuthSPProtocolHandler implements IAuthSPProtocolHandler
 {
 	private final String MODULE = "SMSAuthSPHandler";
 	private ASelectConfigManager _configManager;

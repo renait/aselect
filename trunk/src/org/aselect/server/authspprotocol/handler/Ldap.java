@@ -178,7 +178,8 @@ import org.aselect.system.utils.Utils;
  * 
  * @author Alfa & Ariss
  */
-public class Ldap implements IAuthSPProtocolHandler, IAuthSPDirectLoginProtocolHandler, IAuthSPConditions
+//public class Ldap implements IAuthSPProtocolHandler, IAuthSPDirectLoginProtocolHandler, IAuthSPConditions
+public class Ldap extends AbstractAuthSPProtocolHandler implements IAuthSPProtocolHandler, IAuthSPDirectLoginProtocolHandler
 {
 	private final String MODULE = "Ldap";
 
@@ -217,7 +218,7 @@ public class Ldap implements IAuthSPProtocolHandler, IAuthSPDirectLoginProtocolH
 	protected String _sUserLanguage = "";
 	protected String _sUserCountry = "";
 	
-	protected boolean outputAvailable = true;	// We assume output available presence per default
+//	protected boolean outputAvailable = true;	// We assume output available presence per default
 	
 	/* (non-Javadoc)
 	 * @see org.aselect.server.authspprotocol.IAuthSPProtocolHandler#myRidName()
@@ -1059,6 +1060,7 @@ public class Ldap implements IAuthSPProtocolHandler, IAuthSPDirectLoginProtocolH
 		}
 	}
 
+	/*
 	public synchronized boolean isOutputAvailable()
 	{
 		return outputAvailable;
@@ -1068,5 +1070,6 @@ public class Ldap implements IAuthSPProtocolHandler, IAuthSPDirectLoginProtocolH
 	{
 		this.outputAvailable = outputAvailable;
 	}
+	*/
 
 }

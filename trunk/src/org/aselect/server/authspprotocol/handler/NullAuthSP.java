@@ -100,7 +100,7 @@ import org.aselect.system.exception.ASelectAuthSPException;
  * 
  * @author Alfa & Ariss
  */
-public class NullAuthSP implements IAuthSPProtocolHandler
+public class NullAuthSP extends AbstractAuthSPProtocolHandler implements IAuthSPProtocolHandler
 {
 	/**
 	 * The name of this module, that is used in the system logging.

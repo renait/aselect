@@ -134,7 +134,7 @@ import org.aselect.system.exception.ASelectConfigException;
  * 
  * @author Alfa & Ariss
  */
-public class IP implements IAuthSPProtocolHandler
+public class IP  extends AbstractAuthSPProtocolHandler implements IAuthSPProtocolHandler
 {
 	private final static String MODULE = "IP";
 	private final static String IP_ACCESS_DENIED = "800";

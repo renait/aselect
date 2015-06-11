@@ -33,7 +33,7 @@ import org.aselect.system.utils.Utils;
  * 
  * @author Bauke Hiemstra - www.anoigo.nl
  */
-public class SocialAuthSPHandler implements IAuthSPProtocolHandler
+public class SocialAuthSPHandler extends AbstractAuthSPProtocolHandler implements IAuthSPProtocolHandler
 {
 	/** The module name. */
 	private final static String MODULE = "SocialAuthSPHandler";

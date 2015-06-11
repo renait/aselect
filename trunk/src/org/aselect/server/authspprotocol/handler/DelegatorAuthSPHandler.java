@@ -106,7 +106,7 @@ import org.aselect.system.utils.BASE64Decoder;
  * @version 1.0 14-11-2007 - Changes: - Receive and process Delegator attributes Subject DN and Issuer DN from the AuthSP server
  * @author Bauke Hiemstra - www.anoigo.nl Copyright UMC Nijmegen (http://www.umcn.nl)
  */
-public class DelegatorAuthSPHandler implements IAuthSPProtocolHandler
+public class DelegatorAuthSPHandler  extends AbstractAuthSPProtocolHandler implements IAuthSPProtocolHandler
 {
 	/** The module name. */
 	private final static String MODULE = "DelegatorAuthSPHandler";

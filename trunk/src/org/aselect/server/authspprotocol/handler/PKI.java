@@ -138,7 +138,7 @@ import org.aselect.system.utils.Utils;
  *          server
  * @author Bauke Hiemstra - www.anoigo.nl Copyright UMC Nijmegen (http://www.umcn.nl)
  */
-public class PKI implements IAuthSPProtocolHandler
+public class PKI extends AbstractAuthSPProtocolHandler implements IAuthSPProtocolHandler
 {
 	/** The module name. */
 	private final static String MODULE = "PKI";
