@@ -162,6 +162,7 @@ public class BasicSensorHandler implements ISensorHandler
 				_oLbSensorLogger.log(Level.INFO, MODULE, sMethod, "Trying to read stream T=" + System.currentTimeMillis() +
 						" t="+Thread.currentThread().getId() + ", from remote =" + oSocket.toString());
 				s = oInReader.readLine();
+				echoLineToStream(oOutWriter, s + "\r\n");
 				_oLbSensorLogger.log(Level.INFO, MODULE, sMethod, "Accepted in first loop T=" + System.currentTimeMillis() +
 						" t="+Thread.currentThread().getId() + ", lineLength (without eol) =" + s.length() + ", line  read =" + s);
 				if (isPOST == null ) {	// only true for fist line
@@ -173,7 +174,6 @@ public class BasicSensorHandler implements ISensorHandler
 						isPOST = false;
 					}
 				}
-				oOutWriter.write(s + "\r\n");
 					try {
 						processLine(oOutWriter, s, _sMyId);
 					}
@@ -184,9 +184,9 @@ public class BasicSensorHandler implements ISensorHandler
 			if ( isPOST.booleanValue() == true) {	// read the POST data
 				do {	// we assume there is a eol after the post data. this is trictly not true, we should read content-length
 					s = oInReader.readLine();
+					echoLineToStream(oOutWriter, s + "\r\n");
 					_oLbSensorLogger.log(Level.INFO, MODULE, sMethod, "Accepted in second loop T=" + System.currentTimeMillis() +
 							" t="+Thread.currentThread().getId() + ", lineLength (without eol) =" + s.length() + ", line  read =" + s);
-					oOutWriter.write(s + "\r\n");
 				
 				try {
 					processLine(oOutWriter, s, _sMyId);
@@ -237,6 +237,7 @@ public class BasicSensorHandler implements ISensorHandler
 			_oLbSensorLogger.log(Level.INFO, MODULE, sMethod, " t="+Thread.currentThread().getId() +", Ready");
 			
 		}
+
 	}
 
 	
@@ -350,6 +351,18 @@ public class BasicSensorHandler implements ISensorHandler
 		oOutWriter.write(c);
 	}
 
+	// Override if no echoing is needed
+	/**
+	 * @param oOutWriter2
+	 * @param s
+	 * @throws IOException
+	 */
+	protected  void echoLineToStream(BufferedWriter oOutWriter2, String s) throws IOException
+	{
+		oOutWriter2.write(s);
+	}
+
+	
 	/**
 	 * Process request.
 	 * 

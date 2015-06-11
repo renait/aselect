@@ -143,4 +143,18 @@ public class HttpSensor extends BasicSensorHandler
 	{
 		// No Action
 	}
+	
+	// Called for each incoming line
+	/**
+	 * @param oOutWriter2
+	 * @param s
+	 * @throws IOException
+	 */
+	@Override
+	protected  void echoLineToStream(BufferedWriter oOutWriter2, String s) throws IOException
+	{
+		// No Action
+	}
+
+
 }
