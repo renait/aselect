@@ -280,6 +280,12 @@ public class ASelectAgent
 			
 			System.out.println(sbInfo.toString());
 			oASelectAgentSystemLogger.log(Level.WARNING, MODULE, sMethod, sbInfo.toString());
+			Package pak = Package.getPackage("org.aselect.agent");
+			sbInfo = new StringBuffer("Version Information: "  + pak.getImplementationTitle() + " / "
+					+ pak.getImplementationVendor() +" / "
+					+ pak.getImplementationVersion());
+			oASelectAgentSystemLogger.log(Level.WARNING, MODULE, sMethod, sbInfo.toString());
+
 		}
 		catch (Exception e) {
 			sbInfo.append(" failed to start.");

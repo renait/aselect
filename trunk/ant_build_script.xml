@@ -60,6 +60,7 @@
 	
 	<echo message="Full build version: ${full.build.version}"/>
 	
+	<property name="vendor" value="Anoigo" />
 	
   <macrodef name="build-jar">
     <attribute name="jar-name" />
@@ -109,12 +110,13 @@
     <mkdir dir="target/classes" />
 
 	<echo message="${full.build.version}${line.separator}" file="target/classes/${svnversion_file}" />
-    <!--
+    <!--	-->
 
 	    <javac destdir="target/classes" optimize="true" debug="true" debuglevel="vars,source,lines" srcdir="src/org" sourcepath="">
-		-->
+	    	<!--	-->
+  	<!--
         <javac destdir="target/classes" optimize="true" srcdir="src/org" sourcepath="">
-
+     -->
       <classpath>
         <fileset dir="lib">
           <include name="*.jar" />
@@ -137,6 +139,11 @@
     		<manifest>
     			<attribute name="SIAM-Revision" value="${full.build.version}"/>
 				<attribute name="SIAM-BuiltStamp" value="${touch.time}"/>
+				<attribute name="Specification-Vendor" value="${vendor}"/>
+				<attribute name="Specification-Version" value="${full.build.version} ${touch.time}"/>
+				<attribute name="Implementation-Title" value="SIAM Agent"/>
+				<attribute name="Implementation-Vendor" value="${vendor}"/>
+				<attribute name="Implementation-Version" value="${full.build.version} ${touch.time}"/>
 	   			<attribute name="Main-Class" value="org.aselect.agent.ASelectAgent"/>
     			<attribute name="Class-Path" value="org.aselect.system.jar mysql-connector-java-5.1.7-bin.jar 
     			 cryptix-jce-provider.jar xercesImpl.jar xmlParserAPIs.jar 
@@ -149,6 +156,11 @@
     		<manifest>
     			<attribute name="SIAM-Revision" value="${full.build.version}"/>
 				<attribute name="SIAM-BuiltStamp" value="${touch.time}"/>
+				<attribute name="Specification-Vendor" value="${vendor}"/>
+				<attribute name="Specification-Version" value="${full.build.version} ${touch.time}"/>
+				<attribute name="Implementation-Title" value="SIAM LBSensor"/>
+				<attribute name="Implementation-Vendor" value="${vendor}"/>
+				<attribute name="Implementation-Version" value="${full.build.version} ${touch.time}"/>
     			<attribute name="Main-Class" value="org.aselect.lbsensor.LbSensor"/>
     			<attribute name="Class-Path" value="org.aselect.system.jar mysql-connector-java-5.1.7-bin.jar  
     			 commons-dbcp-1.2.2.jar commons-pool-1.4.jar log4j-1.2.15.jar . "/>
@@ -170,6 +182,11 @@
 			<manifest>
 				<attribute name="SIAM-Revision" value="${full.build.version}"/>
 				<attribute name="SIAM-BuiltStamp" value="${touch.time}"/>
+				<attribute name="Specification-Vendor" value="${vendor}"/>
+				<attribute name="Specification-Version" value="${full.build.version} ${touch.time}"/>
+				<attribute name="Implementation-Title" value="SIAM AuthSP"/>
+				<attribute name="Implementation-Vendor" value="${vendor}"/>
+				<attribute name="Implementation-Version" value="${full.build.version} ${touch.time}"/>
 			</manifest>
 		</manifest-tag>
    	</build-jar>
@@ -216,6 +233,11 @@
 			<manifest>
 				<attribute name="SIAM-Revision" value="${full.build.version}"/>
 				<attribute name="SIAM-BuiltStamp" value="${touch.time}"/>
+				<attribute name="Specification-Vendor" value="${vendor}"/>
+				<attribute name="Specification-Version" value="${full.build.version} ${touch.time}"/>
+				<attribute name="Implementation-Title" value="SIAM System"/>
+				<attribute name="Implementation-Vendor" value="${vendor}"/>
+				<attribute name="Implementation-Version" value="${full.build.version} ${touch.time}"/>
 			</manifest>
 		</manifest-tag>
     </build-jar>
@@ -230,6 +252,11 @@
 			<manifest>
 				<attribute name="SIAM-Revision" value="${full.build.version}"/>
 				<attribute name="SIAM-BuiltStamp" value="${touch.time}" />
+				<attribute name="Specification-Vendor" value="${vendor}"/>
+				<attribute name="Specification-Version" value="${full.build.version} ${touch.time}"/>
+				<attribute name="Implementation-Title" value="SIAM Server"/>
+				<attribute name="Implementation-Vendor" value="${vendor}"/>
+				<attribute name="Implementation-Version" value="${full.build.version} ${touch.time}"/>
 			</manifest>
 		</manifest-tag>
     </build-jar>
