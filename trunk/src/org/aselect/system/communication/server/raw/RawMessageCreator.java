@@ -584,7 +584,7 @@ public class RawMessageCreator implements IMessageCreatorInterface
 		String sMethod = "sendMessage";
 		boolean bRetVal = false;
 		try {
-			_systemLogger.log(Level.WARNING, MODULE, sMethod, "getOutPutStream");
+//			_systemLogger.log(Level.WARNING, MODULE, sMethod, "getOutPutStream");
 			BufferedOutputStream oStream = new BufferedOutputStream(_oResponse.getOutputStream());
 			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Sending message:" + sMsg);
 			oStream.write(sMsg.getBytes());
