@@ -9,7 +9,6 @@ import java.util.HashMap;
 import java.util.Set;
 import java.util.logging.Level;
 
-import javax.servlet.Filter;
 import javax.servlet.FilterChain;
 import javax.servlet.FilterConfig;
 import javax.servlet.ServletException;
@@ -23,26 +22,27 @@ import org.apache.log4j.MDC;
 import org.aselect.server.log.ASelectSystemLogger;
 import org.aselect.server.request.HandlerTools;
 import org.aselect.server.tgt.TGTManager;
+import org.aselect.system.servlet.filter.BasicFilter;
 
 /**
  * @author RH
  */
-public class AuditFilter implements Filter
+public class AuditFilter extends BasicFilter
 {
-	private static final String _MODULE = "AuditFilter";
+	private  static final String _MODULE = "AuditFilter";
+
 	private static final String REQUEST_TGT = "tgt@";
-	private static final String REQUEST_COOKIE = "cookie@";
-	private static final String REQUEST_PARM = "requestparm@";
-	ASelectSystemLogger _logger;
-	private HashMap<String, String> requestParms = new HashMap<String, String>();
-	private HashMap<String, String> cookies = new HashMap<String, String>();
 	private HashMap<String, HashMap<String, String>> tgts = new HashMap<String, HashMap<String, String>>();
 	private HashMap htTGTContext;
+	
+	protected ASelectSystemLogger _logger;
+
 
 	/*
 	 * (non-Javadoc)
 	 * @see javax.servlet.Filter#destroy()
 	 */
+	@Override
 	public void destroy()
 	{
 	}
@@ -53,6 +53,7 @@ public class AuditFilter implements Filter
 	 * javax.servlet.FilterChain)
 	 */
 	@SuppressWarnings("unchecked")
+	@Override
 	public void doFilter(ServletRequest request, ServletResponse response, FilterChain chain)
 	throws IOException, ServletException
 	{
@@ -131,30 +132,19 @@ public class AuditFilter implements Filter
 	 * @see javax.servlet.Filter#init(javax.servlet.FilterConfig)
 	 */
 	@SuppressWarnings("unchecked")
+	@Override
 	public void init(FilterConfig filterConfig)
 	throws ServletException
 	{
+		super.init(filterConfig);
 		final String sMethod = "init";
 		_logger = ASelectSystemLogger.getHandle();
+//		_logger = SystemLoggerAudit.getHandle();
 		// this.filterConfig = filterConfig;
 		filterConfig.getFilterName(); // We probably want this later
 		Enumeration filterParms = filterConfig.getInitParameterNames();
 		while (filterParms.hasMoreElements()) {
 			String fullParmName = (String) filterParms.nextElement();
-			if (fullParmName.toLowerCase().startsWith(REQUEST_PARM)) {
-				String name = fullParmName.substring(REQUEST_PARM.length());
-				String val = filterConfig.getInitParameter(fullParmName);
-				if (val != null && !"".equals(val)) {
-					requestParms.put(name, val);
-				}
-			}
-			if (fullParmName.toLowerCase().startsWith(REQUEST_COOKIE)) {
-				String name = fullParmName.substring(REQUEST_COOKIE.length());
-				String val = filterConfig.getInitParameter(fullParmName);
-				if (val != null && !"".equals(val)) {
-					cookies.put(name, val);
-				}
-			}
 			if (fullParmName.toLowerCase().startsWith(REQUEST_TGT)) {
 				String fullCookieName = fullParmName.substring(REQUEST_TGT.length());
 				_logger.log(Level.INFO, _MODULE, sMethod, "fullCookieName:" + fullCookieName);
