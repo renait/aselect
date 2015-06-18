@@ -35,6 +35,8 @@ public class PartnerData
 	private String addkeyname = null;
 	private String addcertificate = null;
 	
+	private String logoutSupport = "true";
+	
 	private String federationurl = null;
 	private Metadata4Partner metadata4partner = null;
 	private Testdata4Partner testdata4partner = null;
@@ -161,6 +163,18 @@ public class PartnerData
 	{
 		this.attributeconsumerserviceindex = attributeconsumerserviceindex;
 	}
+	
+	public synchronized String getLogoutSupport()
+	{
+		return logoutSupport;
+	}
+
+	public synchronized void setLogoutSupport(String logoutSupport)
+	{
+		this.logoutSupport = logoutSupport;
+	}
+
+
 
 	/**
 	 * @return the metadata4partner
