@@ -970,7 +970,9 @@ public class Utils
 		catch (ASelectConfigException e) {
 			if (!bMandatory)
 				return null;
-			oSysLog.log(Level.SEVERE, MODULE, sMethod, "Cannot find " + sSection + " section in config file", e);
+//			oSysLog.log(Level.SEVERE, MODULE, sMethod, "Cannot find " + sSection + " section in config file", e);	// RH, 20150618, o
+			// , we caanot be sure this is SEVERE yet
+			oSysLog.log(Level.WARNING, MODULE, sMethod, "Cannot find " + sSection + " section in config file", e);	// RH, 20150618, n
 			throw e;
 		}
 		return oSection;
@@ -1055,7 +1057,9 @@ public class Utils
 		catch (Exception e) {
 			if (!bMandatory)
 				return null;
-			oSysLog.log(Level.SEVERE, MODULE, sMethod, "No valid " + sParam + " section with " + sValue + " found", e);
+//			oSysLog.log(Level.SEVERE, MODULE, sMethod, "No valid " + sParam + " section with " + sValue + " found", e);	// RH, 20150618, o
+			// , we caanot be sure this is SEVERE yet
+			oSysLog.log(Level.WARNING, MODULE, sMethod, "No valid " + sParam + " section with " + sValue + " found", e);	// RH, 20150618, n
 			throw new ASelectConfigException(Errors.ERROR_ASELECT_INIT_ERROR, e);
 		}
 		return oLogSection;
