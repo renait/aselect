@@ -150,6 +150,10 @@ public class MetaDataManagerSp extends AbstractMetaDataManager
 			if (addcertificate != null)
 				idpData.setAddcertificate(addcertificate);
 
+			String logoutSupport = Utils.getSimpleParam(_configManager, _systemLogger, idpSection, "logoutsupport", false);
+			if (logoutSupport != null)
+				idpData.setLogoutSupport(logoutSupport);
+
 			// Set specific metadata for this partner
 			Object metadataSection = Utils.getSimpleSection(_configManager, _systemLogger, idpSection, "metadata", false);
 			if (metadataSection != null) {

@@ -50,6 +50,8 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.xml.sax.InputSource;
 
+import com.sun.org.apache.bcel.internal.generic.RETURN;
+
 //
 //
 public abstract class Saml20_BaseHandler extends ProtoRequestHandler
@@ -229,12 +231,14 @@ public abstract class Saml20_BaseHandler extends ProtoRequestHandler
 	 * @param sLogoutReturnUrl
 	 *            the logout return url
 	 * @throws ASelectException
+	 * @return the int, 0 = logout to IDP, 1 = logout not required/supported
 	 */
-	protected void sendLogoutToIdP(HttpServletRequest request, HttpServletResponse response, String sTgT,
+	protected int sendLogoutToIdP(HttpServletRequest request, HttpServletResponse response, String sTgT,
 			HashMap htTGTContext, String sIssuer, String sLogoutReturnUrl)
 	throws ASelectException
 	{
 		String sMethod = "sendLogoutToIdP";
+		int returnValue = 0;
 
 		// Send a saml LogoutRequest to the federation idp
 		LogoutRequestSender logoutRequestSender = new LogoutRequestSender();
@@ -245,23 +249,28 @@ public abstract class Saml20_BaseHandler extends ProtoRequestHandler
 		
 		// RH, 20120307, Add partnerdata for later usage, this is the best point for geting the federationurl, we already retrieved the tgtcontext 
 		PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sFederationUrl);
-		
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "Logout to IdP="+sFederationUrl + " returnUrl="+sLogoutReturnUrl);
-		// if (sFederationUrl == null) sFederationUrl = _sFederationUrl; // xxx for now
-		MetaDataManagerSp metadataManager = MetaDataManagerSp.getHandle();
-		String url = metadataManager.getLocation(sFederationUrl, SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME,
-				SAMLConstants.SAML2_REDIRECT_BINDING_URI);
-
-		if (url != null) {
-			// Get list of sessions to kill if present in tgt
-			Vector<String> sessionindexes = (Vector<String>) htTGTContext.get("remote_sessionlist");	// can be null
-			logoutRequestSender.sendLogoutRequest(request, response, sTgT, url, sIssuer/* issuer */, sNameID,
-					"urn:oasis:names:tc:SAML:2.0:logout:user", sLogoutReturnUrl, sessionindexes, partnerData);
+		if ("true".equalsIgnoreCase(partnerData.getLogoutSupport())) {
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "Logout to IdP="+sFederationUrl + " returnUrl="+sLogoutReturnUrl);
+			// if (sFederationUrl == null) sFederationUrl = _sFederationUrl; // xxx for now
+			MetaDataManagerSp metadataManager = MetaDataManagerSp.getHandle();
+			String url = metadataManager.getLocation(sFederationUrl, SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME,
+					SAMLConstants.SAML2_REDIRECT_BINDING_URI);
+	
+			if (url != null) {
+				// Get list of sessions to kill if present in tgt
+				Vector<String> sessionindexes = (Vector<String>) htTGTContext.get("remote_sessionlist");	// can be null
+				logoutRequestSender.sendLogoutRequest(request, response, sTgT, url, sIssuer/* issuer */, sNameID,
+						"urn:oasis:names:tc:SAML:2.0:logout:user", sLogoutReturnUrl, sessionindexes, partnerData);
+			}
+			else {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "No IdP SingleLogoutService");
+				throw new ASelectException(Errors.ERROR_ASELECT_INIT_ERROR);
+			}
+		} else {
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "Partner: " + partnerData.getPartnerID() + " doesn't require/support logout, straight back to initiating SP");
+			returnValue = 1;	// logout not required/supported
 		}
-		else {
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "No IdP SingleLogoutService");
-			throw new ASelectException(Errors.ERROR_ASELECT_INIT_ERROR);
-		}
+		return returnValue;
 	}
 
 	/**

@@ -27,6 +27,7 @@ import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectCommunicationException;
 import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
+import org.aselect.system.exception.ASelectStorageException;
 import org.opensaml.common.SignableSAMLObject;
 import org.opensaml.saml2.core.Issuer;
 import org.opensaml.saml2.core.LogoutRequest;
@@ -154,7 +155,6 @@ public class Xsaml20_SLO_Response extends Saml20_BrowserHandler
 		LogoutRequest originalLogoutRequest = (LogoutRequest) originalRequest;
 		// String uid = originalLogoutRequest.getNameID().getValue();
 
-		///////////////////////////////////////
 		_systemLogger.log(Level.FINER, MODULE, sMethod, "originalLogoutRequest.getIssuer().getValue(): " +originalLogoutRequest.getIssuer().getValue() 
 				+ ", logoutResponse.getIssuer().getValue" +  logoutResponse.getIssuer().getValue());
 		if (originalLogoutRequest.getIssuer().getValue().equals(logoutResponse.getIssuer().getValue())) {
@@ -175,7 +175,14 @@ public class Xsaml20_SLO_Response extends Saml20_BrowserHandler
 		String originatingSPLogoutRequestID = null;
 		
 		// sRelayState contains originatingSPID
-		if (sRelayState != null && (element2 = (Element) SamlHistoryManager.getHandle().get(sRelayState)) != null) {
+		if (sRelayState != null ) {
+			try {
+				element2 = (Element) SamlHistoryManager.getHandle().get(sRelayState);
+			} catch (ASelectStorageException e) {
+				element2 = null;
+			}
+		}
+		if (element2 != null) {
 			SamlHistoryManager.getHandle().remove(sRelayState); // we only need it once
 			// Get the original LogoutRequest sent by the originatingSP
 			XMLObject originatingSPRequest = null;

@@ -150,8 +150,17 @@ public class Xsaml20_Logout extends Saml20_BaseHandler
 			if (sAuthspType != null && sAuthspType.equals("saml20")) {
 				htTGTContext.put("RelayState", sLogoutReturnUrl);
 				_oTGTManager.updateTGT(sTGT, htTGTContext);  // 20120405, was: update()
-				sendLogoutToIdP(request, response, sTGT, htTGTContext, _sRedirectUrl, sLogoutReturnUrl);
-				return;
+//				sendLogoutToIdP(request, response, sTGT, htTGTContext, _sRedirectUrl, sLogoutReturnUrl);
+				int loggingOut = sendLogoutToIdP(request, response, sTGT, htTGTContext, _sRedirectUrl, sLogoutReturnUrl);
+				// _sASelectServerUrl+"/saml20_sp_slo_http_request");
+				// The sp_slo_htt_response handler must take care of TgT destruction
+				// and responding to the caller
+				if (loggingOut == 0) {
+					_systemLogger.log(Level.FINEST, _sModule, sMethod, "logging out at IDP");
+					return;
+				}
+				
+//				return;
 			}
 			// Kill the ticket granting ticket
 			_oTGTManager.remove(sTGT);
