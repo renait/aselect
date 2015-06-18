@@ -110,13 +110,13 @@
     <mkdir dir="target/classes" />
 
 	<echo message="${full.build.version}${line.separator}" file="target/classes/${svnversion_file}" />
-    <!--	-->
+    <!--
 
 	    <javac destdir="target/classes" optimize="true" debug="true" debuglevel="vars,source,lines" srcdir="src/org" sourcepath="">
-	    	<!--	-->
-  	<!--
+	    	-->
+  	<!--	-->
         <javac destdir="target/classes" optimize="true" srcdir="src/org" sourcepath="">
-     -->
+        	<!--	 -->
       <classpath>
         <fileset dir="lib">
           <include name="*.jar" />
