@@ -290,6 +290,7 @@ public abstract class Saml20_BaseHandler extends ProtoRequestHandler
 	{
 		String sMethod = "finishLogoutActions";
 		String sLogoutResultPage = "";
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Using sLogoutReturnUrl: " + sLogoutReturnUrl);
 
 		// And inform the caller or user
 		if (Utils.hasValue(sLogoutReturnUrl)) {

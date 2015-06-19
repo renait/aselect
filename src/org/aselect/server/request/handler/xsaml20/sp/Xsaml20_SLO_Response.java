@@ -264,11 +264,14 @@ public class Xsaml20_SLO_Response extends Saml20_BaseHandler
 			sTgT = sTgT.substring(1);
 		HashMap htTGTContext = tgtManager.getTGT(sTgT);
 		String sIdP = (htTGTContext == null) ? null : (String) htTGTContext.get("SendIdPLogout");
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "from tgt, SendIdPLogout= " + sIdP);
 
 		// RM_60_02
 		String sReturnUrl = (htTGTContext == null) ? null : (String) htTGTContext.get("RelayState");
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "from tgt, RelayState: " + sReturnUrl);
 		if (sIdP == null || sReturnUrl == null) {
 			sReturnUrl = httpRequest.getParameter("RelayState"); // fall back mechanism
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "from httpRequest, RelayState: " + sReturnUrl);
 		}
 
 		// Remove the TgT
