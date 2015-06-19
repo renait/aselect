@@ -140,6 +140,7 @@ public class Xsaml20_Logout extends Saml20_BaseHandler
 		// 20090627, Bauke: added option to supply return URL
 		// can be done here, because this is a browser request
 		String sLogoutReturnUrl = request.getParameter("logout_return_url");
+		_systemLogger.log(Level.FINEST, _sModule, sMethod, "from httpRequest, logout_return_url: " + sLogoutReturnUrl);
 
 		// Check if the TGT exists
 		HashMap htTGTContext = _oTGTManager.getTGT(sTGT);
@@ -148,7 +149,8 @@ public class Xsaml20_Logout extends Saml20_BaseHandler
 			// For Saml20, will also send word to the IdP
 			String sAuthspType = (String) htTGTContext.get("authsp_type");
 			if (sAuthspType != null && sAuthspType.equals("saml20")) {
-				htTGTContext.put("RelayState", sLogoutReturnUrl);
+				htTGTContext.put("RelayState", sLogoutReturnUrl);	// overwrites any previous RelayState, even when null
+				htTGTContext.put("SendIdPLogout", "true");	// RH, 20150619, n
 				_oTGTManager.updateTGT(sTGT, htTGTContext);  // 20120405, was: update()
 //				sendLogoutToIdP(request, response, sTGT, htTGTContext, _sRedirectUrl, sLogoutReturnUrl);
 				int loggingOut = sendLogoutToIdP(request, response, sTGT, htTGTContext, _sRedirectUrl, sLogoutReturnUrl);
