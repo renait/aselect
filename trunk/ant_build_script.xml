@@ -110,13 +110,13 @@
     <mkdir dir="target/classes" />
 
 	<echo message="${full.build.version}${line.separator}" file="target/classes/${svnversion_file}" />
-    <!--
+    <!--	
 
 	    <javac destdir="target/classes" optimize="true" debug="true" debuglevel="vars,source,lines" srcdir="src/org" sourcepath="">
-	    	-->
-  	<!--	-->
+	  -->
+  	<!--		-->
         <javac destdir="target/classes" optimize="true" srcdir="src/org" sourcepath="">
-        	<!--	 -->
+          	<!--		-->
       <classpath>
         <fileset dir="lib">
           <include name="*.jar" />
@@ -145,9 +145,21 @@
 				<attribute name="Implementation-Vendor" value="${vendor}"/>
 				<attribute name="Implementation-Version" value="${full.build.version} ${touch.time}"/>
 	   			<attribute name="Main-Class" value="org.aselect.agent.ASelectAgent"/>
-    			<attribute name="Class-Path" value="org.aselect.system.jar mysql-connector-java-5.1.7-bin.jar 
+    			<!--
+    			<attribute name="Class-Path" value="org.aselect.system.jar mysql-connector-java-5.1.7-bin.jar  
     			 cryptix-jce-provider.jar xercesImpl.jar xmlParserAPIs.jar 
     			 commons-dbcp-1.2.2.jar commons-pool-1.4.jar . "/>
+    			 -->
+    			<!--	-->
+    			<attribute name="Class-Path" value="org.aselect.system.jar mysql-connector-java-5.1.7-bin.jar sqljdbc4.jar  
+    			 cryptix-jce-provider.jar xercesImpl.jar xmlParserAPIs.jar 
+    			 commons-dbcp-1.2.2.jar commons-pool-1.4.jar . "/>
+    			<!--	-->
+    			<!--
+    			<attribute name="Class-Path" value="org.aselect.system.jar cryptix-jce-provider.jar xercesImpl.jar xmlParserAPIs.jar 
+    			 commons-dbcp-1.2.2.jar commons-pool-1.4.jar . "/>
+    			-->
+    			
     		</manifest>
     	</manifest-tag>
     </build-jar>
@@ -162,7 +174,7 @@
 				<attribute name="Implementation-Vendor" value="${vendor}"/>
 				<attribute name="Implementation-Version" value="${full.build.version} ${touch.time}"/>
     			<attribute name="Main-Class" value="org.aselect.lbsensor.LbSensor"/>
-    			<attribute name="Class-Path" value="org.aselect.system.jar mysql-connector-java-5.1.7-bin.jar  
+    			<attribute name="Class-Path" value="org.aselect.system.jar mysql-connector-java-5.1.7-bin.jar sqljdbc4.jar 
     			 commons-dbcp-1.2.2.jar commons-pool-1.4.jar log4j-1.2.15.jar . "/>
     		</manifest>
     	</manifest-tag>
