@@ -1292,6 +1292,7 @@ public abstract class ProtoRequestHandler extends AbstractRequestHandler
 			}
 			else {
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "Not Signed!");
+				throw new SAMLException("Not Signed!");		// RH, 20150709, n
 			}
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "Verified");
 			return true;
