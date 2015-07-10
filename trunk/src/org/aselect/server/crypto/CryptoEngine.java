@@ -215,8 +215,10 @@ public class CryptoEngine
 				oProvidersSection = _configManager.getSection(oCryptoSection, "providers");
 			}
 			catch (ASelectConfigException eAC) {
+//				_systemLogger.log(Level.CONFIG, MODULE, sMethod,
+//						"Could not find 'providers' config section in configuration. No providers specified", eAC);
 				_systemLogger.log(Level.CONFIG, MODULE, sMethod,
-						"Could not find 'providers' config section in configuration. No providers specified", eAC);
+						"Could not find 'providers' config section in configuration. No providers specified, using default");
 			}
 
 			Object oCryptoProvider = null;
@@ -595,6 +597,58 @@ public class CryptoEngine
 
 			BASE64Encoder xBase64Enc = new BASE64Encoder();
 			return xBase64Enc.encode(xRawSignature);
+		}
+		catch (Exception e) {
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not compute signature", e);
+		}
+		return null;
+	}
+
+	/**
+	 * Generate a signature using the authsp-specific private key and optional signature algorithm. <br>
+	 * <br>
+	 * <b>Description:</b> <br>
+	 * This method generates a signature over a block of data that is to be sent to an authsp. <br>
+	 * <br>
+	 * 
+	 * @param sAuthsp
+	 *            The id of the authsp, or <code>null</code> to use the default signing key.
+	 * @param bData
+	 *            The data to be signed.
+	 * @param signAlg
+	 *            Optional signature algoritn
+	 * @return The byte[] signature
+	 */
+	public synchronized byte[] generateSignature(String sAuthsp, byte[] bData, String signAlg)
+	{
+		String sMethod = "CryptoEngine.generateSignature";
+
+		try {
+			PrivateKey oPrivateKey = null;
+
+			_systemLogger.log(Level.FINER, MODULE, sMethod, "sAuthsp="+sAuthsp);
+			if (sAuthsp != null) {
+				sAuthsp = sAuthsp.toLowerCase();
+
+				oPrivateKey = (PrivateKey)_htAuthspSettings.get(sAuthsp + ".specific_private_key");
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Specific private key " + (oPrivateKey == null ? "NOT" : "") + " found for: "+ sAuthsp);
+			}
+			if (oPrivateKey == null) {
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Using default private key");
+				oPrivateKey = _defaultPrivateKey;
+			}
+
+			Signature oSignature = null;
+			if (_oSignatureProvider != null)
+				oSignature = Signature.getInstance(signAlg != null ? signAlg : _sSignatureAlgorithm, _oSignatureProvider);
+			else
+				oSignature = Signature.getInstance(signAlg != null ? signAlg : _sSignatureAlgorithm);
+
+			oSignature.initSign(oPrivateKey);
+			oSignature.update(bData);
+			byte[] xRawSignature = oSignature.sign();
+
+			return xRawSignature;
 		}
 		catch (Exception e) {
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not compute signature", e);
