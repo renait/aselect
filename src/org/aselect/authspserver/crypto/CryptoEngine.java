@@ -374,7 +374,7 @@ public class CryptoEngine
 		String sMethod = "verifySignature";
 		boolean bVerifies = false;
 		sAlias = sAlias.toLowerCase();
-		_systemLogger.log(Level.FINER, MODULE, sMethod, "sAlias="+sAlias+" sData=["+sData+"]");
+		_systemLogger.log(Level.FINER, MODULE, sMethod, "sAlias="+sAlias+" sData=["+sData+"] sign=["+Utils.firstPartOf(sSignature,30)+"]");
 
 		try {
 			Signature oSignature = null;

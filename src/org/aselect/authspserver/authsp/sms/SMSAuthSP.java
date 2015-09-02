@@ -18,6 +18,7 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.text.DecimalFormat;
 import java.text.NumberFormat;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Properties;
 import java.util.logging.Level;
@@ -298,13 +299,15 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 				String sMyUrl = servletRequest.getRequestURL().toString();
 				htServiceRequest.put("my_url", sMyUrl);
 
-				String sRid = (String) htServiceRequest.get("rid");
-				String sAsUrl = (String) htServiceRequest.get("as_url");
-				String sUid = (String) htServiceRequest.get("uid");
-				String sAserverId = (String) htServiceRequest.get("a-select-server");
-				String sSignature = (String) htServiceRequest.get("signature");
+				String sRid = (String)htServiceRequest.get("rid");
+				String sAsUrl = (String)htServiceRequest.get("as_url");
+				String sUid = (String)htServiceRequest.get("uid");
+				String sAserverId = (String)htServiceRequest.get("a-select-server");
+				// 20150827, Bauke: added timestamp, enables SMS AuthSP to monitor link validity
+				String sTimeStamp = (String)htServiceRequest.get("timestamp");
+				String sSignature = (String)htServiceRequest.get("signature");
 
-				if ((sRid == null) || (sAsUrl == null) || (sUid == null) || (sAserverId == null) || (sSignature == null)) {
+				if (sRid == null || sAsUrl == null || sUid == null || sAserverId == null || sSignature == null || sTimeStamp == null) {
 					_systemLogger.log(Level.WARNING, MODULE, sMethod,
 						"Invalid request received: one or more mandatory parameters missing, handling error locally.");
 					failureHandling = "local";	// RH, 20111021, n
@@ -323,8 +326,7 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 				sbData.append(sAserverId);
 				if (sCountry != null) sbData.append(sCountry);
 				if (sLanguage != null) sbData.append(sLanguage);
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Verifying alias data signature:" 
-						+ sAserverId + " Data=" +  sbData.toString() + " Sign=" + sSignature );
+				sbData.append(sTimeStamp);  // 20150827
 
 				if (!_cryptoEngine.verifySignature(sAserverId, sbData.toString(), sSignature)) {
 					StringBuffer sbWarning = new StringBuffer("Invalid signature from A-Select Server '");
@@ -335,53 +337,74 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 				htServiceRequest.put("as_url", sAsUrl);
 				htServiceRequest.put("uid", sUid);  // This is the user's phone number
 				
+				boolean bSessionPresent = _sessionManager.containsKey(sRid);
+				boolean bSendSms = true;
+				
+				long lTimeStamp = Long.valueOf(sTimeStamp);  // milliseconds
+				long lNow = new Date().getTime();
+				long lDiff = (lNow - lTimeStamp) / 1000; // seconds
+				if (lDiff > 120 || bSessionPresent) {  // assuming the rid is still present within 2 minutes
+					// The link is only valid for 2 minutes, and will only once send an SMS
+					bSendSms = false;
+				}
+				
+				// 20150901, Bauke: no longer store the retry counter in the form (F5 would otherwise result in an error)
 				String formtoken = newToken();
 				Integer iRetryCounter = 1;	// first time
-				String sRetryCounter =  String.valueOf(iRetryCounter);	// for backward compatibility  we use the retry_counter to store our formtoken
-				sRetryCounter +=  ":" + formtoken;	// for backward compatibility  we use the retry_counter to store our formtoken
 				HashMap sessionContext = null; 
-				
-				if (!_sessionManager.containsKey(sRid)) {	// We expect there is no session yet
-					sessionContext = new HashMap();
-				}
-				else {
+				if (bSessionPresent) {
 					sessionContext = _sessionManager.getSessionContext(sRid);
+					formtoken = (String)sessionContext.get("sms_formtoken");
+					iRetryCounter = (Integer)sessionContext.get("sms_retry_counter");
 				}
-				sessionContext.put("sms_formtoken", formtoken);
-				sessionContext.put("sms_retry_counter", iRetryCounter);
-				_sessionManager.updateSession(sRid, sessionContext);
+				if (!bSessionPresent) {	// We expect there is no session yet
+					sessionContext = new HashMap();
+					sessionContext.put("sms_formtoken", formtoken);
+					sessionContext.put("sms_retry_counter", iRetryCounter);  // NOTE: stored as an integer
+					sessionContext.put("timestamp", sTimeStamp);  // 20150831: pass through the session, so we don't need to change the challenge form
+					_sessionManager.updateSession(sRid, sessionContext);
+				}
+				
+				String sRetryCounter =  String.valueOf(iRetryCounter);	// for backward compatibility  we use the retry_counter to store our formtoken
+				sRetryCounter = "X";  // 20150901: No longer stored in the form
+				sRetryCounter +=  ":" + formtoken;	// for backward compatibility  we use the retry_counter to store our formtoken
+				
 				// RH, 20110104, add formsignature
 				sRetryCounter += ":" + _cryptoEngine.generateSignature(sConcat(sAserverId, sUid, sRetryCounter));
-				htServiceRequest.put("retry_counter", String.valueOf(sRetryCounter));
-
+				htServiceRequest.put("retry_counter", sRetryCounter);
 				if (sCountry != null)
 					htServiceRequest.put("country", sCountry);
 				if (sLanguage != null)
 					htServiceRequest.put("language", sLanguage);
-				
-				_systemLogger.log(Level.INFO, MODULE, sMethod, "SMS to sUid=" + sUid);
-				// sUid can have a trailing "v" to indicate a voice phone (without SMS reception)
-				// Should not occur though, the SMSAuthSPHandler must take care of this
-				boolean bValid = isValidPhoneNumber(sUid.replace("v", ""));  // remove voice flag, just in case
-				int iReturnSend = -1;
-				if (bValid)
-					iReturnSend = generateAndSendSms(servletRequest, sUid);
-				if (!bValid || iReturnSend == 1) {
-					// Bad phone number.
-					// We want to show the challenge form only the first time around,
-					// therefore make sure the form contains a "challenge" input field.
-					if (_bShow_challenge && htServiceRequest.get("challenge") == null ) {
-						_systemLogger.log(Level.FINEST, MODULE, sMethod, "challenge FORM htServiceRequest=" + htServiceRequest);
-						
-						// Challenge form should inform user about invalid phone number 
-						/* 20141216, Bauke: set error_code to activate the error message in challenge.html: */
-						showChallengeForm(pwOut, Errors.ERROR_SMS_INVALID_PHONE/*was null*/, null, htServiceRequest);
+
+				if (bSendSms) {
+					_systemLogger.log(Level.INFO, MODULE, sMethod, "SMS to sUid=" + sUid);
+					// sUid can have a trailing "v" to indicate a voice phone (without SMS reception)
+					// Should not occur though, the SMSAuthSPHandler must take care of this
+					boolean bValid = isValidPhoneNumber(sUid.replace("v", ""));  // remove voice flag, just in case
+					int iReturnSend = -1;
+					if (bValid)
+						iReturnSend = generateAndSendSms(servletRequest, sUid);
+					if (!bValid || iReturnSend == 1) {
+						// Bad phone number.
+						// We want to show the challenge form only the first time around,
+						// therefore make sure the form contains a "challenge" input field.
+						if (_bShow_challenge && htServiceRequest.get("challenge") == null ) {
+							_systemLogger.log(Level.FINEST, MODULE, sMethod, "challenge FORM htServiceRequest=" + htServiceRequest);
+							
+							// Challenge form should inform user about invalid phone number 
+							/* 20141216, Bauke: set error_code to activate the error message in challenge.html: */
+							showChallengeForm(pwOut, Errors.ERROR_SMS_INVALID_PHONE/*was null*/, null, htServiceRequest);
+							return;
+						}
+						handleResult(servletRequest, servletResponse, pwOut, Errors.ERROR_SMS_INVALID_PHONE, sLanguage, failureHandling);
 						return;
 					}
-					handleResult(servletRequest, servletResponse, pwOut, Errors.ERROR_SMS_INVALID_PHONE, sLanguage, failureHandling);
-					return;
 				}
-
+				else {
+					_systemLogger.log(Level.INFO, MODULE, sMethod, "No SMS to sUid=" + sUid + ", already sent");
+				}
+				
 				// Code sent successfully
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "FORM htServiceRequest=" + htServiceRequest);
 				showAuthenticateForm(pwOut, ""/*no error*/, htServiceRequest);
@@ -471,27 +494,38 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 			
 			pwOut = Utils.prepareForHtmlOutput(servletRequest, servletResponse);
 
+			// 20150902, Bauke: All server data is protected by it's signature, this data is passed in the authenticate form
+			// and checked after the POST of the form.
+			// The 'formtoken' is generated once, and stored in the form and in the rid record.
+			// This attaches the form to the rid.
+			// The retry counter is stored in the rid record, no longer in the form (there's an X at that position now).
 			String sMyUrl = servletRequest.getRequestURL().toString();
 			String sRid = servletRequest.getParameter("rid");
 			String sAsUrl = servletRequest.getParameter("as_url");
 			String sAserverId = servletRequest.getParameter("a-select-server");
-			sPassword = servletRequest.getParameter("password");  // is code
+			sPassword = servletRequest.getParameter("password");  // this is the code entered by the user
 			sUid = servletRequest.getParameter("uid");
-			String sSignature = servletRequest.getParameter("signature");
+			String sSignature = servletRequest.getParameter("signature");  // the signature from the server
 			String sRetryCounter = servletRequest.getParameter("retry_counter");
 			_systemLogger.log(Level.FINEST, MODULE, sMethod, "uid=" + sUid + " password=" + sPassword + " rid=" + sRid);
-			if ((sRid == null) || (sAsUrl == null) || (sUid == null) || (sPassword == null) || (sAserverId == null)
-					|| (sRetryCounter == null) || (sSignature == null)) {
+			if (sRid == null || sAsUrl == null || sUid == null || sPassword == null || sAserverId == null ||
+						sRetryCounter == null || sSignature == null) {
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Invalid request received: one or more mandatory parameters missing, handling error locally.");
 				failureHandling = "local";	// RH, 20111021, n
 				throw new ASelectException(Errors.ERROR_SMS_INVALID_REQUEST);
 			}
 
+			// Get the session
 			HashMap sessionContext = _sessionManager.getSessionContext(sRid);
-			String formtoken;
-			Integer retry_counter;
-			if ( (sessionContext == null) ||  ( (formtoken = (String)sessionContext.get("sms_formtoken")) == null)
-					 ||  ( (retry_counter = (Integer)sessionContext.get("sms_retry_counter")) == null)) {
+			String sTimeStamp = null;  // 20150831
+			String formtoken = null;
+			Integer retry_counter = null;
+			if (sessionContext != null) {
+				formtoken = (String)sessionContext.get("sms_formtoken");
+				retry_counter = (Integer)sessionContext.get("sms_retry_counter");
+				sTimeStamp = (String)sessionContext.get("timestamp");  // 20150831
+			}
+			if (sessionContext == null || formtoken == null || retry_counter == null) {
 				throw new ASelectException(Errors.ERROR_SMS_INVALID_REQUEST);			
 			}
 			
@@ -512,12 +546,12 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 				showAuthenticateForm(pwOut, Errors.ERROR_SMS_INVALID_PASSWORD, htServiceRequest);
 			}
 			else {
-				// generate signature
+				// Check the server's signature
 				StringBuffer sbData = new StringBuffer(sRid).append(sAsUrl).append(sUid);
 				sbData.append(sAserverId);
 				if (sCountry != null) sbData.append(sCountry);
 				if (sLanguage != null) sbData.append(sLanguage);
-				
+				sbData.append(sTimeStamp);
 				if (!_cryptoEngine.verifySignature(sAserverId, sbData.toString(), URLDecoder.decode(sSignature, "UTF-8"))) {
 					StringBuffer sbWarning = new StringBuffer("Invalid signature from A-Select Server '");
 					sbWarning.append(sAserverId).append("' for user: ").append(sUid);
@@ -528,16 +562,17 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 				}
 
 				// RH, 20110104, sn
-				// verify form signature
-				// formSignature is stored as part of the retryCounter
+				// Verify form signature, formSignature is stored as part of the retryCounter
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "sRetryCounter="+sRetryCounter);
 				String[] sa = sRetryCounter.split(":");
 				String formSignature = sa[2];
 				sRetryCounter = sa[0] + ":" + sa[1]; // now also contains formtoken
 				String signedParms = sConcat(sAserverId, sUid, sRetryCounter);
-//				_systemLogger.log(Level.FINEST, MODULE, sMethod, "sRetryCounter:" +sa[1] + ", formtoken:" + formtoken);
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "sRetryCounter:" + sRetryCounter + ", formtoken:" + formtoken);
-				if ( !_cryptoEngine.verifyMySignature(signedParms, formSignature) || !sa[1].equals(formtoken) ) {
-					StringBuffer sbWarning = new StringBuffer("Invalid signature from User form '");
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "sRetryCounter=" + sRetryCounter + " formtoken=" + formtoken);
+				boolean bBadToken = !sa[1].equals(formtoken);
+				if (!_cryptoEngine.verifyMySignature(signedParms, formSignature) || bBadToken) {
+					StringBuffer sbWarning = new StringBuffer("Invalid ");
+					sbWarning.append((bBadToken)?"token":"signature").append(" from User form '");
 					sbWarning.append(sAserverId).append("' for user: ").append(sUid);
 					sbWarning.append(" , handling error locally. Data=").append(sbData.toString());	// RH, 20111021, n
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, sbWarning.toString());
@@ -546,8 +581,7 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 				}
 				// RH, 20110104, en
 
-				// authenticate user
-				// RM_20_01
+				// authenticate user, RM_20_01
 				String generatedPass = (String) servletRequest.getSession(true).getAttribute("generated_secret");
 				String sResultCode = (sPassword.compareTo(generatedPass) == 0) ? (Errors.ERROR_SMS_SUCCESS)
 						: Errors.ERROR_SMS_INVALID_PASSWORD;
@@ -556,8 +590,7 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 				{
 					_systemLogger.log(Level.INFO, MODULE, sMethod, "Invalid password, retry=" + retry_counter + " < " + _iAllowedRetries);
 					int iRetriesDone = retry_counter;
-					if (iRetriesDone < _iAllowedRetries) // try again
-					{
+					if (iRetriesDone < _iAllowedRetries) {  // try again
 						HashMap htServiceRequest = new HashMap();
 						htServiceRequest.put("my_url", sMyUrl);
 						htServiceRequest.put("as_url", sAsUrl);
@@ -566,15 +599,20 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 						htServiceRequest.put("a-select-server", sAserverId);
 
 						// add formsignature
-						sRetryCounter =  String.valueOf(iRetriesDone + 1);
+						// sRetryCounter =  String.valueOf(iRetriesDone + 1);
+						sRetryCounter = "X";  // 20150901: No longer stored in form, only in session
 						sessionContext.put("sms_retry_counter", iRetriesDone+1);
-						formtoken = newToken(); 
-						sessionContext.put("sms_formtoken", formtoken);
+						
+						// Don't generate a new form token, otherwise F5 (refresh screen) does not work
+						//formtoken = newToken();
+						//_systemLogger.log(Level.FINER, MODULE, sMethod, "New token="+formtoken);
+						//sessionContext.put("sms_formtoken", formtoken);
 						_sessionManager.updateSession(sRid, sessionContext);
 
 						sRetryCounter +=  ":" + formtoken;	// for backward compatibility we use sRetryCounter to store the formtoken
 						
-						sRetryCounter += ":" + _cryptoEngine.generateSignature( sConcat(sAserverId, sUid, sRetryCounter));
+						sRetryCounter += ":" + _cryptoEngine.generateSignature(sConcat(sAserverId, sUid, sRetryCounter));
+						_systemLogger.log(Level.FINER, MODULE, sMethod, "Retry counter="+sRetryCounter);
 						htServiceRequest.put("retry_counter", sRetryCounter);	// RH, 20110104, n
 						htServiceRequest.put("signature", sSignature);
 						if (sCountry != null)
@@ -703,7 +741,6 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 		sAuthenticateForm = Utils.replaceString(sAuthenticateForm, "[language]", (sLanguage != null)? sLanguage: "");
 		sAuthenticateForm = Utils.replaceString(sAuthenticateForm, "[signature]", sSignature);
 		sAuthenticateForm = Utils.replaceString(sAuthenticateForm, "[retry_counter]", sRetryCounter);
-		
 		sAuthenticateForm = Utils.replaceString(sAuthenticateForm, "[error_message]", sErrorMessage);
 		
 		// Bauke 20110721: Extract if_cond=... from the application URL
@@ -744,8 +781,8 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 		String sSignature = (String) htServiceRequest.get("signature");
 		String sRetryCounter = (String) htServiceRequest.get("retry_counter");
 		String sCountry = (String) htServiceRequest.get("country");
-		String sChallenge = (String) htServiceRequest.get("challenge");
 		String sLanguage = (String) htServiceRequest.get("language");
+		String sChallenge = (String) htServiceRequest.get("challenge");
 		
 		String sChallengeForm = Utils.loadTemplateFromFile(_systemLogger, _sWorkingDir, _sConfigID,
 				"challenge.html", sLanguage, _sFriendlyName, VERSION);
@@ -797,7 +834,7 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 		String sSpecials = Utils.getAselectSpecials(htServiceRequest, true/*decode too*/, _systemLogger);
 		sChallengeForm = Utils.handleAllConditionals(sChallengeForm, Utils.hasValue(sError/*20141216,Bauke:was sErrorMessage*/), sSpecials, _systemLogger);
 
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "Show Form");
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "Show Form: challenge.html");
 		pwOut.println(sChallengeForm);
 	}
 
@@ -846,8 +883,7 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 						_systemLogger.log(Level.FINEST, MODULE, sMethod, "REDIRECT " + sbTemp);
 						servletResponse.sendRedirect(sbTemp.toString());
 					}
-					catch (IOException eIO) // could not send redirect
-					{
+					catch (IOException eIO) {  // could not send redirect
 						StringBuffer sbError = new StringBuffer("Could not send redirect to: \"");
 						sbError.append(sbTemp.toString()).append("\"");
 						_systemLogger.log(Level.WARNING, MODULE, sMethod, sbError.toString(), eIO);

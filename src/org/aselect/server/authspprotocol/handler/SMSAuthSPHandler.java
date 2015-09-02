@@ -11,6 +11,7 @@ package org.aselect.server.authspprotocol.handler;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.logging.Level;
 
@@ -210,8 +211,7 @@ public class SMSAuthSPHandler extends AbstractAuthSPProtocolHandler implements I
 			String sCF = (String)htSessionContext.get("sms_correction_facility");
 			
 			// 20121124, Bauke: added SMS by Voice
-			// sPhoneNr will contain the phone number without the possible trailing "v"
-			// sUserId contains the combination.
+			// sPhoneNr will contain the phone number without the possible trailing "v" sUserId contains the combination.
 			// For an SMS by Voice a different url is used.
 			String sPhoneNr = sUserId;
 			boolean isVoice = false;
@@ -241,6 +241,9 @@ public class SMSAuthSPHandler extends AbstractAuthSPProtocolHandler implements I
 			if (sLanguage == null || sLanguage.trim().length() < 1) {
 				sLanguage = null;
 			}
+			// 20150827, Bauke: added timestamp, enables SMS AuthSP to monitor link validity
+			String sTimeStamp = String.valueOf(new Date().getTime());
+			
 			String sServerId = _configManager.getParam(_configManager.getSection(null, "aselect"), "server_id");
 			StringBuffer sbSignature = new StringBuffer(sRid);
 			sbSignature.append(sAsUrl);
@@ -252,6 +255,8 @@ public class SMSAuthSPHandler extends AbstractAuthSPProtocolHandler implements I
 			if (sLanguage != null) {
 				sbSignature.append(sLanguage);
 			}
+			sbSignature.append(sTimeStamp);  // 20150827
+			
 			String sSignature = CryptoEngine.getHandle().generateSignature(_sAuthsp, sbSignature.toString());
 			if (sSignature == null) {
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not sign SMS AuthSP request.");
@@ -277,6 +282,7 @@ public class SMSAuthSPHandler extends AbstractAuthSPProtocolHandler implements I
 			if (sLanguage != null) {
 				sbRedirect.append("&language=").append(sLanguage);
 			}
+			sbRedirect.append("&timestamp=").append(sTimeStamp); // 20150827
 			sbRedirect.append("&signature=").append(sSignature);
 			htResponse.put("redirect_url", sbRedirect.toString());
 			htResponse.put("result", Errors.ERROR_ASELECT_SUCCESS);
