@@ -41,7 +41,6 @@ import org.aselect.system.configmanager.ConfigManager;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.logging.SystemLogger;
-import org.aselect.system.storagemanager.SendQueue;
 import org.w3c.dom.*;
 
 //
