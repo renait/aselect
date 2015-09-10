@@ -49,6 +49,10 @@ public class Saml20_Metadata extends ProtoRequestHandler
 	public final static String singleLogoutServiceBindingConstantSOAP = SAMLConstants.SAML2_SOAP11_BINDING_URI;
 	public final static String authzServiceBindingConstantSOAP = SAMLConstants.SAML2_SOAP11_BINDING_URI;
 
+	public final static boolean DEFAULT_ADDKEYNAME = false;
+	public final static boolean DEFAULT_ADDCERTIFICATE = false;
+	public final static boolean DEFAULT_USESHA256 = false;
+
 	private String workingDir = null;
 	private String redirectURL;
 	private String signingCertificate;
@@ -82,6 +86,13 @@ public class Saml20_Metadata extends ProtoRequestHandler
 	private String idpSloHttpLocation = null;
 	private String idpSloHttpResponse = null;
 	private String idpSSSoapLocation = null;
+	
+	
+	private boolean addkeyname = DEFAULT_ADDKEYNAME;
+	private boolean addcertificate = DEFAULT_ADDCERTIFICATE;
+	private boolean usesha256 = DEFAULT_USESHA256;
+	
+	
 
 	protected XMLObjectBuilderFactory _oBuilderFactory;
 
@@ -125,6 +136,36 @@ public class Saml20_Metadata extends ProtoRequestHandler
 				if (sCacheDuration != null) {
 					setCacheDuration(new Long(Long.parseLong(sCacheDuration) * 1000));
 				}
+				
+				// RH, 20150910, sn
+				// Retrieve signing parameters from config, for the moment only IDP,  for SP can be set through partnerdata config
+				String metaaddkeyname = Utils.getSimpleParam(_configManager, _systemLogger, oConfig, "addkeyname", false);
+				if (metaaddkeyname != null) {
+					addkeyname = Boolean.parseBoolean(metaaddkeyname);
+				} else {
+					addkeyname = DEFAULT_ADDKEYNAME;
+				}
+				_systemLogger.log(Level.FINER, MODULE, sMethod, "Using addkeyname: " + addkeyname);
+
+				String metaaddcertificate = Utils.getSimpleParam(_configManager, _systemLogger, oConfig, "addcertificate", false);
+				if (metaaddcertificate != null) {
+					addcertificate = Boolean.parseBoolean(metaaddcertificate);
+				} else {
+					addcertificate = DEFAULT_ADDCERTIFICATE;
+				}
+				_systemLogger.log(Level.FINER, MODULE, sMethod, "Using addcertificate: " + addcertificate);
+
+				String metausesha256 = Utils.getSimpleParam(_configManager, _systemLogger, oConfig, "use_sha256", false);
+				if (metausesha256 != null) {
+					usesha256 = Boolean.parseBoolean(metausesha256);
+				} else {
+					usesha256 = DEFAULT_USESHA256;
+				}
+				_systemLogger.log(Level.FINER, MODULE, sMethod, "Using use_sha256: " + usesha256);
+				//	RH, 20150910, en
+				
+				
+				
 			}
 			catch (ASelectConfigException e) {
 				_systemLogger.log(Level.WARNING, MODULE, sMethod,
@@ -845,5 +886,35 @@ public class Saml20_Metadata extends ProtoRequestHandler
 	public void setIdpSloSoapResponseUrl(String idpSloSoapResponseUrl)
 	{
 		this.idpSloSoapResponseUrl = idpSloSoapResponseUrl;
+	}
+
+	public boolean isAddkeyname()
+	{
+		return addkeyname;
+	}
+
+	public void setAddkeyname(boolean addkeyname)
+	{
+		this.addkeyname = addkeyname;
+	}
+
+	public boolean isAddcertificate()
+	{
+		return addcertificate;
+	}
+
+	public void setAddcertificate(boolean addcertificate)
+	{
+		this.addcertificate = addcertificate;
+	}
+
+	public boolean isUsesha256()
+	{
+		return usesha256;
+	}
+
+	public void setUsesha256(boolean usesha256)
+	{
+		this.usesha256 = usesha256;
 	}
 }
