@@ -272,7 +272,11 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 		pdpDescriptor.addSupportedProtocol(SAMLConstants.SAML20P_NS);
 		entityDescriptor.getRoleDescriptors().add(pdpDescriptor);
 
-		entityDescriptor = (EntityDescriptor) SamlTools.signSamlObject(entityDescriptor);
+		// Add option for sha256 and KeyName
+		
+//		entityDescriptor = (EntityDescriptor) SamlTools.signSamlObject(entityDescriptor);// RH, 20150910, o
+		entityDescriptor = (EntityDescriptor) SamlTools.signSamlObject(entityDescriptor, isUsesha256() ? "sha256" : "sha1", 
+				isAddkeyname(), isAddcertificate());// RH, 20150910, n
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "Just built the entityDescriptor");
 
 		// Marshall to the Node
