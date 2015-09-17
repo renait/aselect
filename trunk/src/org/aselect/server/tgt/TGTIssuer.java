@@ -542,6 +542,13 @@ public class TGTIssuer
 					htTGTContext.put("sel_level", sAuthspLevel);
 				}
 			}
+			
+			String forced_level =  (String)htSessionContext.get("forced_level");
+			if ( forced_level != null) {
+				htTGTContext.put("authsp_level", forced_level);
+				htTGTContext.put("sel_level", forced_level);
+				_systemLogger.log(Level.FINER, MODULE, sMethod, "found forced_level in htSessionContext, forcing sel_level and authsp_level to "+forced_level);
+			}
 
 			// 20100228, Bauke: changed from "remote_attributes" to "attributes"
 			String sRemoteAttributes = (htAdditional==null)? null: (String) htAdditional.get("attributes");

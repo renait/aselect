@@ -71,6 +71,8 @@ public class AccountSTS extends ProtoRequestHandler
 	protected HashMap<String, Pattern> _htSP_wctxregex;	// RH, 20130916, n
 	protected HashMap<String, String>	_htSP_SignAlgorithm;	// RH, 20130924, alg for signing the returned token
 	
+	private Integer _iMinLevelProcess = null;
+	private Integer _iMinLevelProcessReturn = null;
 
 
 	// protected HashMap _htSP_ErrorUrl;
@@ -187,6 +189,16 @@ public class AccountSTS extends ProtoRequestHandler
 
 			_sPostTemplate = readTemplateFromConfig(oConfig, "post_template");
 
+			String _sMinLevelProcess = ASelectConfigManager.getSimpleParam(oConfig, "min_level_process", false);
+			if (_sMinLevelProcess != null) {
+				_iMinLevelProcess = Integer.valueOf(_sMinLevelProcess);
+			}
+			String _sMinLevelProcessReturn = ASelectConfigManager.getSimpleParam(oConfig, "min_level_processreturn", false);
+			if (_sMinLevelProcessReturn != null) {
+				_iMinLevelProcessReturn = Integer.valueOf(_sMinLevelProcessReturn);
+			}
+
+			
 		}
 		catch (ASelectException e) {
 			throw e;
@@ -276,13 +288,19 @@ public class AccountSTS extends ProtoRequestHandler
 		String sTgt = getCredentialsFromCookie(servletRequest);
 		if (sTgt != null) {
 			HashMap htTGTContext = getContextFromTgt(sTgt, true); // Check expiration
-			if (htTGTContext != null) {
+//			if (htTGTContext != null) {	// RH, 20150915, o
+			if ( htTGTContext != null && (_iMinLevelProcess == null 
+					|| ( htTGTContext.get("authsp_level") != null 
+					&& _iMinLevelProcess.compareTo(Integer.valueOf((String)htTGTContext.get("authsp_level"))) <= 0)) ) {	// RH, 20150915, n
 				// Valid TGT context found, Update TGT timestamp
 				_oTGTManager.updateTGT(sTgt, htTGTContext);
 				// Return to the caller
 				String sUid = (String) htTGTContext.get("uid");
 				HashMap htAllAttributes = getAttributesFromTgtAndGatherer(htTGTContext);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Posting requestortoken");
 				return postRequestorToken(servletRequest, servletResponse, sUid, htSessionData, htAllAttributes);
+			} else {
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "No tgt context found or authsp level too low, doing authenticate");
 			}
 		}
 		String sASelectURL = _sServerUrl;
@@ -371,27 +389,37 @@ public class AccountSTS extends ProtoRequestHandler
 			else {
 			*/
 			// RH, 20141027, eo, only allow return from A-Select server
-				// From A-Select server
-				sUrlTgt = decryptCredentials(sUrlTgt);
-				_systemLogger.log(Level.INFO, MODULE, sMethod, "From A-Select TGT="+Tools.clipString(sUrlTgt, 40, true));
+			// From A-Select server
+			sUrlTgt = decryptCredentials(sUrlTgt);
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "From A-Select TGT="+Tools.clipString(sUrlTgt, 40, true));
 
-				// Get credentials and attributes using Cookie
-				htCredentials = getASelectCredentials(request);
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "getAselectCredentials: " + htCredentials);
-				sUid = (String) htCredentials.get("uid");
-				if (sUid == null) {
-					_systemLogger.log(Level.WARNING, MODULE, sMethod, "No parameter 'uid' found");
+			// Get credentials and attributes using Cookie
+			htCredentials = getASelectCredentials(request);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "getAselectCredentials: " + htCredentials);
+			
+			// RH, 20150915, sn
+			if ( htCredentials == null || htCredentials.get("authsp_level") == null  ||
+				( _iMinLevelProcessReturn != null 
+				&& _iMinLevelProcessReturn.compareTo(Integer.valueOf((String)htCredentials.get("authsp_level"))) > 0 ) ) {
+					_systemLogger.log(Level.WARNING, MODULE, sMethod, "No tgt context found or authsp level too low");
 					throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR);
-				}
-				String sAttributes = (String) htCredentials.get("attributes");
-				if (sAttributes != null)
-					htAttributes = org.aselect.server.utils.Utils.deserializeAttributes(sAttributes);
+			}
+			//	RH, 20150915, en 
+				
+			sUid = (String) htCredentials.get("uid");
+			if (sUid == null) {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "No parameter 'uid' found");
+				throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR);
+			}
+			String sAttributes = (String) htCredentials.get("attributes");
+			if (sAttributes != null)
+				htAttributes = org.aselect.server.utils.Utils.deserializeAttributes(sAttributes);
 
-				String sLevel = (String) htCredentials.get("authsp_level");
-				String sTryLevel = (String) htAttributes.get("authsp_level");
-				if (sTryLevel == null && sLevel != null) {
-					htAttributes.put("auhsp_level", sLevel);
-				}
+			String sLevel = (String) htCredentials.get("authsp_level");
+			String sTryLevel = (String) htAttributes.get("authsp_level");
+			if (sTryLevel == null && sLevel != null) {
+				htAttributes.put("auhsp_level", sLevel);
+			}
 				sTgt = (String) htCredentials.get("tgt");
 				// RH, 20141027, so, only allow return from A-Select server
 //			}
@@ -434,12 +462,14 @@ public class AccountSTS extends ProtoRequestHandler
 			else {
 			*/
 						// RH, 20141027, eo, only allow return from A-Select server
-				if ("true".equals(_sPassTransientId))
-					htAttributes.put("transient_id", sTgt);
-				return postRequestorToken(request, response, sUid, htCredentials, htAttributes);
+			if ("true".equals(_sPassTransientId))
+				htAttributes.put("transient_id", sTgt);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Posting requestortoken");//	RH, 20150915, n
+			return postRequestorToken(request, response, sUid, htCredentials, htAttributes);
 				// RH, 20141027, so, only allow return from A-Select server
 //			}
 			// RH, 20141027, eo, only allow return from A-Select server
+
 		}
 		catch (ASelectException e) {
 			throw e;
