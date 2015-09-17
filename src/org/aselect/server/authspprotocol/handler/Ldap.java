@@ -806,15 +806,31 @@ public class Ldap extends AbstractAuthSPProtocolHandler implements IAuthSPProtoc
 				htSessionContext.put("authsp_type", "ldap");
 
 				String next_authsp = _authSPHandlerManager.getNextAuthSP(sAuthSPId, app_id);
+				String next_authsp_entry_level = _authSPHandlerManager.getNextAuthSPEntryLevel(sAuthSPId, app_id);	// RH, 20150914, n
 				if (next_authsp != null) {
 					htSessionContext.remove("direct_authsp");	// No other direct_authsp's yet
 					htSessionContext.put("forced_authsp", next_authsp);
+					// RH, 20150914, sn
+					if ( next_authsp_entry_level != null ) {
+						// Set tgt authsp level back so in case of falure of next_authsp authentication the remaining level will be low
+						htSessionContext.put("forced_level", next_authsp_entry_level);
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Setting forced_level htSessionContext: " + htSessionContext);
+					}
+					// RH, 20150914, en
 					
 					// Set allowed_user_authsps in the event of direct_authsp, 
 					// would 'normally' be set by  ApplicationBrowserHandler.handleLogin2(.....).getAuthsps(....)
 					HashMap htUserAuthsps = getUserAuthsps(sUid);
 					_systemLogger.log(Level.INFO, MODULE, sMethod, "next_authsp="+next_authsp+" allowed="+htUserAuthsps);
 					htSessionContext.put("allowed_user_authsps", htUserAuthsps);
+					// RH, 20150914, sn
+				} else {
+					String forced_level = (String)htSessionContext.get("forced_level");
+					if ( forced_level != null) {	// found forced_level but no next_authsp, so remove "old" forced_level
+						htSessionContext.remove("forced_level");
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Found forced_level in htSessionContext but no next_authsp, removed forced_level, htSessionContext:" + htSessionContext);
+					}
+					// RH, 20150914, en
 				}
 				// Store now, issueTGTandRedirect() will read it again
 				//_sessionManager.updateSession(sRid, htSessionContext);

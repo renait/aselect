@@ -327,6 +327,8 @@ public class AuthSPBrowserHandler extends AbstractBrowserRequestHandler
 			String app_id = (String) _htSessionContext.get("app_id");
 			String next_authsp = null;
 			String next_authsp_server_id = null;
+			String next_authsp_entry_level = null;
+			if (sResultCode.equals(Errors.ERROR_ASELECT_SUCCESS)) {
 			try {
 				// get authsps config and retrieve active resource from SAMAgent
 				String sResourceGroup = _configManager.getParam(authSPsection, "resourcegroup");
@@ -343,6 +345,14 @@ public class AuthSPBrowserHandler extends AbstractBrowserRequestHandler
 					_systemLogger.log(Level.FINER, _sModule, sMethod, "No next_authsp_server_id defined for app_id: "+app_id + ", using server_id from previous request");
 				}
 				// RH, 20150526, en				
+				// RH, 20150914, sn
+				try {
+					next_authsp_entry_level = _configManager.getParam(objAppl, "next_authsp_entry_level");
+				}
+				catch (ASelectConfigException ace) {
+					_systemLogger.log(Level.FINER, _sModule, sMethod, "No next_authsp_entry_level defined for app_id: "+app_id + ", continuing");
+				}
+				// RH, 20150914, en				
 				
 			}
 			catch (ASelectConfigException ace) {
@@ -351,8 +361,30 @@ public class AuthSPBrowserHandler extends AbstractBrowserRequestHandler
 			catch (ASelectSAMException ase) {
 				_systemLogger.log(Level.INFO, _sModule, sMethod, "No next_authsp defined for app_id: "+app_id+ ", continuing");
 			}
-
+			}
 			HandlerTools.setRequestorFriendlyCookie(_servletResponse, _htSessionContext, _systemLogger);  // 20130825
+			
+//			if (next_authsp != null ) {// RH, 20150914, o
+			// RH, 20150914, sn
+			if (sResultCode.equals(Errors.ERROR_ASELECT_SUCCESS) && next_authsp != null) {
+				
+				if ( next_authsp_entry_level != null) {
+					// Set tgt authsp level back so in case of falure of next_authsp authentication the remaining level will be low
+					_htSessionContext.put("forced_level", next_authsp_entry_level);
+					_sessionManager.setUpdateSession(_htSessionContext, _systemLogger);
+					_systemLogger.log(Level.FINEST, _sModule, sMethod, "Setting forced_level in  _htSessionContext: " + _htSessionContext);
+				}
+			} else {
+				String forced_level = (String)_htSessionContext.get("forced_level");
+				if ( forced_level != null) {	// found forced_level but no next_authsp, so remove "old" forced_level
+					_htSessionContext.remove("forced_level");
+					_sessionManager.setUpdateSession(_htSessionContext, _systemLogger);
+					_systemLogger.log(Level.FINEST, _sModule, sMethod, "Found forced_level in _htSessionContext but no next_authsp, removed forced_level, _htSessionContext:" + _htSessionContext);
+				}
+			}
+			// RH, 20150914, en				
+
+			
 			
 			// 20111020, Bauke: split redirection from issueTGTandRedirect, so next_authsp variant will also set the TGT
 			TGTIssuer tgtIssuer = new TGTIssuer(_sMyServerId);
@@ -363,7 +395,8 @@ public class AuthSPBrowserHandler extends AbstractBrowserRequestHandler
 			// Cookie was set on the 'servletResponse'
 
 			// If there is a next_authsp, "present" form to user (auto post) and do not set tgt 
-			if (next_authsp != null ) {
+//			if (next_authsp != null ) {
+			if (sResultCode.equals(Errors.ERROR_ASELECT_SUCCESS) && next_authsp != null ) {
 				_systemLogger.log(Level.INFO, _sModule, sMethod, "Found next_authsp: "+ next_authsp + " defined for app_id: "+app_id);
 				if (_servletResponse != null) {					// Direct user to next_authsp with form
 					String sNextauthspForm = _configManager.getHTMLForm("nextauthsp", _sUserLanguage, _sUserCountry);

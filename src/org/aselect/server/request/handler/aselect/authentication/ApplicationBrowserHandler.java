@@ -1211,7 +1211,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 							_htSessionContext.put("sub_level", iSubLevel);  // need not be saved
 						}
 						catch (ASelectException ae) {
-							_systemLogger.log(Level.FINER, _sModule, sMethod, "No min_level found for application: " + sAppId );
+							_systemLogger.log(Level.FINER, _sModule, sMethod, "No sub_level found for application: " + sAppId );
 						}
 						// RH, 20140424, en
 
