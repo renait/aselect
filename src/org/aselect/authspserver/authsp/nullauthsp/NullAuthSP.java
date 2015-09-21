@@ -92,8 +92,10 @@ package org.aselect.authspserver.authsp.nullauthsp;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.HashMap;
+import java.util.Properties;
 import java.util.logging.Level;
 
 import javax.servlet.ServletConfig;
@@ -132,6 +134,9 @@ public class NullAuthSP extends AbstractAuthSP
 	 */
 	private String _sAuthMode;
 	
+	// 20150909, Bauke: added form to allow the user to enter attributes
+	private boolean _bDataEntry = false;
+	
 	/**
 	 * Initialization of the Null AuthSP. <br>
 	 * <br>
@@ -159,7 +164,7 @@ public class NullAuthSP extends AbstractAuthSP
 	 * <br>
 	 * 
 	 * @param oServletConfig
-	 *            the o servlet config
+	 *            the servlet config
 	 * @throws ServletException
 	 *             the servlet exception
 	 * @see javax.servlet.Servlet#init(javax.servlet.ServletConfig)
@@ -196,8 +201,14 @@ public class NullAuthSP extends AbstractAuthSP
 			else
 				_sAuthMode = Errors.ERROR_NULL_SUCCESS;
 
+			_bDataEntry = sAuthMode.equalsIgnoreCase("data_entry");  // show the data entry form
+			if (_bDataEntry) {
+				Utils.loadTemplateFromFile(_systemLogger, _sWorkingDir, _sConfigID, "data_entry.html", null, _sFriendlyName, VERSION);
+				_systemLogger.log(Level.INFO, MODULE, sMethod, "Successfully loaded 'data_entry.html' template.");
+			}
+			
 			sbInfo = new StringBuffer("Successfully started: ").append(MODULE);
-			_systemLogger.log(Level.INFO, MODULE, sMethod, sbInfo.toString());
+			_systemLogger.log(Level.INFO, MODULE, sMethod, sbInfo.toString()+" authentication_mode="+sAuthMode);
 		}
 		catch (ASelectException ase) {
 			throw new ServletException(ase);
@@ -285,29 +296,17 @@ public class NullAuthSP extends AbstractAuthSP
 
 			String sRid = (String) htServiceRequest.get("rid");
 			String sAsUrl = (String) htServiceRequest.get("as_url");
-			String sUid = (String) htServiceRequest.get("uid");
 			String sAsId = (String) htServiceRequest.get("a-select-server");
+			String sUid = (String) htServiceRequest.get("uid");
 			String sSignature = (String) htServiceRequest.get("signature");
 
-			if ((sRid == null) || (sAsUrl == null) || (sUid == null) || (sAsId == null) || (sSignature == null)) {
-				_systemLogger.log(Level.FINE, MODULE, sMethod,
-						"Invalid request, at least one mandatory parameter is missing.");
+			if (sRid == null || sAsUrl == null || sUid == null || sAsId == null || sSignature == null) {
+				_systemLogger.log(Level.FINE, MODULE, sMethod, "Invalid request, at least one mandatory parameter is missing.");
 				throw new ASelectException(Errors.ERROR_NULL_INVALID_REQUEST);
 			}
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "GET begin { "+sMethod+": "+sQueryString);
 
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "NULL GET {" + servletRequest + " --> " + sMethod + ": "
-					+ sQueryString);
-
-			// 20120110, Bauke: no longer needed, done by convertCGIMessage()
-			//sAsUrl = URLDecoder.decode(sAsUrl, "UTF-8");
-			//sUid = URLDecoder.decode(sUid, "UTF-8");
-			//sSignature = URLDecoder.decode(sSignature, "UTF-8");
-
-			StringBuffer sbSignature = new StringBuffer(sRid);
-			sbSignature.append(sAsUrl);
-			sbSignature.append(sUid);
-			sbSignature.append(sAsId);
-
+			StringBuffer sbSignature = new StringBuffer(sRid).append(sAsUrl).append(sUid).append(sAsId);
 			// optional country and language code
 			if (sCountry != null) sbSignature.append(sCountry);
 			if (sLanguage != null) sbSignature.append(sLanguage);
@@ -315,7 +314,29 @@ public class NullAuthSP extends AbstractAuthSP
 			if (!_cryptoEngine.verifySignature(sAsId, sbSignature.toString(), sSignature)) {
 				throw new ASelectException(Errors.ERROR_NULL_INVALID_REQUEST);
 			}
+			
+			if (_bDataEntry) {
+				// Store data we will need later on
+				HashMap sessionContext = new HashMap();
+				sessionContext.put("rid", sRid);
+				sessionContext.put("as_url", sAsUrl);
+				sessionContext.put("a-select-server", sAsId);
+				sessionContext.put("uid", sUid);
+				_sessionManager.updateSession(sRid, sessionContext);
 
+				// Display the data entry form, result will be handled in the POST
+				// Sign the rid for the form
+				String sFormSignature = _cryptoEngine.generateSignature(sRid);
+				if (sFormSignature == null) {
+					_systemLogger.log(Level.WARNING, MODULE, sMethod, "Failed to generate signature");
+					throw new ASelectException(Errors.ERROR_NULL_COULD_NOT_AUTHENTICATE_USER);
+				}
+				//sFormSignature = URLEncoder.encode(sFormSignature, "UTF-8");
+				htServiceRequest.put("signature", sFormSignature);  // replaces server signature
+				showDataEntryForm(pwOut, ""/*no error*/, htServiceRequest);
+				return;
+			}
+			
 			if (_sAuthMode.equals(Errors.ERROR_NULL_SUCCESS)) {
 				_authenticationLogger.log(new Object[] {
 					MODULE, sUid, servletRequest.getRemoteAddr(), sAsId, "granted"
@@ -326,20 +347,85 @@ public class NullAuthSP extends AbstractAuthSP
 					MODULE, sUid, servletRequest.getRemoteAddr(), sAsId, "denied", _sAuthMode
 				});
 			}
-			handleResult(htServiceRequest, servletResponse, _sAuthMode, sLanguage);
+			handleResult(htServiceRequest, servletResponse, null, _sAuthMode, sLanguage, pwOut);
 		}
 		catch (ASelectException e) {
-			handleResult(htServiceRequest, servletResponse, e.getMessage(), sLanguage);
+			handleResult(htServiceRequest, servletResponse, null, e.getMessage(), sLanguage, pwOut);
 		}
 		catch (Exception e) {
 			_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Internal error", e);
-			handleResult(htServiceRequest, servletResponse, Errors.ERROR_NULL_COULD_NOT_AUTHENTICATE_USER, sLanguage);
+			handleResult(htServiceRequest, servletResponse, null, Errors.ERROR_NULL_COULD_NOT_AUTHENTICATE_USER, sLanguage, pwOut);
 		}
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "} NULL GET");
+		finally {
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "} GET end");			
+		}
+	}
+	/**
+	 * Show an HTML authentication page. <br>
+	 * <br>
+	 * <b>Description:</b> <br>
+	 * Shows a authentication form with, if applicable, an error or warning message.
+	 * 
+	 * @param pwOut
+	 *            the <code>PrintWriter</code> that is the target for displaying the html page.
+	 * @param sError
+	 *            The error that should be shown in the page. Can be null (no errors)
+	 * @param sErrorMessage
+	 *            The error message that should be shown in the page.
+	 * @param htServiceRequest
+	 *            The request parameters.
+	 * @throws ASelectException 
+	 */
+	private void showDataEntryForm(PrintWriter pwOut, String sError, HashMap htServiceRequest)
+	throws ASelectException
+	{
+		String sMethod = "showDataEntryForm";
+
+		String sRid = (String) htServiceRequest.get("rid");
+		String sMyUrl = (String) htServiceRequest.get("my_url");
+		String sSignature = (String) htServiceRequest.get("signature");
+		String sLanguage = (String)htServiceRequest.get("language");  // optional language code
+		String sDataEntryForm = Utils.loadTemplateFromFile(_systemLogger, _sWorkingDir, _sConfigID,
+				"data_entry.html", sLanguage, _sFriendlyName, VERSION);
+		
+		String sErrorMessage = null;
+		if (Utils.hasValue(sError)) {  // translate error code
+			Properties propErrorMessages = Utils.loadPropertiesFromFile(_systemLogger, _sWorkingDir, _sConfigID, "errors.conf", sLanguage);
+			sErrorMessage = _configManager.getErrorMessage(MODULE, sError, propErrorMessages);
+		}
+		
+		// NOTE: friendly name is taken from the request, not the value produced by init()
+		String sFriendlyName = (String) htServiceRequest.get("requestorfriendlyname");
+		if (sFriendlyName != null) {
+			try {
+				sDataEntryForm = Utils.replaceString(sDataEntryForm, "[requestor_friendly_name]", URLDecoder.decode(sFriendlyName, "UTF-8"));
+			}
+			catch (UnsupportedEncodingException e) {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "UTF-8 encoding not supported, using undecoded", e);
+				sDataEntryForm = Utils.replaceString(sDataEntryForm, "[requestor_friendly_name]", sFriendlyName);
+			}
+		}
+
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "error_code="+sError+" message="+sErrorMessage);
+		sDataEntryForm = Utils.replaceString(sDataEntryForm, "[rid]", sRid);
+		sDataEntryForm = Utils.replaceString(sDataEntryForm, "[signature]", sSignature);
+		sDataEntryForm = Utils.replaceString(sDataEntryForm, "[authsp_server]", sMyUrl);
+		if (sError != null) {
+			sDataEntryForm = Utils.replaceString(sDataEntryForm, "[error_code]", sError);
+		}
+		sDataEntryForm = Utils.replaceString(sDataEntryForm, "[error_message]", sErrorMessage);
+		
+		// Bauke 20110721: Extract if_cond=... from the application URL
+		String sSpecials = Utils.getAselectSpecials(htServiceRequest, true/*decode too*/, _systemLogger);
+		sDataEntryForm = Utils.handleAllConditionals(sDataEntryForm, Utils.hasValue(sErrorMessage), sSpecials, _systemLogger);
+
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "Show Form: "+"data_entry.html");
+		pwOut.println(sDataEntryForm);
 	}
 
 	/**
-	 * Private entry point of the Null AuthSP. This will not be used, so always an error page will be shown. <br>
+	 * POST entry point of the Null AuthSP.
+	 * Used to process data entry from the user.<br>
 	 * <br>
 	 * 
 	 * @param servletRequest
@@ -358,31 +444,49 @@ public class NullAuthSP extends AbstractAuthSP
 	throws ServletException, java.io.IOException
 	{
 		String sMethod = "doPost";
+		String sResult = Errors.ERROR_NULL_INVALID_REQUEST;
 
 		PrintWriter pwOut = Utils.prepareForHtmlOutput(servletRequest, servletResponse);
 
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "NULL POST {" + servletRequest + ", qry="
-				+ servletRequest.getQueryString());
-		String sLanguage = servletRequest.getParameter("language");
-		if (sLanguage == null || sLanguage.trim().length() < 1) {
-			sLanguage = null;
-		}
-		String sRid = (String)servletRequest.getParameter("rid");  // is URLdecoded
-		String sAsUrl = (String)servletRequest.getParameter("as_url");
-		String sAsId = (String)servletRequest.getParameter("a-select-server");
-		HashMap serviceRequest = new HashMap();
-		if (sRid != null) serviceRequest.put("rid", sRid);
-		if (sAsUrl != null) serviceRequest.put("as_url", sAsUrl);
-		if (sAsId != null) serviceRequest.put("a-select-server", sAsId);
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "POST begin { "+sMethod+", qry=" + servletRequest.getQueryString());		
+		String sRid = (String)servletRequest.getParameter("rid");
+		String sSignature = (String)servletRequest.getParameter("signature");
 
 		try {
-			handleResult(serviceRequest, servletResponse, Errors.ERROR_NULL_INVALID_REQUEST, sLanguage);
+			// Get the session
+			HashMap sessionContext = _sessionManager.getSessionContext(sRid);
+			HashMap<String,String> hmAttributes = new HashMap<String, String>();
+			String sLanguage = (String)sessionContext.get("language");
+
+			if (!_cryptoEngine.verifyMySignature(sRid, sSignature)) {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Invalid signature from POST form");
+			}
+			else {
+				for (int i=1; ; i++) {
+					String sName = "attr_name"+i;
+					String sValue = "attr_value"+i;
+					String sNameValue = (String)servletRequest.getParameter(sName);
+					String sValueValue = (String)servletRequest.getParameter(sValue);
+					if (!Utils.hasValue(sNameValue) || !Utils.hasValue(sValueValue))
+						break;
+					hmAttributes.put(sNameValue, sValueValue);
+				}
+				_systemLogger.log(Level.FINE, MODULE, sMethod, "Attributes="+hmAttributes);
+				sResult = Errors.ERROR_NULL_SUCCESS;
+			}
+			handleResult(sessionContext, servletResponse, hmAttributes, sResult, sLanguage, pwOut);
 		}
 		catch (Exception e) {
 			_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Internal error", e);
 			throw new ServletException(Errors.ERROR_NULL_INTERNAL);
 		}
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "} NULL POST");
+		finally {
+			if (pwOut != null) {
+				pwOut.close();
+				pwOut = null;
+			}
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "} POST end");
+		}
 	}
 
 	/**
@@ -412,12 +516,11 @@ public class NullAuthSP extends AbstractAuthSP
 	 * @throws IOException
 	 *             Signals that an I/O exception has occurred.
 	 */
-	private void handleResult(HashMap servletRequest, HttpServletResponse servletResponse,
-			String sResultCode, String sLanguage)
+	private void handleResult(HashMap servletRequest, HttpServletResponse servletResponse, HashMap<String,String> hmAttributes,
+				String sResultCode, String sLanguage, PrintWriter pwOut)
 	throws IOException
 	{
 		String sMethod = "handleResult";
-		PrintWriter pwOut = null;
 
 		try {
 			if (sResultCode.equals(Errors.ERROR_NULL_SUCCESS)) {
@@ -425,10 +528,16 @@ public class NullAuthSP extends AbstractAuthSP
 				String sAsUrl = (String)servletRequest.get("as_url");
 				String sAsId = (String)servletRequest.get("a-select-server");
 				if (sRid != null && sAsUrl != null && sAsId != null) {
+					String sSerializedAttrs = null;
+					if (hmAttributes != null) {  // pass the attributes too
+						sSerializedAttrs = Utils.serializeAttributes(hmAttributes);	// creates base64
+					}
 					StringBuffer sbSignature = new StringBuffer(sRid);
 					sbSignature.append(sAsUrl);
 					sbSignature.append(sResultCode);
 					sbSignature.append(sAsId);
+					if (sSerializedAttrs != null)
+						sbSignature.append(sSerializedAttrs);
 
 					String sSignature = _cryptoEngine.generateSignature(sbSignature.toString());
 					sSignature = URLEncoder.encode(sSignature, "UTF-8");
@@ -436,32 +545,26 @@ public class NullAuthSP extends AbstractAuthSP
 					sbRedirect.append("&rid=").append(sRid);
 					sbRedirect.append("&result_code=").append(sResultCode);
 					sbRedirect.append("&a-select-server=").append(sAsId);
+					sbRedirect.append("&ser_attrs=").append(sSerializedAttrs);
 					sbRedirect.append("&signature=").append(sSignature);
 					_systemLogger.log(Level.INFO, MODULE, sMethod, "REDIR " + sbRedirect);
 					servletResponse.sendRedirect(sbRedirect.toString());
 					return;
 				}
 			}
-			pwOut = servletResponse.getWriter();
 			getTemplateAndShowErrorPage(pwOut, sResultCode, sResultCode, sLanguage, VERSION);
-			
 		}
-		catch (ASelectException eAS) // could not generate signature
-		{
+		catch (ASelectException eAS) {  // could not generate signature
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not generate NULL AuthSP signature", eAS);
 			try {
-				pwOut = servletResponse.getWriter();
 				getTemplateAndShowErrorPage(pwOut, sResultCode, Errors.ERROR_NULL_COULD_NOT_AUTHENTICATE_USER, sLanguage, VERSION);
 			}
 			catch (ASelectException e) {
 			}
-
 		}
-		catch (UnsupportedEncodingException eUE) // could not encode signature
-		{
+		catch (UnsupportedEncodingException eUE) {  // could not encode signature
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not encode NULL AuthSP signature", eUE);
 			try {
-				pwOut = servletResponse.getWriter();
 				getTemplateAndShowErrorPage(pwOut, sResultCode, Errors.ERROR_NULL_COULD_NOT_AUTHENTICATE_USER, sLanguage, VERSION);
 			}
 			catch (ASelectException e) {
@@ -470,10 +573,6 @@ public class NullAuthSP extends AbstractAuthSP
 		catch (IOException eIO) { // Could not write output
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, "IO error while handling authentication result", eIO);
 			throw eIO;
-		}
-		finally {
-			if (pwOut != null)
-				pwOut.close();
 		}
 	}
 }
