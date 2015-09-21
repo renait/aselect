@@ -277,7 +277,7 @@ public class AuthSPBrowserHandler extends AbstractBrowserRequestHandler
 				handleInvalidPhone(_servletResponse, sRid, _htSessionContext);
 				return;
 			}
-			
+		
 			String sIssuer = (String) _htSessionContext.get("sp_issuer");
 			if (sIssuer == null && !sResultCode.equals(Errors.ERROR_ASELECT_SUCCESS)) {
 				// Session can be killed. The user could not be authenticated.
@@ -293,9 +293,18 @@ public class AuthSPBrowserHandler extends AbstractBrowserRequestHandler
 				_sessionManager.setUpdateSession(_htSessionContext, _systemLogger);  // 20120401, Bauke: postpone session action
 			}
 
+			// Additional attributes can be provided by the AuthSP
+			HashMap htAdditional = new HashMap();
+			
+			// The NullAuthSP (so far the only one) can pass a set of attributes
+			String sSerAttrs = (String)htAuthspResponse.get("ser_attrs");
+			if (Utils.hasValue(sSerAttrs)) {  // inject the attributes
+				htAdditional = org.aselect.server.utils.Utils.deserializeAttributes(sSerAttrs);
+				_systemLogger.log(Level.FINE, MODULE, sMethod, "Attributes="+htAdditional);
+			}
+			
 			// Some AuthSP's will return the authenticated userid as well (e.g. DigiD)
 			// If they do, we'll have to copy it to our own Context
-			HashMap htAdditional = new HashMap();
 			String sUid = (String) htAuthspResponse.get("uid");
 			if (sUid != null) { // For all AuthSP's that can set the user id
 				// (and thereby replace the 'siam_user' value)

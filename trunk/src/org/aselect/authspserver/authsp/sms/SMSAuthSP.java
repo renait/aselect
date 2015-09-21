@@ -280,14 +280,14 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 		try {
 			String sQueryString = servletRequest.getQueryString();
 			HashMap htServiceRequest = Utils.convertCGIMessage(sQueryString, false);
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "GET htServiceRequest=" + htServiceRequest);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "GET  { htServiceRequest=" + htServiceRequest);
 			sLanguage = (String) htServiceRequest.get("language");  // optional language code
 			if (sLanguage == null || sLanguage.trim().length() < 1)
 				sLanguage = null;
 			String sCountry = (String) htServiceRequest.get("country");  // optional country code
 			if (sCountry == null || sCountry.trim().length() < 1)
 				sCountry = null;
-			
+
 			pwOut = Utils.prepareForHtmlOutput(servletRequest, servletResponse);
 
 			// check if the request is an API call
@@ -359,6 +359,7 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 				}
 				if (!bSessionPresent) {	// We expect there is no session yet
 					sessionContext = new HashMap();
+					sessionContext.put("rid", sRid);
 					sessionContext.put("sms_formtoken", formtoken);
 					sessionContext.put("sms_retry_counter", iRetryCounter);  // NOTE: stored as an integer
 					sessionContext.put("timestamp", sTimeStamp);  // 20150831: pass through the session, so we don't need to change the challenge form
@@ -430,6 +431,7 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 			handleResult(servletRequest, servletResponse, pwOut, Errors.ERROR_SMS_COULD_NOT_AUTHENTICATE_USER, sLanguage, failureHandling);
 		}
 		finally {
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "} GET end");
 			if (pwOut != null) {
 				pwOut.close();
 				pwOut = null;
@@ -483,7 +485,7 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 		String sLanguage = null;
 		String failureHandling = _sFailureHandling;	// Initially we use default from config, this might change if we suspect parameter tampering
 
-		_systemLogger.log(Level.FINEST, MODULE, sMethod, "POST htServiceRequest=" + servletRequest);
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "POST begin { servletRequest=" + servletRequest);
 		try {
 			sLanguage = servletRequest.getParameter("language");  // optional language code
 			if (sLanguage == null || sLanguage.trim().length() < 1)
@@ -670,6 +672,7 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 				pwOut.close();
 				pwOut = null;
 			}
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "} POST end");
 		}
 	}
 

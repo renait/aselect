@@ -305,16 +305,9 @@ public class NullAuthSP extends AbstractAuthSPProtocolHandler implements IAuthSP
 				sLanguage = null;
 			}
 
-			StringBuffer sbSignature = new StringBuffer(sRid);
-			sbSignature.append(sAsUrl);
-			sbSignature.append(sUserId);
-			sbSignature.append(_sServerId);
-
-			if (sCountry != null)
-				sbSignature.append(sCountry);
-
-			if (sLanguage != null)
-				sbSignature.append(sLanguage);
+			StringBuffer sbSignature = new StringBuffer(sRid).append(sAsUrl).append(sUserId).append(_sServerId);
+			if (sCountry != null) sbSignature.append(sCountry);
+			if (sLanguage != null) sbSignature.append(sLanguage);
 
 			String sSignature = _cryptoEngine.generateSignature(_sAuthSP, sbSignature.toString());
 			if (sSignature == null) {
@@ -414,16 +407,16 @@ public class NullAuthSP extends AbstractAuthSPProtocolHandler implements IAuthSP
 			String sAsUrl = (String) htAuthspResponse.get("my_url");
 			String sResultCode = (String) htAuthspResponse.get("result_code");
 			String sAsId = (String) htAuthspResponse.get("a-select-server");
+			String sSerAttrs = (String) htAuthspResponse.get("ser_attrs");
 			String sSignature = (String) htAuthspResponse.get("signature");
-			if ((sRid == null) || (sResultCode == null) || (sSignature == null) || (sAsId == null)) {
+			if (sRid == null || sResultCode == null || sSignature == null || sAsId == null) {
 				_systemLogger.log(Level.WARNING, MODULE, sMethod,
 						"Incorrect AuthSP response, missing one or more required parameters.");
 				throw new ASelectAuthSPException(Errors.ERROR_ASELECT_AUTHSP_INVALID_RESPONSE);
 			}
 
 			StringBuffer sbAsUrl = new StringBuffer(sAsUrl);
-			sbAsUrl.append("?authsp=");
-			sbAsUrl.append(_sAuthSP);
+			sbAsUrl.append("?authsp=").append(_sAuthSP);
 			sAsUrl = sbAsUrl.toString();
 
 			sSignature = URLDecoder.decode(sSignature, "UTF-8");
@@ -431,18 +424,20 @@ public class NullAuthSP extends AbstractAuthSPProtocolHandler implements IAuthSP
 			sbSignature.append(sAsUrl);
 			sbSignature.append(sResultCode);
 			sbSignature.append(sAsId);
+			if (sSerAttrs != null)
+				sbSignature.append(sSerAttrs);
 
 			if (!_cryptoEngine.verifySignature(_sAuthSP, sbSignature.toString(), sSignature)) {
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Invalid signature in response from AuthSP:"
 						+ _sAuthSP);
 				throw new ASelectAuthSPException(Errors.ERROR_ASELECT_AUTHSP_INVALID_RESPONSE);
 			}
-
+			
 			// 20120403, Bauke: session is available as a parameter
 			sUserId = (String) htSessionContext.get("user_id");
 			sAppID = (String) htSessionContext.get("app_id");
 
-			// must be retrieved from the session, because it can be an remote organtization
+			// must be retrieved from the session, because it can be an remote organization
 			sOrganization = (String) htSessionContext.get("organization");
 
 			sbMessage = new StringBuffer(sOrganization);
@@ -468,9 +463,12 @@ public class NullAuthSP extends AbstractAuthSPProtocolHandler implements IAuthSP
 			});
 
 			htResponse.put("rid", sRid);
-			htResponse.put("authsp_type", "null");
+			htResponse.put("authsp_type", "nullap");
 			sLogResultCode = Errors.ERROR_ASELECT_SUCCESS;
-			htResponse.put("result", sLogResultCode);
+			htResponse.put("result", sLogResultCode);			
+			if (sSerAttrs != null) {
+				htResponse.put("ser_attrs", sSerAttrs);			
+			}
 		}
 		catch (ASelectAuthSPException e) {
 			sLogResultCode = e.getMessage();
