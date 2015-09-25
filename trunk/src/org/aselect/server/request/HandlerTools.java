@@ -18,10 +18,14 @@ import java.io.StringReader;
 import java.io.UnsupportedEncodingException;
 import java.security.GeneralSecurityException;
 import java.security.KeyStore;
+import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.Vector;
 import java.util.logging.Level;
 
 import javax.net.ssl.KeyManagerFactory;
@@ -361,10 +365,7 @@ public class HandlerTools
 		_oBuilderFactory = org.opensaml.xml.Configuration.getBuilderFactory();
 
 		systemLogger.log(Level.INFO, MODULE, sMethod, "Issuer="+sIssuer+" Subject="+sSubject);
-		XMLObjectBuilder stringBuilder = _oBuilderFactory.getBuilder(XSString.TYPE_NAME);
 
-		SAMLObjectBuilder<AttributeStatement> attributeStatementBuilder = (SAMLObjectBuilder<AttributeStatement>) _oBuilderFactory
-				.getBuilder(AttributeStatement.DEFAULT_ELEMENT_NAME);
 
 		SAMLObjectBuilder<Assertion> assertionBuilder = (SAMLObjectBuilder<Assertion>) _oBuilderFactory
 				.getBuilder(Assertion.DEFAULT_ELEMENT_NAME);
@@ -399,38 +400,19 @@ public class HandlerTools
 			assertion.setID(SamlTools.generateIdentifier(systemLogger, MODULE));
 		}
 		catch (ASelectException ase) {
-			systemLogger.log(Level.WARNING, MODULE, sMethod, "failed to build SAML response", ase);
+			systemLogger.log(Level.WARNING, MODULE, sMethod, "Failed to generate Identifier for the Assertion", ase);
 		}
 
-		AttributeStatement attributeStatement = attributeStatementBuilder.buildObject();
+		
+		if ( parms != null ) {
 
-		SAMLObjectBuilder<Attribute> attributeBuilder = (SAMLObjectBuilder<Attribute>) _oBuilderFactory
-				.getBuilder(Attribute.DEFAULT_ELEMENT_NAME);
+			AttributeStatement attributeStatement = createAttributeStatement(parms, systemLogger, _oBuilderFactory);
+			if (attributeStatement != null)
+				assertion.getAttributeStatements().add(attributeStatement);
 
-		Iterator itr = parms.keySet().iterator();
-		systemLogger.log(Level.INFO, MODULE, sMethod, "Start iterating through parameters");
-		while (itr.hasNext()) {
-			String parmName = (String) itr.next();
-
-			// Bauke, 20081202 replaced, cannot convert parms.get() to a String[]
-			Object oValue = parms.get(parmName);
-			if (!(oValue instanceof String)) {
-				systemLogger.log(Level.INFO, MODULE, sMethod, "Skip, not a String: "+parmName);
-				continue;
-			}
-			String sValue = (String)parms.get(parmName);
-			systemLogger.log(Level.FINEST, MODULE, sMethod, "parm:" + parmName + " has value:" + sValue);
-			Attribute attribute = attributeBuilder.buildObject();
-			attribute.setName(parmName);
-			XSString attributeValue = (XSString) stringBuilder.buildObject(AttributeValue.DEFAULT_ELEMENT_NAME,
-					XSString.TYPE_NAME);
-			attributeValue.setValue(sValue);
-			attribute.getAttributeValues().add(attributeValue);
-
-			attributeStatement.getAttributes().add(attribute);
 		}
+		
 		systemLogger.log(Level.FINER, MODULE, sMethod, "Finalizing the assertion building, sign="+sign);
-		assertion.getAttributeStatements().add(attributeStatement);
 		assertion = marshallAssertion(assertion, false);
 		if (sign) {
 			systemLogger.log(Level.FINER, MODULE, sMethod, "Sign the final Assertion >======");
@@ -523,7 +505,7 @@ public class HandlerTools
 			assertion.setID(SamlTools.generateIdentifier(systemLogger, MODULE));
 		}
 		catch (ASelectException ase) {
-			systemLogger.log(Level.WARNING, MODULE, sMethod, "failed to build SAML response", ase);
+			systemLogger.log(Level.WARNING, MODULE, sMethod, "Failed to generate Identifier for the Assertion", ase);
 		}
 
 		// ---- AuthenticationContext
@@ -561,33 +543,11 @@ public class HandlerTools
 		
 		if ( parms != null && !parms.isEmpty() ) {	// only add attributeStatement if there are any attributes
 			
-			AttributeStatement attributeStatement = attributeStatementBuilder.buildObject();
-	
-			SAMLObjectBuilder<Attribute> attributeBuilder = (SAMLObjectBuilder<Attribute>) _oBuilderFactory
-					.getBuilder(Attribute.DEFAULT_ELEMENT_NAME);
-	
-			Iterator itr = parms.keySet().iterator();
-			systemLogger.log(Level.INFO, MODULE, sMethod, "Start iterating through parameters");
-			while (itr.hasNext()) {
-				String parmName = (String) itr.next();
-	
-				Object oValue = parms.get(parmName);
-				if (!(oValue instanceof String)) {
-					systemLogger.log(Level.INFO, MODULE, sMethod, "Skip, not a String: "+parmName);
-					continue;
-				}
-				String sValue = (String)parms.get(parmName);
-				systemLogger.log(Level.FINEST, MODULE, sMethod, "parm:" + parmName + " has value:" + sValue);
-				Attribute attribute = attributeBuilder.buildObject();
-				attribute.setName(parmName);
-				XSString attributeValue = (XSString) stringBuilder.buildObject(AttributeValue.DEFAULT_ELEMENT_NAME,
-						XSString.TYPE_NAME);
-				attributeValue.setValue(sValue);
-				attribute.getAttributeValues().add(attributeValue);
-	
-				attributeStatement.getAttributes().add(attribute);
-			}
-			assertion.getAttributeStatements().add(attributeStatement);
+
+			AttributeStatement attributeStatement = createAttributeStatement(parms, systemLogger, _oBuilderFactory);
+
+			if (attributeStatement != null)
+				assertion.getAttributeStatements().add(attributeStatement);
 		}
 
 		systemLogger.log(Level.FINER, MODULE, sMethod, "Finalizing the assertion building, sign="+sign);
@@ -603,6 +563,71 @@ public class HandlerTools
 	}
 
 
+	
+	/**
+	 * @param parms
+	 * @param systemLogger
+	 * @param _oBuilderFactory
+	 * @return
+	 * 
+	 * all parameters MUST not be null
+	 * parameter parms MAY be empty, if if multivalued values are used the MUST contain object elements not simple types
+	 */
+	public static AttributeStatement createAttributeStatement(Map parms, ASelectSystemLogger systemLogger, 
+			XMLObjectBuilderFactory _oBuilderFactory)
+	{
+		String sMethod = "createAttributeStatement";
+
+		systemLogger.log(Level.FINEST, MODULE, sMethod, "Building statement with parmameters:" + parms);
+
+		SAMLObjectBuilder<AttributeStatement> attributeStatementBuilder = (SAMLObjectBuilder<AttributeStatement>) _oBuilderFactory
+				.getBuilder(AttributeStatement.DEFAULT_ELEMENT_NAME);
+
+
+		SAMLObjectBuilder<Attribute> attributeBuilder = (SAMLObjectBuilder<Attribute>) _oBuilderFactory
+				.getBuilder(Attribute.DEFAULT_ELEMENT_NAME);
+
+		XMLObjectBuilder stringBuilder = _oBuilderFactory.getBuilder(XSString.TYPE_NAME);
+
+		AttributeStatement attributeStatement = attributeStatementBuilder.buildObject();
+
+		
+		Iterator itr = parms.keySet().iterator();
+		systemLogger.log(Level.FINEST, MODULE, sMethod, "Starting iterating through parameters with keys: " + parms.keySet());
+		while (itr.hasNext()) {
+			String parmName = (String) itr.next();
+
+			Object oValue = parms.get(parmName);
+			systemLogger.log(Level.FINEST, MODULE, sMethod, "Found value: " + oValue);
+			Attribute attribute = attributeBuilder.buildObject();
+			attribute.setName(parmName);
+
+			XSString attributeValue = null;
+
+			if ( oValue != null && oValue instanceof Iterable) {
+				Iterator enumValues = ((Iterable) oValue).iterator();
+				while (enumValues.hasNext()) {
+					attributeValue = (XSString) stringBuilder.buildObject(AttributeValue.DEFAULT_ELEMENT_NAME,
+							XSString.TYPE_NAME);
+					attributeValue.setValue("" + enumValues.next());	// cast to String
+					attribute.getAttributeValues().add(attributeValue);
+				}
+			}
+			else {
+				attributeValue = (XSString) stringBuilder.buildObject(AttributeValue.DEFAULT_ELEMENT_NAME,
+						XSString.TYPE_NAME);
+				attributeValue.setValue("" + oValue);	// cast to String
+				attribute.getAttributeValues().add(attributeValue);
+			}
+
+			attributeStatement.getAttributes().add(attribute);
+		}
+		systemLogger.log(Level.FINEST, MODULE, sMethod, "Finished iterating through parameters");
+		return attributeStatement;
+	}
+
+
+	
 /**
  * @param ass
  *             the assertion
