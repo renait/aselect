@@ -78,7 +78,9 @@ package org.aselect.server.attributes.requestors.jndi;
 
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Hashtable;
+import java.util.Set;
 import java.util.Vector;
 import java.util.logging.Level;
 
@@ -656,6 +658,24 @@ public class JNDIAttributeRequestor extends GenericAttributeRequestor
 									//_systemLogger.log(Level.FINEST, MODULE, sMethod, sAttributeName+" multi" + iCount + "=" + oValue);
 									vMultiValues.add(oAttribute.get(iCount));
 								}
+								// RH, 20150922, sn
+								if (bAllowresultsetaccumulation && hAttrResponse.containsKey(sAttributeName)) {
+										Object v = hAttrResponse.get(sAttributeName);
+										if ( v instanceof Vector) {	// there were already multiple values
+											// we don't want duplicates
+											// Test how and if this works when vMultiValues contains different types
+											Set<Object> set = new HashSet<Object>();
+											set.addAll((Vector)v);
+											set.addAll((Vector)vMultiValues);
+											_systemLogger.log(Level.FINEST, MODULE, sMethod, "Added multiple attributes to multivalued attribute. Set is now:  "+set.toArray());
+											vMultiValues.clear();
+											vMultiValues.addAll(set);
+										} else {
+											vMultiValues.add(v);	// add the old attribute
+											_systemLogger.log(Level.FINEST, MODULE, sMethod, "Added multiple attributes to single value attribute. Set is now:  "+vMultiValues.toArray());
+										}
+								}
+								// RH, 20150922, en
 								hAttrResponse.put(sAttributeName, vMultiValues);
 							}
 						}
@@ -664,8 +684,26 @@ public class JNDIAttributeRequestor extends GenericAttributeRequestor
 							if (sAttributeValue == null)
 								sAttributeValue = "";
 							//_systemLogger.log(Level.FINEST, MODULE, sMethod, sAttributeName+" single=" + sAttributeValue);
-							if (hAttrResponse != null)
-								hAttrResponse.put(sAttributeName, sAttributeValue);
+//							if (hAttrResponse != null) //	RH, 20150922, o
+//								//	RH, 20150922, sn
+								if (hAttrResponse != null && bAllowresultsetaccumulation && hAttrResponse.containsKey(sAttributeName)) {
+									Object v = hAttrResponse.get(sAttributeName);
+									Vector<Object> vMultiValues = new Vector<Object>();
+									Set<Object> set = new HashSet<Object>();
+									if ( v instanceof Vector) {	// there were already multiple values
+										// we don't want duplicates
+										// Test how and if this works when vMultiValues contains different types
+										set.addAll((Vector)v);
+									} else {
+										set.add(v);
+									}
+									set.add(sAttributeValue);
+									_systemLogger.log(Level.FINEST, MODULE, sMethod, "Added attribute(s) to single value attribute. Set is now:  "+set.toArray());
+									vMultiValues.addAll(set);
+									hAttrResponse.put(sAttributeName, vMultiValues);
+								} else	// the old way
+								//	RH, 20150922, en
+									hAttrResponse.put(sAttributeName, sAttributeValue);
 							
 							// Check Organization ID or Name (only for single valued attributes)
 							if (_sOrgDN != null && _sOrgName != null) {

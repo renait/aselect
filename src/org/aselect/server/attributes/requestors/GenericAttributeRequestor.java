@@ -72,6 +72,7 @@ public abstract class GenericAttributeRequestor implements IAttributeRequestor
 	protected String _sUseKey = null;
 	protected boolean _bFromTgt = false;
 	protected int _iGathererVersion = -1;
+	protected boolean bAllowresultsetaccumulation = false;	// RH, 20150922, n	// allows for multiple search results to map onto single multi valued attribute
 
 	/**
 	 * The default constructor. <br>
@@ -112,8 +113,13 @@ public abstract class GenericAttributeRequestor implements IAttributeRequestor
 				_sUseKey = "uid";
 			_bFromTgt = true;
 		}
+		// RH, 20150922, sn
+		String _sAllowresultsetaccumulation = ASelectConfigManager.getSimpleParam(oConfig, "allow_resultset_accumulation", false);
+		bAllowresultsetaccumulation = Boolean.parseBoolean(_sAllowresultsetaccumulation);
+		// RH, 20150922, en
 		_iGathererVersion = AttributeGatherer.getHandle().getGathererVersion();
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "Requestor id="+sID+" version="+_iGathererVersion+" use_key="+_sUseKey+" tgt="+_bFromTgt);
+//		_systemLogger.log(Level.INFO, MODULE, sMethod, "Requestor id="+sID+" version="+_iGathererVersion+" use_key="+_sUseKey+" tgt="+_bFromTgt);
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "Requestor id="+sID+" version="+_iGathererVersion+" use_key="+_sUseKey+" tgt="+_bFromTgt + " allow_resultset_accumulation=" + bAllowresultsetaccumulation);
 }
 	
 	/**
