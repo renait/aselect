@@ -50,8 +50,6 @@ import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.xml.sax.InputSource;
 
-import com.sun.org.apache.bcel.internal.generic.RETURN;
-
 //
 //
 public abstract class Saml20_BaseHandler extends ProtoRequestHandler

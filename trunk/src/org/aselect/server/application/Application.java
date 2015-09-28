@@ -116,6 +116,10 @@ public class Application
 	// Optional application specific AttributeConsumerServiveIndex for SAML AuthnRequest
 	private String _sForcedAttrConsServIndex = null;	// RH, 20140505, n
 
+	// Optional application specific for pushing 'attributes' parameter back on upgrade_tgt request
+	private boolean _bPushAttributes = false;	// backwards compatibility
+
+	
 	/**
 	 * Constructor which contains the default parameters for an Application <br>
 	 * <br>
@@ -734,6 +738,16 @@ public class Application
 	public synchronized void setAssertionSubjectNameIDNameQualifier(String assertionSubjectNameIDNameQualifier)
 	{
 		_AssertionSubjectNameIDNameQualifier = assertionSubjectNameIDNameQualifier;
+	}
+
+	public synchronized boolean isPushAttributes()
+	{
+		return _bPushAttributes;
+	}
+
+	public synchronized void setPushAttributes(boolean _bPushAttributes)
+	{
+		this._bPushAttributes = _bPushAttributes;
 	}
 
 }

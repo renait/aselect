@@ -25,10 +25,12 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.aselect.server.application.Application;
 import org.aselect.server.application.ApplicationManager;
+import org.aselect.server.request.HandlerTools;
 import org.aselect.server.request.RequestState;
 import org.aselect.server.request.handler.xsaml20.Saml20_BrowserHandler;
 import org.aselect.server.request.handler.xsaml20.SamlTools;
 import org.aselect.server.request.handler.xsaml20.SecurityLevel;
+import org.aselect.server.tgt.TGTManager;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.logging.Audit;
@@ -206,10 +208,20 @@ public class Xsaml20_Receiver extends Saml20_BrowserHandler
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "Attr "+attr.getName()+"="+obj.getValue());
 			}
 			
+			// RH, 20150917, sn, oldTgt can be null
+			// Assertion issuer must be equal to app_id to avoid signature verification problem in upgrade_tgt
+			// if we have a tgt we'll have to update it
+			String oldTgt = getCredentialsFromCookie(httpRequest);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "==== Found tgt=" + oldTgt );
+			String _sCookieDomain = _configManager.getCookieDomain();
+			// Remove the TGT cookie
+
+			// RH, 20150917, sn, oldTgt can be null
+			
 			// Create a ticket with attributes and set a cookie
 			String sTgt = createContextAndIssueTGT(httpResponse, null, null, _sMyServerId, _sASelectOrganization,
-									get_SamlIssuer().getValue(), null, htAttributes);
-
+//									get_SamlIssuer().getValue(), null, htAttributes);	// RH, 20150917, o
+									get_SamlIssuer().getValue(), oldTgt, htAttributes);	// RH, 20150917, n, oldTgt can be null
 			// and redirect the user to the destination url
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "REDIRECT to "+sApplicationResource);
 			httpResponse.sendRedirect(sApplicationResource);
