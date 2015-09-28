@@ -192,6 +192,7 @@ package org.aselect.server.request.handler.aselect.authentication;
 import java.security.MessageDigest;
 import java.security.PublicKey;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.logging.Level;
 
 import javax.servlet.http.HttpServletRequest;
@@ -760,7 +761,25 @@ public class ApplicationAPIHandler extends AbstractAPIRequestHandler
 					Assertion saml2token = (Assertion)HandlerTools.base64DecodeAssertion(sSaml2token);
 					saml2token = HandlerTools.updateAssertionIssueInstant(saml2token);
 					String sToken = HandlerTools.base64EncodeAssertion(saml2token);
-					HashMap<String, Object> htAttribs = new HashMap<String, Object>();
+					
+					// RH, 20150921, sn
+					// We will now add the updated token to the existing ' attributes' , or create new ' attributes' 
+					HashMap<String, Object> htAttribs = null;
+					String sTgtAttributes = (String) htTGTContext.get("attributes");
+					if (sTgtAttributes != null) {
+						try {
+						htAttribs = org.aselect.server.utils.Utils.deserializeAttributes(sTgtAttributes);
+						}catch (ASelectException ae) {
+							htAttribs = null;
+							// Just continue without attributes
+						}
+					}
+					if (htAttribs == null) {
+						htAttribs = new HashMap<String, Object>();
+						
+					}
+					// RH, 20150921, en
+//					HashMap<String, Object> htAttribs = new HashMap<String, Object>();	// RH, 20150921, o
 					htAttribs.put("saml_attribute_token", sToken);
 					String sSerializedAttributes = org.aselect.server.utils.Utils.serializeAttributes(htAttribs);
 					oOutputMessage.setParam("attributes", sSerializedAttributes);	// only send new atttribute(s)
@@ -770,6 +789,16 @@ public class ApplicationAPIHandler extends AbstractAPIRequestHandler
 				}
 			}
 			//	20141229, RH, en
+			// RH, 20150921, sn
+			boolean push_attributes = _applicationManager.isPushAttributes(sAppId); 
+			if (push_attributes && htTGTContext != null) {	// send 'attributes' back to requestor (probably agent)
+				String sTgtAttributes = (String) htTGTContext.get("attributes");
+				if (sTgtAttributes != null) {
+					_systemLogger.log(Level.FINEST, _sModule, sMethod, "pushing back attributes=" + sTgtAttributes);
+					oOutputMessage.setParam("attributes", sTgtAttributes);
+				}
+			}
+			// RH, 20150921, sn
 		}
 		catch (ASelectCommunicationException eAC) {
 			_systemLogger.log(Level.WARNING, _sModule, sMethod, "Could not set response parameter", eAC);

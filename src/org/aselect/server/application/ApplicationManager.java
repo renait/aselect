@@ -372,6 +372,13 @@ public class ApplicationManager
 				
 				String sForcedAttrConsServIndex = ASelectConfigManager.getSimpleParam(oApplication, "forced_attrconsservindex", false); // RH, 20140505, n
 
+				// RH, 20150921, sn
+				boolean bPushAttributes = false;
+				String sPushAttributes = ASelectConfigManager.getSimpleParam(oApplication, "push_attributes", false);
+				if (sPushAttributes != null)
+					bPushAttributes = new Boolean(sPushAttributes).booleanValue();
+				// RH, 20150921, en
+
 				// Bauke 20101125: For DigiD4Bedrijven:
 				String sUseSsn = ASelectConfigManager.getSimpleParam(oApplication, "use_ssn", false);
 				application.setUseSsn(sUseSsn);
@@ -442,6 +449,7 @@ public class ApplicationManager
 				} // RH, 20140707, en
 
 				application.setForcedAttrConsServIndex(sForcedAttrConsServIndex);  // RH, 20140505, n
+				application.setPushAttributes(bPushAttributes);	// RH, 20150921, n
 				
 				_htApplications.put(sAppId, application);
 				oApplication = _oASelectConfigManager.getNextSection(oApplication);
@@ -1421,4 +1429,33 @@ public class ApplicationManager
 		return (oApplication==null)? null: oApplication.getForcedAttrConsServIndex();
 	}
 
+	/**
+	 * Returns the Optional PushAttributes to force pushing 'attributes'  parameter back on tgt_upgrade request <br>
+	 * <br>
+	 * <b>Description:</b> <br>
+	 * Returns the configured push_attributes for the application. <br>
+	 * <br>
+	 * <b>Concurrency issues:</b> <br>
+	 * - <br>
+	 * <br>
+	 * <b>Preconditions:</b> <br>
+	 * - <br>
+	 * <br>
+	 * <b>Postconditions:</b> <br>
+	 * - <br>
+	 * 
+	 * @param sAppId
+	 *            <code>String</code> containing an application id.
+	 * @return boolean containing the PushAttributes. <code>false</code> if no PushAttributes name was found.
+	 * @throws ASelectException
+	 *             the a select exception
+	 */
+	public boolean isPushAttributes(String sAppId)
+	throws ASelectException
+	{
+		Application oApplication = getApplication(sAppId);
+		return (oApplication==null)? false: oApplication.isPushAttributes();
+	}
+
+	
 }
