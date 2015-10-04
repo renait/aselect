@@ -18,10 +18,10 @@ import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.exception.ASelectSAMException;
 
-public class JSONAPIAttributeRequestor extends APIAttributeRequestor {
+public class RESTAPIAttributeRequestor extends APIAttributeRequestor {
 
 	/** The module name. */
-	private final String MODULE = "JSONAPIAttributeRequestor";
+	private final String MODULE = "RESTAPIAttributeRequestor";
 	private String jsonkey = null;
 
 	
@@ -63,12 +63,14 @@ public class JSONAPIAttributeRequestor extends APIAttributeRequestor {
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "communicator= 'json' loaded");
 			} else {
 				// raw communication is specified or something unreadable
-				_communicator = new RawCommunicator(_systemLogger);
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "communicator= 'raw' loaded");
+				_systemLogger.log(Level.SEVERE, MODULE, sMethod, "only 'json' supported");
+				throw new ASelectAttributesException(Errors.ERROR_ASELECT_INIT_ERROR);
 			}
 
 			try {
 				jsonkey = ASelectConfigManager.getParamFromSection(oConfig, "attribute_mapping", "id", true);
+				// MUST be GET | POST | PUT | DELETE 
+				
 			}			
 			catch (ASelectConfigException eAC) {	// maybe provide some default here
 				_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Could not retrieve 'id' in attribute_mapping section",
@@ -106,6 +108,8 @@ public class JSONAPIAttributeRequestor extends APIAttributeRequestor {
 		final String sMethod = "getAttributes";
 		String sURL = null;
 
+		String requestURL = null ;
+		
 		HashMap htAttributes = new HashMap();
 		try {
 			if (!vAttributes.isEmpty()) {  // Attributes should be gathered.
@@ -113,6 +117,8 @@ public class JSONAPIAttributeRequestor extends APIAttributeRequestor {
 				try {
 					sURL = getConnection();
 					_systemLogger.log(Level.FINEST, MODULE, sMethod, "retrieved url from resources:" + sURL);
+					requestURL = sURL + _sAttributesName;
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "request url before parsing:" + requestURL);
 				}
 				catch (ASelectSAMException eSAM) {
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not retrieve connection from sam", eSAM);
@@ -134,12 +140,15 @@ public class JSONAPIAttributeRequestor extends APIAttributeRequestor {
 						_systemLogger.log(Level.SEVERE, MODULE, sMethod, sbError.toString());
 						throw new ASelectAttributesException(Errors.ERROR_ASELECT_CONFIG_ERROR);
 					}
+					requestURL = requestURL.replaceAll("\\{" + sName + "\\}", sValue);
 					int iIndex = _vAllAttributes.indexOf(sName);
 					if (iIndex >= 0 && iIndex <_vAllAttributesMappings.size()) { // mapping available
 						sName = (String) _vAllAttributesMappings.get(iIndex);
 						htRequestpairs.put(sName, sValue);
 					}
 				}
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "request url after parsing:" + requestURL);
+
 				Iterator itr = _htConfigParameters.keySet().iterator();
 				while (itr.hasNext()) {
 					String sName = (String)itr.next();
@@ -152,23 +161,30 @@ public class JSONAPIAttributeRequestor extends APIAttributeRequestor {
 				}
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "json requestpairs:" + htRequestpairs);
 
-				HashMap jsonrequest = new HashMap();
-				jsonrequest.put(jsonkey, htRequestpairs);
-//				// set Configuration parameters
-				htRequest.putAll(_htConfigParameters);
-				htRequest.put(_sAttributesName, jsonrequest);
+				// for now we only implement GET with no parameters
+				// for POST | PUT | DELETE we need aother communicator
+				
+//				HashMap jsonrequest = new HashMap();
+//				jsonrequest.put(jsonkey, htRequestpairs);
+////				// set Configuration parameters
+//				htRequest.putAll(_htConfigParameters);
+//				htRequest.put(_sAttributesName, jsonrequest);
+//				htRequest.put("relaystate", "myrelaydata");
+				// Just send an empty htRequest
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "request:" + htRequest);
 				
 				// do Authentication if needed
 				_communicator.setUser(getUser());
 				_communicator.setPw(getPw());
-
+				
 				// send message
-				htResponse = _communicator.sendMessage(htRequest, sURL);
+				htResponse = _communicator.sendMessage(htRequest, requestURL);
 				
 				htAttributes = htResponse;
 				// retrieve response and forward 1-on-1
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "retrieved attributes:" + htAttributes);
+				
+				// TODO map back, may contain nested json
 			}
 		}
 		catch (ASelectCommunicationException eAC) {

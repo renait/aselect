@@ -81,6 +81,11 @@ public class APIAttributeRequestor extends GenericAttributeRequestor implements 
 
 	/** The recourcegroup */
 	private String _sAPIResourceGroup;
+	
+	/** for (basic authentication */
+	private String _user = null;
+	private String _pw = null;
+	
 
 	/**
 	 * Create a new <code>APIAttributeRequestor</code>. <br>
@@ -235,6 +240,10 @@ public class APIAttributeRequestor extends GenericAttributeRequestor implements 
 				throw new ASelectAttributesException(Errors.ERROR_ASELECT_INIT_ERROR, eAC);
 			}
 
+			_user = _configManager.getSimpleParam(oConfig,  "user", false);
+			_pw = _configManager.getSimpleParam(oConfig,  "pw", false);
+
+				
 			// Get configured attributes from configuration
 			_vAllAttributes = new Vector();
 			_vAllAttributesMappings = new Vector();
@@ -494,5 +503,15 @@ public class APIAttributeRequestor extends GenericAttributeRequestor implements 
 					"Could not retrieve 'SOAPMethod' parameter in 'main' configuration section", eAC);
 			throw new ASelectAttributesException(Errors.ERROR_ASELECT_INIT_ERROR, eAC);
 		}
+	}
+
+	public String getUser()
+	{
+		return _user;
+	}
+
+	public String getPw()
+	{
+		return _pw;
 	}
 }
