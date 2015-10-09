@@ -99,4 +99,11 @@ public interface IClientCommunicator
 	 */
 	public String sendStringMessage(String sParameters, String sTarget)
 	throws ASelectCommunicationException;
+	
+	
+	public String getUser();
+	public void setUser(String user);
+	public String getPw();
+	public void setPw(String pw);
+	
 }
