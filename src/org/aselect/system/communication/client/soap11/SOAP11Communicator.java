@@ -725,4 +725,28 @@ public class SOAP11Communicator implements IClientCommunicator
 
 		return sb.toString();
 	}
+
+	public String getUser()
+	{
+		// Not implemented yet
+		return null;
+	}
+
+	public void setUser(String user)
+	{
+		// Not implemented yet
+		
+	}
+
+	public String getPw()
+	{
+		// Not implemented yet
+		return null;
+	}
+
+	public void setPw(String pw)
+	{
+		// Not implemented yet
+		
+	}
 }
