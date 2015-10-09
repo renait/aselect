@@ -128,6 +128,12 @@ public class RawCommunicator implements IClientCommunicator
 
 	/** "[]" braces UTF-8 encoded. */
 	private static final String ENCODED_BRACES = "%5B%5D";
+	
+	// Optional user / pw for ( basic ) authentication
+	private String user = null;
+	private String pw = null;
+
+
 
 	/**
 	 * Creates a new <code>RawCommunicator</code>. <br>
