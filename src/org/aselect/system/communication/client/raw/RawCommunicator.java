@@ -95,6 +95,7 @@ import java.io.IOException;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.MalformedURLException;
+import java.net.Authenticator;
 import java.net.PasswordAuthentication;
 import java.net.URL;
 import java.net.URLDecoder;
@@ -264,6 +265,7 @@ public class RawCommunicator implements IClientCommunicator
 
 		_systemLogger.log(Level.FINEST, MODULE, sMethod, "URL=" + sbBuffer.toString());
 		try {
+
 			urlSomeServer = new URL(sbBuffer.toString());
 			brInput = new BufferedReader(new InputStreamReader(urlSomeServer.openStream()), 16000);
 			String s = null;
