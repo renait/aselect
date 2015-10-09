@@ -204,6 +204,7 @@ public class RawCommunicator implements IClientCommunicator
 		String sMethod = "sendStringMessage";
 
 		try {  // Send the message
+			if ( getUser() != null ) _systemLogger.log(Level.WARNING, MODULE, sMethod, "Authentication not implemented for DataCommunicator (yet)");
 			sResponse = DataCommunicator.dataComSend(_systemLogger, sMessage, sTarget);
 		}
 		catch (java.net.MalformedURLException eMU) {
