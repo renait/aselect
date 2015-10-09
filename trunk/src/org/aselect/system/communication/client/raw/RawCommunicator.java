@@ -266,6 +266,9 @@ public class RawCommunicator implements IClientCommunicator
 		_systemLogger.log(Level.FINEST, MODULE, sMethod, "URL=" + sbBuffer.toString());
 		try {
 
+			
+
+			
 			urlSomeServer = new URL(sbBuffer.toString());
 			brInput = new BufferedReader(new InputStreamReader(urlSomeServer.openStream()), 16000);
 			String s = null;
