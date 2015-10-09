@@ -254,7 +254,14 @@ public class RawCommunicator implements IClientCommunicator
 		BufferedReader brInput = null;
 		StringBuffer sbBuffer = new StringBuffer();
 
-		sbBuffer = new StringBuffer(sUrl).append("?").append(sParams);
+		
+//		sbBuffer = new StringBuffer(sUrl).append("?").append(sParams);// RH, 20151001, o
+		// RH, 20151001, sn
+		sbBuffer = new StringBuffer(sUrl);
+		if ( sParams != null && sParams.length() > 0 && !sParams.startsWith("?")) {
+			sbBuffer = sbBuffer.append("?").append(sParams);
+		}
+
 		_systemLogger.log(Level.FINEST, MODULE, sMethod, "URL=" + sbBuffer.toString());
 		try {
 			urlSomeServer = new URL(sbBuffer.toString());
