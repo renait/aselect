@@ -242,10 +242,20 @@ public class Xsaml20_ArtifactResolver extends Saml20_BaseHandler
 			if (_sAddedPatching == null) {	// backward compatibility, get it from handler configuration
 				_sAddedPatching = _configManager.getAddedPatching();
 			}
-			boolean bSignAssertion = _sAddedPatching.contains("sign_assertion");  // this is an application attribute
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "Sign the artifactResponse >====== SignAssertion="+bSignAssertion);
+			boolean bSignAssertion = _sAddedPatching.contains("sign_assertion"); 
+			_systemLogger.log(Level.FINER, MODULE, sMethod, "ArtifactResponse >====== SignAssertion="+bSignAssertion);
+			boolean bSignArtifactResponse = _sAddedPatching.contains("sign_artifactresponse"); 
+			_systemLogger.log(Level.FINER, MODULE, sMethod, "ArtifactResponse >====== SignArtifactResponse="+bSignArtifactResponse);
+			// IMPROV get the sha1/sha256 from configuration or metadata
 			if (bSignAssertion) {
-				// only the assertion was signed
+				// only the assertion, was signed already in Saml20_SSO
+				if (bSignArtifactResponse) {	// sign the ArtifactResponse anyway
+					artifactResponse = (ArtifactResponse)SamlTools.signSamlObject(artifactResponse, 
+							(_sReqSigning != null) ?_sReqSigning: _sDefaultSigning ,
+									(_sAddKeyName != null) ? "true".equals(_sAddKeyName): "true".equals(_sDefaultAddKeyname),
+											(_sAddCertificate != null) ? "true".equals(_sAddCertificate): "true".equals(_sDefaultAddCertificate));
+					_systemLogger.log(Level.FINER, MODULE, sMethod, "Signed the artifactResponse ======<");
+				} else {
 				try {
 					// don't forget to marshall the response when no signing will be done here
 					org.opensaml.xml.Configuration.getMarshallerFactory().getMarshaller(artifactResponse).marshall(artifactResponse);
@@ -254,11 +264,15 @@ public class Xsaml20_ArtifactResolver extends Saml20_BaseHandler
 					_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Cannot marshall object", e);
 					throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR, e);
 				}
+				}
 			}
 			else {  // No assertion signing, sign the complete response
-				artifactResponse = (ArtifactResponse)SamlTools.signSamlObject(artifactResponse, "sha1", false, false); 
+//				artifactResponse = (ArtifactResponse)SamlTools.signSamlObject(artifactResponse, "sha1", false, false);
+				artifactResponse = (ArtifactResponse)SamlTools.signSamlObject(artifactResponse,  (_sReqSigning != null) ?_sReqSigning: _sDefaultSigning, 
+						(_sAddKeyName != null) ? "true".equals(_sAddKeyName): "true".equals(_sDefaultAddKeyname), 
+								(_sAddCertificate != null) ? "true".equals(_sAddCertificate): "true".equals(_sDefaultAddCertificate));
+				_systemLogger.log(Level.FINER, MODULE, sMethod, "Signed the artifactResponse =====<");
 			}
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "Signed the artifactResponse ======<");
 			Envelope envelope = new SoapManager().buildSOAPMessage(artifactResponse);
 			Element envelopeElem = SamlTools.marshallMessage(envelope);
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "Writing SOAP message:\n" + XMLHelper.nodeToString(envelopeElem));

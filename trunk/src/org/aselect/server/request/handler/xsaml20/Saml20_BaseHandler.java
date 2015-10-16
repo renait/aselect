@@ -35,6 +35,7 @@ import org.aselect.server.request.handler.xsaml20.sp.MetaDataManagerSp;
 import org.aselect.server.tgt.TGTManager;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectCommunicationException;
+import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.exception.ASelectStorageException;
 import org.aselect.system.utils.Utils;
@@ -74,6 +75,19 @@ public abstract class Saml20_BaseHandler extends ProtoRequestHandler
 
 	private SSLSocketFactory sslSocketFactory = null;
 
+	// RH, 20151016, sn, refactor pull up from Xsaml20_SSO
+	protected String _sReqSigning = null;
+
+	protected String _sAddKeyName = null;
+
+	protected String _sAddCertificate = null;
+
+	protected String _sDefaultSigning = null;
+
+	protected String _sDefaultAddKeyname = null;
+
+	protected String _sDefaultAddCertificate = null;
+	// RH, 20151016, en
 	
 	/**
 	 * Init for class Saml20_BaseHandler. <br>
@@ -173,6 +187,39 @@ public abstract class Saml20_BaseHandler extends ProtoRequestHandler
 		}
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "use_backchannelclientcertificate: " + isUseBackchannelClientcertificate());
 		// RH, 20120322, en
+		
+		// RH, 20151016, sn, refactor pull up from Xsaml20_SSO
+		try {
+//			String use_sha256 =_sReqSigning = _configManager.getParam(oHandlerConfig, "use_sha256");
+			String use_sha256 = _configManager.getParam(oHandlerConfig, "use_sha256");
+			if ( Boolean.parseBoolean(use_sha256 ))  {
+				_sDefaultSigning = "sha256";
+			}
+		}
+		catch (ASelectConfigException e) {
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config item 'use_sha256' found, normal operation resumes");
+		}
+
+		try {
+			String add_keyname = _configManager.getParam(oHandlerConfig, "add_keyname");
+			if ( Boolean.parseBoolean(add_keyname ))  {
+				_sDefaultAddKeyname = "true";	// lowercase
+			}
+		}
+		catch (ASelectConfigException e) {
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config item 'add_keyname' found, normal operation resumes");
+		}
+
+		try {
+			String add_certifcate = _configManager.getParam(oHandlerConfig, "add_certificate");
+			if ( Boolean.parseBoolean(add_certifcate ))  {
+				_sDefaultAddCertificate = "true";	// lowercase
+			}
+		}
+		catch (ASelectConfigException e) {
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config item 'add_certificate' found, normal operation resumes");
+		}
+		// RH, 20151016, en
 
 	}
 
