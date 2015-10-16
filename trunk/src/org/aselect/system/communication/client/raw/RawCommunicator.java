@@ -92,12 +92,13 @@ package org.aselect.system.communication.client.raw;
 
 import java.io.BufferedReader;
 import java.io.IOException;
-import java.io.IOException2_test;
 import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
-import java.net.MalformedURLException;
 import java.net.Authenticator;
+import java.net.MalformedURLException;
+
 import java.net.PasswordAuthentication;
+
 import java.net.URL;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -134,7 +135,6 @@ public class RawCommunicator implements IClientCommunicator
 	// Optional user / pw for ( basic ) authentication
 	private String user = null;
 	private String pw = null;
-
 
 
 	/**
@@ -266,10 +266,8 @@ public class RawCommunicator implements IClientCommunicator
 
 		_systemLogger.log(Level.FINEST, MODULE, sMethod, "URL=" + sbBuffer.toString());
 		try {
+			// RH, 20151001, en
 
-			
-
-			
 			urlSomeServer = new URL(sbBuffer.toString());
 			brInput = new BufferedReader(new InputStreamReader(urlSomeServer.openStream()), 16000);
 			String s = null;
@@ -297,6 +295,18 @@ public class RawCommunicator implements IClientCommunicator
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, sbBuffer.toString());
 			throw new ASelectCommunicationException(Errors.ERROR_ASELECT_IO, eIO);
 		}
+		// RH, 20151001, sn
+		finally {
+			if (brInput != null)
+				try {
+					brInput.close();
+				}
+				catch (IOException e) {
+					_systemLogger.log(Level.WARNING, MODULE, sMethod, "Couldn't close inputstream, continuing");
+				}
+		}
+		// RH, 20151001, en
+
 	}
 
 	/**
@@ -449,5 +459,25 @@ public class RawCommunicator implements IClientCommunicator
 			}
 		}
 		return xResponse;
+	}
+
+	public String getUser()
+	{
+		return user;
+	}
+
+	public void setUser(String user)
+	{
+		this.user = user;
+	}
+
+	public String getPw()
+	{
+		return pw;
+	}
+
+	public void setPw(String pw)
+	{
+		this.pw = pw;
 	}
 }
