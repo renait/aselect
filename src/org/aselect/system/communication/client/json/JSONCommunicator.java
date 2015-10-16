@@ -1,5 +1,5 @@
 /*
- * * Copyright (c) Anoigo. All rights reserved.
+ * Copyright (c) Anoigo. All rights reserved.
  *
  * A-Select is a trademark registered by SURFnet bv.
  *
@@ -14,7 +14,9 @@ package org.aselect.system.communication.client.json;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.InputStreamReader;
+import java.net.Authenticator;
 import java.net.MalformedURLException;
+import java.net.PasswordAuthentication;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -44,6 +46,10 @@ public class JSONCommunicator implements IClientCommunicator
 
 	/** The Logger for this JSONCommunicator */
 	private SystemLogger _systemLogger;
+	
+	private String user= null;
+	private String pw = null;
+
 
 
 	/**
@@ -117,9 +123,18 @@ public class JSONCommunicator implements IClientCommunicator
 		if (sResponse != null) {
 //				htReturn = convertCGIMessage(sResponse);
 			_systemLogger.log( Level.FINEST, MODULE, sMethod, "parsing message." );
+			try {
 			JSONArray jsonArray = (JSONArray) JSONSerializer.toJSON( sResponse );  
-			_systemLogger.log( Level.FINEST, MODULE, sMethod, "received message parsed:" + jsonArray.toString() );
+			_systemLogger.log( Level.FINEST, MODULE, sMethod, "received message parsed to JSONArray:" + jsonArray.toString() );
 			htReturn = new HashMap((Map<String, Object>) JSONObject.toBean(jsonArray.getJSONObject(0), Map.class));
+			} catch (java.lang.ClassCastException cce) {	// not a JSONArray
+				// maybe a JSONObject
+				JSONObject jsonObject = (JSONObject) JSONSerializer.toJSON( sResponse );  
+				_systemLogger.log( Level.FINEST, MODULE, sMethod, "received message parsed to JSONObject:" + jsonObject.toString() );
+				htReturn = new HashMap((Map<String, Object>) JSONObject.toBean(jsonObject, Map.class));
+				
+				
+			}
 			_systemLogger.log( Level.FINEST, MODULE, sMethod, "created HashMap:" + htReturn );
 		}
 		
@@ -137,6 +152,7 @@ public class JSONCommunicator implements IClientCommunicator
 		String sMethod = "sendStringMessage";
 
 		try {  // Send the message
+			if ( getUser() != null ) _systemLogger.log(Level.WARNING, MODULE, sMethod, "Authentication not implemented for DataCommunicator (yet)");
 			sResponse = DataCommunicator.dataComSend(_systemLogger, sMessage, sTarget);
 		}
 		catch (java.net.MalformedURLException eMU) {
@@ -186,9 +202,19 @@ public class JSONCommunicator implements IClientCommunicator
 		BufferedReader brInput = null;
 		StringBuffer sbBuffer = new StringBuffer();
 
-		sbBuffer = new StringBuffer(sUrl).append("?").append(sParams);
+//		sbBuffer = new StringBuffer(sUrl).append("?").append(sParams);	// RH, 20151001, o
+		// RH, 20151001, sn
+		sbBuffer = new StringBuffer(sUrl);
+		if ( sParams != null && sParams.length() > 0 && !sParams.startsWith("?")) {
+			sbBuffer = sbBuffer.append("?").append(sParams);
+		}
+
+
 		_systemLogger.log(Level.FINEST, MODULE, sMethod, "URL=" + sbBuffer.toString());
 		try {
+			
+			// RH, 20151001, en
+			
 			urlSomeServer = new URL(sbBuffer.toString());
 			brInput = new BufferedReader(new InputStreamReader(urlSomeServer.openStream()), 16000);
 			String s = null;
@@ -216,7 +242,39 @@ public class JSONCommunicator implements IClientCommunicator
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, sbBuffer.toString());
 			throw new ASelectCommunicationException(Errors.ERROR_ASELECT_IO, eIO);
 		}
+		// RH, 20151001, sn
+		finally {
+			if (brInput != null)
+				try {
+					brInput.close();
+				}
+				catch (IOException e) {
+					_systemLogger.log(Level.WARNING, MODULE, sMethod, "Couldn't close inputstream, continuing");
+				}
+		}
+		// RH, 20151001, en
 	}
 
+	public String getUser()
+	{
+		return user;
+	}
+
+	public void setUser(String user)
+	{
+		this.user = user;
+	}
+
+	public String getPw()
+	{
+		return pw;
+	}
+
+	public void setPw(String pw)
+	{
+		this.pw = pw;
+	}
+
+	
 
 }
