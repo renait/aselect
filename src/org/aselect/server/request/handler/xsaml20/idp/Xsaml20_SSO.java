@@ -98,13 +98,7 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 	// Communication for processReturn()
 	private String _sAppId = null;
 	private String _sAddedPatching = null;
-	private String _sReqSigning = null;
-	private String _sAddKeyName = null;
-	private String _sAddCertificate = null;
 	boolean _bSignAssertion = false;  // must be retrieved from the metadata
-	private String _sDefaultSigning = null;
-	private String _sDefaultAddKeyname = null;
-	private String _sDefaultAddCertificate = null;
 	
 	/**
 	 * Initializes the request handler by reading the following configuration: <br/>
@@ -163,37 +157,37 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config item 'post_template' found", e);
 		}
 		
-		// RH, 20140925,sn
-		try {
-			String use_sha256 =_sReqSigning = _configManager.getParam(oHandlerConfig, "use_sha256");
-			if ( Boolean.parseBoolean(use_sha256 ))  {
-				_sDefaultSigning = "sha256";
-			}
-		}
-		catch (ASelectConfigException e) {
-			_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config item 'use_sha256' found, normal operation resumes");
-		}
-
-		try {
-			String add_keyname = _configManager.getParam(oHandlerConfig, "add_keyname");
-			if ( Boolean.parseBoolean(add_keyname ))  {
-				_sDefaultAddKeyname = "true";	// lowercase
-			}
-		}
-		catch (ASelectConfigException e) {
-			_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config item 'add_keyname' found, normal operation resumes");
-		}
-
-		try {
-			String add_certifcate = _configManager.getParam(oHandlerConfig, "add_certificate");
-			if ( Boolean.parseBoolean(add_certifcate ))  {
-				_sDefaultAddCertificate = "true";	// lowercase
-			}
-		}
-		catch (ASelectConfigException e) {
-			_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config item 'add_certificate' found, normal operation resumes");
-		}
-		// RH, 20140925,en
+//		// RH, 20140925,sn
+//		try {
+//			String use_sha256 =_sReqSigning = _configManager.getParam(oHandlerConfig, "use_sha256");
+//			if ( Boolean.parseBoolean(use_sha256 ))  {
+//				_sDefaultSigning = "sha256";
+//			}
+//		}
+//		catch (ASelectConfigException e) {
+//			_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config item 'use_sha256' found, normal operation resumes");
+//		}
+//
+//		try {
+//			String add_keyname = _configManager.getParam(oHandlerConfig, "add_keyname");
+//			if ( Boolean.parseBoolean(add_keyname ))  {
+//				_sDefaultAddKeyname = "true";	// lowercase
+//			}
+//		}
+//		catch (ASelectConfigException e) {
+//			_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config item 'add_keyname' found, normal operation resumes");
+//		}
+//
+//		try {
+//			String add_certifcate = _configManager.getParam(oHandlerConfig, "add_certificate");
+//			if ( Boolean.parseBoolean(add_certifcate ))  {
+//				_sDefaultAddCertificate = "true";	// lowercase
+//			}
+//		}
+//		catch (ASelectConfigException e) {
+//			_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config item 'add_certificate' found, normal operation resumes");
+//		}
+//		// RH, 20140925,en
 
 	
 	}
