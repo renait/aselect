@@ -981,10 +981,18 @@ public class ApplicationAPIHandler extends AbstractAPIRequestHandler
 				htSelectedAttr.put("saml_remote_token", sRemoteToken);
 
 			// Add Saml Token to the attributes, must be signed and base64 encoded
+
+			// workaround for consumers that cannot handle saml attribute datatype declarations
+			boolean usesamlattributedatatypes = true;
+			if ( _configManager.getAddedPatching() != null && _configManager.getAddedPatching().contains("nosamlattributedatatypes") ) {
+				usesamlattributedatatypes = false;
+			}
+
+//			sToken = HandlerTools.createAttributeToken(_sServerUrl, sTGT, htSelectedAttr);	// RH, 20151006, o
+			// Workaround for consumers that cannot handle saml attribute datatype declarations
+			sToken = HandlerTools.createAttributeToken(_sServerUrl, sTGT, htSelectedAttr, usesamlattributedatatypes);	// RH, 20151006, n
 			
-//			sToken = HandlerTools.createAttributeToken(_sServerUrl, sTGT, htSelectedAttr);
 			// Because this is relatively expensive we might consider making this application dependent
-			sToken = HandlerTools.createAttributeToken(_sServerUrl, sTGT, htSelectedAttr);
 			
 			if ( bUpdateTokenIssueinstant ) {
 				htTGTContext.put("saml_attribute_token", sToken);	// store the token for use with handleUpgradeTGTRequest

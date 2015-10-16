@@ -34,6 +34,7 @@ import javax.net.ssl.SSLSocketFactory;
 import javax.servlet.http.Cookie;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.xml.namespace.QName;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -72,6 +73,7 @@ import org.opensaml.xml.XMLObjectBuilderFactory;
 import org.opensaml.xml.io.Marshaller;
 import org.opensaml.xml.io.MarshallerFactory;
 import org.opensaml.xml.io.MarshallingException;
+import org.opensaml.xml.schema.XSAny;
 import org.opensaml.xml.schema.XSString;
 import org.opensaml.xml.signature.KeyName;
 import org.opensaml.xml.signature.Signature;
@@ -339,6 +341,28 @@ public class HandlerTools
 	}
 
 	
+	
+	/**
+	 * Creates the attribute statement assertion.
+	 * 
+	 * @param parms
+	 *            the parms
+	 * @param sIssuer
+	 *            the issuer
+	 * @param sSubject
+	 *            the subject
+	 * @param sign
+	 *            sign the assertion?
+	 * @return the assertion
+	 * @throws ASelectException
+	 */
+	public static Assertion createAttributeStatementAssertion(Map parms, String sIssuer, String sSubject, boolean sign )
+	throws ASelectException
+	{
+		return createAttributeStatementAssertion(parms, sIssuer, sSubject, sign , true ); 	// defaults to using saml attribute type declarations
+	}	
+
+	
 	/**
 	 * Creates the attribute statement assertion.
 	 * 
@@ -356,7 +380,7 @@ public class HandlerTools
 	@SuppressWarnings( {
 		"unchecked"
 	})
-	public static Assertion createAttributeStatementAssertion(Map parms, String sIssuer, String sSubject, boolean sign)
+	public static Assertion createAttributeStatementAssertion(Map parms, String sIssuer, String sSubject, boolean sign ,boolean useSamlAttrTypeDecl )
 	throws ASelectException
 	{
 		String sMethod = "createAttributeStatementAssertion";
@@ -406,7 +430,15 @@ public class HandlerTools
 		
 		if ( parms != null ) {
 
-			AttributeStatement attributeStatement = createAttributeStatement(parms, systemLogger, _oBuilderFactory);
+			// RH, 20151006, sn
+			AttributeStatement attributeStatement = null;
+			if (!useSamlAttrTypeDecl) {	// workaround option
+				 attributeStatement = createAttributeStatementWithoutDataType(parms, systemLogger, _oBuilderFactory);
+			} else {	// default way
+				 attributeStatement = createAttributeStatement(parms, systemLogger, _oBuilderFactory);
+			}
+			
+//			AttributeStatement attributeStatement = createAttributeStatement(parms, systemLogger, _oBuilderFactory); // RH, 20151006, o
 			if (attributeStatement != null)
 				assertion.getAttributeStatements().add(attributeStatement);
 
@@ -563,7 +595,6 @@ public class HandlerTools
 	}
 
 
-	
 	/**
 	 * @param parms
 	 * @param systemLogger
@@ -626,6 +657,82 @@ public class HandlerTools
 		return attributeStatement;
 	}
 
+
+	
+	/**
+	 * @param parms
+	 * @param systemLogger
+	 * @param _oBuilderFactory
+	 * @return
+	 * 
+	 * all parameters MUST not be null
+	 * parameter parms MAY be empty, if if multivalued values are used the MUST contain object elements not simple types
+	 * (Workaround) solution for clients that cannot handle Attribute DataType declarations
+	 */
+	public static AttributeStatement createAttributeStatementWithoutDataType(Map parms, ASelectSystemLogger systemLogger, 
+			XMLObjectBuilderFactory _oBuilderFactory)
+	{
+		String sMethod = "createAttributeStatementWithoutDataType";
+
+		systemLogger.log(Level.FINEST, MODULE, sMethod, "Building statement with parmameters:" + parms);
+
+		SAMLObjectBuilder<AttributeStatement> attributeStatementBuilder = (SAMLObjectBuilder<AttributeStatement>) _oBuilderFactory
+				.getBuilder(AttributeStatement.DEFAULT_ELEMENT_NAME);
+
+
+		SAMLObjectBuilder<Attribute> attributeBuilder = (SAMLObjectBuilder<Attribute>) _oBuilderFactory
+				.getBuilder(Attribute.DEFAULT_ELEMENT_NAME);
+
+//		XMLObjectBuilder stringBuilder = _oBuilderFactory.getBuilder(XSString.TYPE_NAME);
+//		XMLObjectBuilder stringBuilder = _oBuilderFactory.getBuilder(AttributeValue.DEFAULT_ELEMENT_NAME);
+		XMLObjectBuilder stringBuilder = _oBuilderFactory.getBuilder(XSAny.TYPE_NAME);
+
+		AttributeStatement attributeStatement = attributeStatementBuilder.buildObject();
+
+		
+		Iterator itr = parms.keySet().iterator();
+		systemLogger.log(Level.FINEST, MODULE, sMethod, "Starting iterating through parameters with keys: " + parms.keySet());
+		while (itr.hasNext()) {
+			String parmName = (String) itr.next();
+
+			Object oValue = parms.get(parmName);
+			systemLogger.log(Level.FINEST, MODULE, sMethod, "Found value: " + oValue);
+			Attribute attribute = attributeBuilder.buildObject();
+			attribute.setName(parmName);
+
+//			XSString attributeValue = null;
+			XSAny attributeValue = null;
+
+
+			if ( oValue != null && oValue instanceof Iterable) {
+				Iterator enumValues = ((Iterable) oValue).iterator();
+				while (enumValues.hasNext()) {
+//					attributeValue = (XSString) stringBuilder.buildObject(AttributeValue.DEFAULT_ELEMENT_NAME,
+//							XSString.TYPE_NAME);
+					attributeValue = (XSAny) stringBuilder.buildObject(AttributeValue.DEFAULT_ELEMENT_NAME,
+							null);
+//					attributeValue.setValue("" + enumValues.next());	// cast to String
+					attributeValue.setTextContent("" + enumValues.next());
+
+					attribute.getAttributeValues().add(attributeValue);
+				}
+			}
+			else {
+//				attributeValue = (XSString) stringBuilder.buildObject(AttributeValue.DEFAULT_ELEMENT_NAME,
+//						XSString.TYPE_NAME);
+				attributeValue = (XSAny) stringBuilder.buildObject(AttributeValue.DEFAULT_ELEMENT_NAME,
+						null);
+//				attributeValue.setValue("" + oValue);	// cast to String
+				attributeValue.setTextContent("" + oValue);
+
+				attribute.getAttributeValues().add(attributeValue);
+			}
+
+			attributeStatement.getAttributes().add(attribute);
+		}
+		systemLogger.log(Level.FINEST, MODULE, sMethod, "Finished iterating through parameters");
+		return attributeStatement;
+	}
 
 	
 /**
@@ -765,7 +872,7 @@ public class HandlerTools
 		return rebuildedAssertion;
 	}
 
-	
+
 	/**
 	 * Create a signed and base64 encoded Saml Token
 	 * containing the attributes present in htAttributes.
@@ -782,13 +889,32 @@ public class HandlerTools
 	public static String createAttributeToken(String sIssuer, String sTgt, HashMap htAttributes)
 	throws ASelectException
 	{
+		return createAttributeToken(sIssuer, sTgt, htAttributes, true); // defualts to using datatype decalrations in saml attributes
+	}
+
+	/**
+	 * Create a signed and base64 encoded Saml Token
+	 * containing the attributes present in htAttributes.
+	 * 
+	 * @param sIssuer
+	 *            the issuer
+	 * @param sTgt
+	 *            the tgt
+	 * @param htAttributes
+	 *            the attributes
+	 * @return the attribute token
+	 * @throws ASelectException
+	 */
+	public static String createAttributeToken(String sIssuer, String sTgt, HashMap htAttributes, boolean useSamlAttrTypeDecl )
+	throws ASelectException
+	{
 		String sMethod = "createAttributeToken";
 		ASelectSystemLogger systemLogger = ASelectSystemLogger.getHandle();
 
 		systemLogger.log(Level.FINER, MODULE, sMethod, "Creating AttributeToken");
 
 		Assertion samlAssert = HandlerTools.createAttributeStatementAssertion(htAttributes, sIssuer/* Issuer */,
-				sTgt/* Subject */, true/* sign */);
+				sTgt/* Subject */, true/* sign */, useSamlAttrTypeDecl );
 		String sSamlAssert = base64EncodeAssertion(samlAssert);
 		return sSamlAssert;
 	}
