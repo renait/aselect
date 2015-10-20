@@ -112,9 +112,7 @@ public class CmHttpSmsSender extends GenericSmsSender
 		if (Utils.hasValue(this.gateway)) {
 			_systemLogger.log(Level.WARNING, sModule, sMethod, "Alternate gateway supplied, but not supported");
 		}
-		_systemLogger.log(Level.FINEST, sModule, sMethod, "append");
 		sbResult.append(sData);
-		_systemLogger.log(Level.FINEST, sModule, sMethod, "data=" + sbResult.toString());
 		return 0;
 	}
 	

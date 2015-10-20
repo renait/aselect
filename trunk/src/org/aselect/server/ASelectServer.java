@@ -524,16 +524,16 @@ public class ASelectServer extends ASelectHttpServlet
 			_systemLogger.log(Level.FINEST, MODULE, sMethod, "TimerSensor thread="+_timerSensorThread+" this="+this);
 
 			_numRequests++;
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Entering SERVICE {" + " currentTimeMillis T="+System.currentTimeMillis()+", currentThreadId t="+Thread.currentThread().getId()+
-					" nReq="+_numRequests+" "+servletRequest.getMethod() + " Query: "+servletRequest.getQueryString());
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "Enter SERVICE { "+servletRequest.getMethod() + " Query: "+servletRequest.getQueryString() +
+					" currentTimeMillis T="+System.currentTimeMillis()+" currentThreadId t="+Thread.currentThread().getId()+" nReq="+_numRequests);
 			//HandlerTools.logCookies(request, _systemLogger);
 			_systemLogger.log(Level.FINEST, MODULE, sMethod, servletRequest.getRemoteHost() + " / " + servletRequest.getRequestURL()
 					+ " / " + servletRequest.getRemoteAddr());
 			_oRequestHandlerFactory.process(servletRequest, servletResponse);
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "} Exiting SERVICE" + " currentTimeMillis T=" + System.currentTimeMillis()+", currentThreadId t="+Thread.currentThread().getId()+ "\n====");
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "} SERVICE Exit" + " currentTimeMillis T=" + System.currentTimeMillis()+" currentThreadId t="+Thread.currentThread().getId()+ "\n====");
 		}
 		catch (ASelectException e) {
-			_systemLogger.log(Level.WARNING, MODULE, sMethod, "} Exiting SERVICE" + "  currentTimeMillis T=" + System.currentTimeMillis()
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "} SERVICE Exit" + "  currentTimeMillis T=" + System.currentTimeMillis()
 					+", currentThreadId t="+Thread.currentThread().getId()+" ASelectException while processing request: " + e + " commit="+servletResponse.isCommitted()+"\n====");
 			if (!servletResponse.isCommitted()) {
 				// send response if no headers have been written
@@ -544,8 +544,8 @@ public class ASelectServer extends ASelectHttpServlet
 			}
 		}
 		catch (Exception e) {
-			_systemLogger.log(Level.SEVERE, MODULE, sMethod, "} Exiting SERVICE" + " currentTimeMillis T=" + System.currentTimeMillis()
-					+", currentThreadId t="+Thread.currentThread().getId()+" Exception occurred: " + e +  " commit="+servletResponse.isCommitted()+"\n====");
+			_systemLogger.log(Level.SEVERE, MODULE, sMethod, "} SERVICE Exit" + " currentTimeMillis T=" + System.currentTimeMillis()
+					+" currentThreadId t="+Thread.currentThread().getId()+" Exception occurred: " + e +  " commit="+servletResponse.isCommitted()+"\n====");
 			if (!servletResponse.isCommitted()) {
 				// send response if no headers have been written
 				servletResponse.sendError(HttpServletResponse.SC_INTERNAL_SERVER_ERROR);

@@ -280,7 +280,7 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 		try {
 			String sQueryString = servletRequest.getQueryString();
 			HashMap htServiceRequest = Utils.convertCGIMessage(sQueryString, false);
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "GET  { htServiceRequest=" + htServiceRequest);
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "Enter GET { htServiceRequest=" + htServiceRequest);
 			sLanguage = (String) htServiceRequest.get("language");  // optional language code
 			if (sLanguage == null || sLanguage.trim().length() < 1)
 				sLanguage = null;
@@ -296,15 +296,21 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 				// handleApiRequest(htServiceRequest,servletRequest,pwOut,servletResponse);
 			}
 			else {  // Browser request
+				HashMap sessionContext = null; 
 				String sMyUrl = servletRequest.getRequestURL().toString();
 				htServiceRequest.put("my_url", sMyUrl);
 
 				String sRid = (String)htServiceRequest.get("rid");
+				// 20150827, Bauke: added timestamp, enables SMS AuthSP to monitor link validity
+				String sTimeStamp = (String)htServiceRequest.get("timestamp");
+				boolean bSessionPresent = _sessionManager.containsKey(sRid);
+				if (bSessionPresent) {  // 20151014, Bauke: get timestamp from session, it's not in the challenge form
+					sessionContext = _sessionManager.getSessionContext(sRid);
+					sTimeStamp = (String)sessionContext.get("timestamp");
+				}
 				String sAsUrl = (String)htServiceRequest.get("as_url");
 				String sUid = (String)htServiceRequest.get("uid");
 				String sAserverId = (String)htServiceRequest.get("a-select-server");
-				// 20150827, Bauke: added timestamp, enables SMS AuthSP to monitor link validity
-				String sTimeStamp = (String)htServiceRequest.get("timestamp");
 				String sSignature = (String)htServiceRequest.get("signature");
 
 				if (sRid == null || sAsUrl == null || sUid == null || sAserverId == null || sSignature == null || sTimeStamp == null) {
@@ -337,23 +343,10 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 				htServiceRequest.put("as_url", sAsUrl);
 				htServiceRequest.put("uid", sUid);  // This is the user's phone number
 				
-				boolean bSessionPresent = _sessionManager.containsKey(sRid);
-				boolean bSendSms = true;
-				
-				long lTimeStamp = Long.valueOf(sTimeStamp);  // milliseconds
-				long lNow = new Date().getTime();
-				long lDiff = (lNow - lTimeStamp) / 1000; // seconds
-				if (lDiff > 120 || bSessionPresent) {  // assuming the rid is still present within 2 minutes
-					// The link is only valid for 2 minutes, and will only once send an SMS
-					bSendSms = false;
-				}
-				
 				// 20150901, Bauke: no longer store the retry counter in the form (F5 would otherwise result in an error)
 				String formtoken = newToken();
 				Integer iRetryCounter = 1;	// first time
-				HashMap sessionContext = null; 
 				if (bSessionPresent) {
-					sessionContext = _sessionManager.getSessionContext(sRid);
 					formtoken = (String)sessionContext.get("sms_formtoken");
 					iRetryCounter = (Integer)sessionContext.get("sms_retry_counter");
 				}
@@ -377,15 +370,26 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 					htServiceRequest.put("country", sCountry);
 				if (sLanguage != null)
 					htServiceRequest.put("language", sLanguage);
-
-				if (bSendSms) {
-					_systemLogger.log(Level.INFO, MODULE, sMethod, "SMS to sUid=" + sUid);
+				
+				boolean bSendSms = true;				
+				long lTimeStamp = Long.valueOf(sTimeStamp);  // milliseconds
+				long lNow = new Date().getTime();
+				long lDiff = (lNow - lTimeStamp) / 1000; // seconds
+				if (lDiff > 120 || bSessionPresent) {  // assuming the rid is still present within 2 minutes
+					// The link is only valid for 2 minutes, and will only once send an SMS
+					bSendSms = false;
+				}
+				
+				boolean bValid = isValidPhoneNumber(sUid.replace("v", ""));  // remove voice flag, just in case
+				//if (bSendSms) {
+				if (bSendSms || !bValid) {  // 20151014
 					// sUid can have a trailing "v" to indicate a voice phone (without SMS reception)
 					// Should not occur though, the SMSAuthSPHandler must take care of this
-					boolean bValid = isValidPhoneNumber(sUid.replace("v", ""));  // remove voice flag, just in case
+					_systemLogger.log(Level.INFO, MODULE, sMethod, "SMS to sUid=" + sUid+" valid="+bValid);
 					int iReturnSend = -1;
-					if (bValid)
+					if (bValid) {
 						iReturnSend = generateAndSendSms(servletRequest, sUid);
+					}
 					if (!bValid || iReturnSend == 1) {
 						// Bad phone number.
 						// We want to show the challenge form only the first time around,
@@ -398,12 +402,13 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 							showChallengeForm(pwOut, Errors.ERROR_SMS_INVALID_PHONE/*was null*/, null, htServiceRequest);
 							return;
 						}
+						// Back to aselectserver
 						handleResult(servletRequest, servletResponse, pwOut, Errors.ERROR_SMS_INVALID_PHONE, sLanguage, failureHandling);
 						return;
 					}
 				}
 				else {
-					_systemLogger.log(Level.INFO, MODULE, sMethod, "No SMS to sUid=" + sUid + ", already sent");
+					_systemLogger.log(Level.INFO, MODULE, sMethod, "No SMS to sUid=" + sUid + ", already sent or bad phonenumber");
 				}
 				
 				// Code sent successfully
@@ -431,7 +436,7 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 			handleResult(servletRequest, servletResponse, pwOut, Errors.ERROR_SMS_COULD_NOT_AUTHENTICATE_USER, sLanguage, failureHandling);
 		}
 		finally {
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "} GET end");
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "} GET Exit");
 			if (pwOut != null) {
 				pwOut.close();
 				pwOut = null;
@@ -454,6 +459,12 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 		if (sPhone.length() > 0 && sPhone.charAt(0) == '+')
 			sPhone = sPhone.substring(1);
 		sPhone = sPhone.replaceAll("^0*", "");
+		
+		// 20151014, Bauke: Check all digits?
+		for (int i=0; i<sPhone.length(); i++) {
+			if (!Character.isDigit(sPhone.charAt(i)))
+				return false;
+		}
 		if (sPhone.length() < 5 || sPhone.length() > 14)
 			return false;
 		if (sPhone.startsWith("31") && sPhone.length() != 11)
@@ -485,7 +496,7 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 		String sLanguage = null;
 		String failureHandling = _sFailureHandling;	// Initially we use default from config, this might change if we suspect parameter tampering
 
-		_systemLogger.log(Level.FINEST, MODULE, sMethod, "POST begin { servletRequest=" + servletRequest);
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "Enter POST { servletRequest=" + servletRequest);
 		try {
 			sLanguage = servletRequest.getParameter("language");  // optional language code
 			if (sLanguage == null || sLanguage.trim().length() < 1)
@@ -672,7 +683,7 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 				pwOut.close();
 				pwOut = null;
 			}
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "} POST end");
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "} POST Exit");
 		}
 	}
 
@@ -883,7 +894,7 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 					sbTemp.append("&signature=").append(sSignature);
 
 					try {
-						_systemLogger.log(Level.FINEST, MODULE, sMethod, "REDIRECT " + sbTemp);
+						_systemLogger.log(Level.FINER, MODULE, sMethod, "REDIRECT " + sbTemp);
 						servletResponse.sendRedirect(sbTemp.toString());
 					}
 					catch (IOException eIO) {  // could not send redirect
