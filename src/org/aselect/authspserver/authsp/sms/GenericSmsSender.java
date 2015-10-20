@@ -111,6 +111,7 @@ public abstract class GenericSmsSender
 				url = new URL(providerUrl+"?"+data.toString());
 				conn = (HttpURLConnection)url.openConnection();
 			}
+			_systemLogger.log(Level.FINEST, sModule, sMethod, "Send URL="+url);
 			conn.setRequestProperty("Host", url.getHost());	// Wireless Services requires 'Host' header
 
 			//conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");	// Wireless Services requires this for POST
