@@ -213,6 +213,14 @@ public class JSONCommunicator implements IClientCommunicator
 		_systemLogger.log(Level.FINEST, MODULE, sMethod, "URL=" + sbBuffer.toString());
 		try {
 			
+			if ( user != null) {
+				_systemLogger.log(Level.INFO, MODULE, sMethod, "Using Basic Authentication");
+				Authenticator.setDefault(new Authenticator() {
+				    protected PasswordAuthentication getPasswordAuthentication() {
+					return new PasswordAuthentication(getUser(), (getPw() != null) ? getPw().toCharArray() : "".toCharArray());
+				    }
+				});
+			}
 			// RH, 20151001, en
 			
 			urlSomeServer = new URL(sbBuffer.toString());
@@ -244,6 +252,7 @@ public class JSONCommunicator implements IClientCommunicator
 		}
 		// RH, 20151001, sn
 		finally {
+			if ( getUser() != null)	Authenticator.setDefault(null);
 			if (brInput != null)
 				try {
 					brInput.close();
@@ -278,3 +287,4 @@ public class JSONCommunicator implements IClientCommunicator
 	
 
 }
+
