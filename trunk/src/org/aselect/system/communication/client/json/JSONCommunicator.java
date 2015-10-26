@@ -223,9 +223,6 @@ public class JSONCommunicator implements IClientCommunicator
 			}
 			// RH, 20151001, en
 			
-			
-			
-			
 			urlSomeServer = new URL(sbBuffer.toString());
 			brInput = new BufferedReader(new InputStreamReader(urlSomeServer.openStream()), 16000);
 			String s = null;
