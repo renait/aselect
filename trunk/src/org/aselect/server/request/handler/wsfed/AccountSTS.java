@@ -15,6 +15,8 @@
  */
 package org.aselect.server.request.handler.wsfed;
 
+import java.net.URL;
+import java.net.URLDecoder;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Vector;
@@ -585,7 +587,7 @@ public class AccountSTS extends ProtoRequestHandler
 		// Bauke 20081209: getCredentialsFromCookie now returns a string
 		String sTgt = getCredentialsFromCookie(request);
 		String sWtRealm = null;
-		// if (htCredentialsParams != null) {
+		// if (htCredentialsParams != null) {sWtRealm
 		// String sTgt = (String)htCredentialsParams.get("tgt");
 		if (sTgt != null) {
 			HashMap htTGTContext = getContextFromTgt(sTgt, false); // Don't check expiration
@@ -594,6 +596,7 @@ public class AccountSTS extends ProtoRequestHandler
 				_oTGTManager.remove(sTgt);
 			}
 		}
+		
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "wtrealm=" + sWtRealm);
 		// Remove the TGT cookie
 		HandlerTools.delCookieValue(response, "aselect_credentials", _sCookieDomain, null, _systemLogger);
@@ -607,6 +610,29 @@ public class AccountSTS extends ProtoRequestHandler
 				sWtRealm = HandlerTools.getCookieValue(request, SESSION_ID_PREFIX + "realm", _systemLogger);
 			}
 			String sReply = (String) _htSP_LogoutReturn.get(sWtRealm);
+			// RH, 20151026, sn
+			if (sReply != null & sReply.length() > 0 && sReply.endsWith("*")) {	// add wreply query string to logout return url
+				StringBuffer s = new StringBuffer();
+				s.append(sReply.substring(0, sReply.length() - 1));	// snap off the "*"
+				String wreply = request.getParameter("wreply");	// contains url encoded url
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Handling  wreply: " + wreply);
+				if (wreply != null && wreply.length() > 0) {
+					wreply = URLDecoder.decode(wreply, "UTF-8");
+					URL replyURL = new URL(wreply);	// we want wreply to be a url
+					String queryPart = replyURL.getQuery(); // get the query part to add to our return url
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Found  queryPart: " + queryPart);
+					if (queryPart != null && queryPart.length()>0) {
+						if (s.indexOf("?")>0)	{
+							s.append("&");
+						} else {
+							s.append("?");
+						}
+						s.append(queryPart);
+					}
+				}
+				sReply = s.toString();
+			}
+			// RH, 20151026, sn
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "Used " + sWtRealm
 					+ " to find return address, REDIRECT to SP=" + sReply);
 
