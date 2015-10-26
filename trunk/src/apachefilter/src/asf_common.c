@@ -272,19 +272,52 @@ char *aselect_filter_strip_param(pool *pPool, char * pcASelectServerURL)
 // Loops until enough data is received or a "\r" is received
 // returns number of bytes received, returns -1 if error has occured
 //
-int aselect_filter_receive_msg(int sd, char *pcReceiveMsg, int ccReceiveMsg)
+char *aselect_filter_receive_msg(pool *pPool, int sd)  //, char *pcReceiveMsg, int ccReceiveMsg)
 {
+#define INIT_BUFSIZE 12300
+#define BUF_NEED 800
+#define BUF_INCR 6001
+	char *pReceiveBuf = 0, *pLF;
+	int iReadSofar = 0, iBufSize = INIT_BUFSIZE;
     int iReceived = 0;
-    int iRemaining = ccReceiveMsg;
-    char *pMsg = pcReceiveMsg;
-    char *pLF;
-    int cnt;
+    //int iRemaining = ccReceiveMsg;
+    char *pMsg;
     static int count = 1000;
-    cnt = ++count;
 
-    TRACE2("RCV[%d] aselect_filter_receive_msg: max=%d", cnt, ccReceiveMsg);
+    TRACE2("RCV[%d] receive_msg: alloc=%d", ++count, iBufSize);
+	//
+    // Receive data while there is data or till we find a "\r"
+	//
+    pReceiveBuf = (char *)ap_palloc(pPool, iBufSize+1); // plus null-byte
+	*pReceiveBuf = '\0';
+	for ( ; ; ) {
+		if ((iBufSize - iReadSofar) <= BUF_NEED) {  // enlarge the buffer
+			TRACE3("RCV[%d] receive_msg: realloc=%d sofar=%d", count, iBufSize+BUF_INCR, iReadSofar);
+			char *pNewBuf = (char *)ap_palloc(pPool, iBufSize+BUF_INCR+1);
+			iBufSize += BUF_INCR;
+			strncpy(pNewBuf, pReceiveBuf, iReadSofar+1);
+			pReceiveBuf = pNewBuf;
+		}
+		// Read new data
+		pMsg = pReceiveBuf+iReadSofar;  // put new data here
+		iReceived = recv(sd, pMsg, iBufSize-iReadSofar, 0);
+        if (iReceived <= 0)
+            break;
+		*(pMsg+iReceived) = '\0';
+        pLF = strchr(pMsg, '\r');
+        if (pLF) { // cut off the data and finish
+			iReceived = pLF - pMsg;
+			*(pMsg+iReceived) = '\0';
+			iReadSofar += iReceived;
+            break;
+        }
+		iReadSofar += iReceived;
+	}
+    TRACE2("RCV[%d] receive_msg: read=%d", count, iReadSofar);
+	return (iReceived>=0)? pReceiveBuf: NULL;
 
-    // Receive data while their is data or till we find a "\r"
+	/* 20151026, Bauke: replaced following code
+    // Receive data while there is data or till we find a "\r"
     while ((iRemaining > 0) && ((iReceived = recv(sd, pMsg, iRemaining, 0)) > 0)) {
         if (iReceived == -1)
             break;
@@ -301,6 +334,7 @@ int aselect_filter_receive_msg(int sd, char *pcReceiveMsg, int ccReceiveMsg)
         
     TRACE2("RCV[%d] aselect_filter_receive_msg: recv=%d", cnt, iReceived);
     return iReceived;
+	*/
 }
 
 //
@@ -312,15 +346,15 @@ char *aselect_filter_send_request(server_rec *pServer, pool *pPool, char *pcASAI
 	struct sockaddr_in pin;
 	struct hostent *hp;
 	int  timeout;
-	char pcReceiveMessage[ASELECT_FILTER_MAX_RECV+1];
-	int  ccReceiveMessage;
+	//char pcReceiveMessage[ASELECT_FILTER_MAX_RECV+1];
+	//int  ccReceiveMessage;
 	char *pcResponse = NULL;
 	static int count = 0;
 	int cnt = ++count;
 
     char *sDest = (toAgent)? "AGENT": "LbSensor";
     TRACE3("To%s[%d] aselect_filter_send_request { [%s]", sDest, cnt, pcSendMessage);
-    memset(pcReceiveMessage, 0, ASELECT_FILTER_MAX_RECV);
+    //memset(pcReceiveMessage, 0, ASELECT_FILTER_MAX_RECV);
 
     // Retrieve the host information
     if ((hp = gethostbyname(pcASAIP)) != NULL) { // Initialize the connection information
@@ -348,22 +382,32 @@ char *aselect_filter_send_request(server_rec *pServer, pool *pPool, char *pcASAI
                 // Could not connect to specified address and port
                 TRACE1("could not set socket send timeout (%d)", errno);
                 ap_log_error(APLOG_MARK, APLOG_NOERRNO|APLOG_WARNING, 0, pServer,
-						/*ap_psprintf(pPool, */"ASELECT_FILTER:: could not set socket send timeout (%d)", errno);
+						"ASELECT_FILTER:: could not set socket send timeout (%d)", errno);
             }
 
             if (setsockopt(sd, SOL_SOCKET, SO_RCVTIMEO, (char*) &timeout, sizeof(timeout)) != -1) {
                 TRACE1("could not set socket receive timeout (%d)", errno);
                 ap_log_error(APLOG_MARK, APLOG_NOERRNO|APLOG_WARNING, 0, pServer,
-						/*ap_psprintf(pPool, */"ASELECT_FILTER:: could not set socket receive timeout (%d)", errno);
+						"ASELECT_FILTER:: could not set socket receive timeout (%d)", errno);
             }
 
             // Check if information is not too large for message
             if ((ccSendMessage + 1) < ASELECT_FILTER_MAX_MSG) {
                 // Send the message, PAUSE TIMER
 				if (pt != NULL) timer_pause(pt);
-				if (send(sd, (void *) pcSendMessage, (ccSendMessage), 0) > 0) { // 20111116 don't send null-byte
+				if (send(sd, (void *)pcSendMessage, (ccSendMessage), 0) > 0) { // 20111116 don't send null-byte
+					// ====
+
 					// Message has been sent, now wait for response
-					ccReceiveMessage = aselect_filter_receive_msg(sd, pcReceiveMessage, sizeof(pcReceiveMessage)-1);
+					// 20151026, Bauke: changed receive_msg routine
+					pcResponse = aselect_filter_receive_msg(pPool, sd);  // , pcReceiveMessage, sizeof(pcReceiveMessage)-1);
+					if (pcResponse == NULL) {  // Could not receive data
+						TRACE1("error while receiving data (%d)", errno);
+						ap_log_error(APLOG_MARK, APLOG_NOERRNO|APLOG_ERR, 0, pServer, "ASELECT_FILTER:: error while receiving data (%d)", errno);
+					}
+
+					// 20151026: ccReceiveMessage = aselect_filter_receive_msg(sd, pcReceiveMessage, sizeof(pcReceiveMessage)-1);
+					/*
 					if (ccReceiveMessage > 0) {
 						if (ccReceiveMessage >= sizeof(pcReceiveMessage)-1) {
 							// Received message too large
@@ -377,14 +421,15 @@ char *aselect_filter_send_request(server_rec *pServer, pool *pPool, char *pcASAI
 					}
 					else { // Could not receive data
 						TRACE1("error while receiving data (%d)", errno);
-						ap_log_error(APLOG_MARK, APLOG_NOERRNO|APLOG_ERR, 0, pServer,
-							/*ap_psprintf(pPool, */"ASELECT_FILTER:: error while receiving data (%d)", errno);
+						ap_log_error(APLOG_MARK, APLOG_NOERRNO|APLOG_ERR, 0, pServer, "ASELECT_FILTER:: error while receiving data (%d)", errno);
 					}
+					*/
+
+					// ====
 				}
 				else { // Could not send data
 					TRACE1("error while sending data (%d)", errno);
-					ap_log_error(APLOG_MARK, APLOG_NOERRNO|APLOG_ERR, 0, pServer,
-						/*ap_psprintf(pPool, */"ASELECT_FILTER:: error while sending data (%d)", errno);
+					ap_log_error(APLOG_MARK, APLOG_NOERRNO|APLOG_ERR, 0, pServer, "ASELECT_FILTER:: error while sending data (%d)", errno);
 				}
 				// RESUME TIMER
 				if (pt != NULL) timer_resume(pt);
@@ -397,13 +442,12 @@ char *aselect_filter_send_request(server_rec *pServer, pool *pPool, char *pcASAI
         else { // Could not connect to specified address and port
             TRACE4("Could not connect to %s at %s:%d (%d)", sDest, pcASAIP, iASAPort, errno);
 			ap_log_error(APLOG_MARK, APLOG_NOERRNO|APLOG_ERR, 0, pServer,
-				/*ap_psprintf(pPool, */"ASELECT_FILTER:: could not connect to %s at %s:%d (%d)", sDest, pcASAIP, iASAPort, errno);
+						"ASELECT_FILTER:: could not connect to %s at %s:%d (%d)", sDest, pcASAIP, iASAPort, errno);
         }
         close(sd);
     } // socket
     else { // Could not create socket
-        ap_log_error(APLOG_MARK, APLOG_NOERRNO|APLOG_ERR, 0, pServer,
-		    /*ap_psprintf(pPool, */"ASELECT_FILTER:: could not create socket (%d)", errno);
+        ap_log_error(APLOG_MARK, APLOG_NOERRNO|APLOG_ERR, 0, pServer, "ASELECT_FILTER:: could not create socket (%d)", errno);
     }
     TRACE3("} From%s[%d] aselect_filter_send_request, response=[%s]", sDest, cnt, pcResponse?pcResponse:"NULL");
     return pcResponse;

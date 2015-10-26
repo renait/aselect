@@ -108,6 +108,7 @@ static const char *aselect_filter_set_logfile(cmd_parms *parms, void *mconfig, c
 static const char *aselect_filter_added_security(cmd_parms *parms, void *mconfig, const char *arg);
 static const char *aselect_filter_set_sensor_address(cmd_parms *parms, void *mconfig, const char *arg);
 static const char *aselect_filter_set_sensor_port(cmd_parms *parms, void *mconfig, const char *arg);
+static const char *aselect_filter_set_sensor_opts(cmd_parms *parms, void *mconfig, const char *arg);
 static const char *aselect_filter_cookie_path(cmd_parms *parms, void *mconfig, const char *arg);
 static const char *aselect_filter_special_settings(cmd_parms *parms, void *mconfig, const char *arg);
 static const char *aselect_filter_add_app_regexp(cmd_parms *parms, void *mconfig, const char *arg);
@@ -179,14 +180,14 @@ int aselect_filter_upload_all_rules(PASELECT_FILTER_CONFIG pConfig, server_rec *
 	int i;
 	PASELECT_APPLICATION pApp;
 
-	TRACE1("ASELECT_FILTER:: AppCount=%d", pConfig->iAppCount);
+	TRACE1("upload_all_rules:: AppCount=%d", pConfig->iAppCount);
 	for (i=0; i<pConfig->iAppCount; i++) {
 		pApp = &pConfig->pApplications[i];
-		TRACE4("ASELECT_FILTER:: added %s at %s %s%s", pApp->pcAppId, pApp->pcLocation,
-		pApp->bEnabled ? "" : "(disabled)", pApp->bForcedLogon ? "(forced logon)" : "");
+		TRACE4("upload_all_rules:: added %s at %s %s%s", pApp->pcAppId, pApp->pcLocation,
+				pApp->bEnabled ? "" : "(disabled)", pApp->bForcedLogon ? "(forced logon)" : "");
 
 		if (aselect_filter_upload_authz_rules(pConfig, pServer, pPool, pApp, pt)) {
-			TRACE2("ASELECT_FILTER:: registered %d authZ rules for %s", pApp->iRuleCount, pApp->pcAppId);
+			TRACE2("upload_all_rules:: registered %d authz rules for %s", pApp->iRuleCount, pApp->pcAppId);
 		}
 		else
 			return 0; // not ok
@@ -204,7 +205,10 @@ int aselect_filter_upload_authz_rules(PASELECT_FILTER_CONFIG pConfig, server_rec
     char *pcResponse;
     int iRet;
     
-    if (pApp->iRuleCount == 0) return 1;
+    if (pApp->iRuleCount == 0) {
+        TRACE1("upload_authz_rules: NO RULES sent for app=%s", pApp->pcAppId);
+		return 1;
+	}
     
     // Calculate size of request
     pAppId = aselect_filter_url_encode(pPool, pApp->pcAppId);
@@ -231,21 +235,21 @@ int aselect_filter_upload_authz_rules(PASELECT_FILTER_CONFIG pConfig, server_rec
         }
         strcat(pRequest, "\r\n");
         
-        TRACE1("aselect_filter_upload_authz_rules: sending: %s", pRequest);
+        TRACE1("upload_authz_rules: sending: %s", pRequest);
         pcResponse = aselect_filter_send_request(pServer, pPool, pConfig->pcASAIP, pConfig->iASAPort, pRequest, strlen(pRequest), pt, 1);
         if (pcResponse == NULL) {
             // Could not send request, error already logged
             return 0;
         }
-        //TRACE1("aselect_filter_upload_authz_rules: response: %s", pcResponse);
+        //TRACE1("upload_authz_rules: response: %s", pcResponse);
         iRet = aselect_filter_get_error(pPool, pcResponse);
         if (iRet != 0) {
-			TRACE1("ASELECT_FILTER:: Agent returned error %s while uploading authorization rules", pcResponse);
+			TRACE1("upload_authz_rules:: Agent returned error %s while uploading authorization rules", pcResponse);
             return 0;
         }
     }
     else {
-        TRACE("aselect_filter_upload_authz_rules: Out of memory");
+        TRACE("upload_authz_rules: Out of memory");
         return 0;
     }
     return 1;
@@ -592,6 +596,7 @@ static int aselect_filter_handler(request_rec *pRequest)
     char *passUsiAttribute = NULL; 
 	char *pcCookiePath = NULL;
     int try, rc;
+	char *p, sep;
     TIMER_DATA timer_data;
 
     TRACE2("---- { GET %s %s", pRequest->uri, pRequest->args);
@@ -748,7 +753,7 @@ static int aselect_filter_handler(request_rec *pRequest)
 				// Bauke: changed
 				// If attributes are not stored in a cookie,
 				// the value will not be checked with the A-Select server.
-	//if (1 == 1) {
+//if (1 == 1) {
 				// Validate ticket
 				// Bauke: added, always send rules
 				//aselect_filter_upload_all_rules(pConfig, pRequest->server, pPool, &timer_data);
@@ -1270,9 +1275,22 @@ finish_filter_handler:
     ok = (iRet == DONE || iAction == ASELECT_FILTER_ACTION_ACCESS_GRANTED);
     if (pConfig && pConfig->pCurrentApp) {
 		char *pData, buf[1000], *pcResponse;
+		int iSensorOpts = (pConfig->pcSensorOpts != NULL);
 
 		timer_finish(&timer_data);
-		pData = timer_pack(pPool, &timer_data, "flt_all", pConfig->pCurrentApp->pcAppId, ok);
+		strcpy(buf, pConfig->pCurrentApp->pcAppId);
+		if (iSensorOpts) {
+			sep = '_';
+			p = strchr(pConfig->pcSensorOpts, 's');
+			if (p && *(p+1) != '\0')
+				sep = *(p+1);
+			if (strchr(pConfig->pcSensorOpts, 'e'))
+				sprintf(buf, "%s%c%s%c%s", pConfig->pCurrentApp->pcAppId, sep, pRequest->uri, sep, pConfig->pCurrentApp->pcLocation);
+			else if (iSensorOpts && strchr(pConfig->pcSensorOpts, 'd'))
+				sprintf(buf, "%s%c%s", pConfig->pCurrentApp->pcAppId, sep, pRequest->uri);
+		}
+
+		pData = timer_pack(pPool, &timer_data, "flt_all", buf, ok);
 		if (pConfig->iBatchSize > 0 && pConfig->iSensorPort > 0 && *pConfig->pcSensorIP) {
 			sprintf(buf, "GET /?request=store&data=%s HTTP/1.1\r\n", pData);
 			pcResponse = aselect_filter_send_request(pRequest->server, pPool,
@@ -1888,6 +1906,17 @@ static const char *aselect_filter_set_sensor_address(cmd_parms *parms, void *mco
     return NULL;
 }
 
+static const char *aselect_filter_set_sensor_opts(cmd_parms *parms, void *mconfig, const char *arg)
+{
+    PASELECT_FILTER_CONFIG pConfig = (PASELECT_FILTER_CONFIG) ap_get_module_config(parms->server->module_config, &aselect_filter_module);
+
+    if (!pConfig || !(pConfig->pcSensorOpts = ap_pstrdup(parms->pool, (!arg)? "": arg)))
+		return "A-Select ERROR: Internal error when setting Sensor Options";
+
+    TRACE1("aselect_filter_set_sensor_opts:: %s", pConfig->pcSensorOpts);
+    return NULL;
+}
+
 static const char *aselect_filter_cookie_path(cmd_parms *parms, void *mconfig, const char *arg)
 {
     PASELECT_FILTER_CONFIG pConfig = (PASELECT_FILTER_CONFIG) ap_get_module_config(parms->server->module_config, &aselect_filter_module);
@@ -2459,6 +2488,9 @@ static const command_rec aselect_filter_cmds[] =
 
     AP_INIT_TAKE1( "aselect_filter_set_sensor_port", aselect_filter_set_sensor_port, NULL, RSRC_CONF,
         "Usage aselect_filter_set_sensor_port <port of a Sensor process>, example: aselect_filter_set_sensor_port \"1805\"" ),
+
+    AP_INIT_TAKE1( "aselect_filter_set_sensor_opts", aselect_filter_set_sensor_opts, NULL, RSRC_CONF,
+        "Usage aselect_filter_set_sensor_opts <options>, example: aselect_filter_set_sensor_opts \"d\"" ),
 
     AP_INIT_TAKE1("aselect_filter_cookie_path", aselect_filter_cookie_path, NULL, RSRC_CONF,
         "Usage aselect_filter_cookie_path <value>"),
