@@ -235,6 +235,7 @@ typedef struct _ASELECT_FILTER_CONFIG
     int     iASAPort;
     char    *pcSensorIP;
     int     iSensorPort;
+    char    *pcSensorOpts;
     int     iBatchSize;
     char    *pcRemoteOrg;
     ASELECT_APPLICATION pApplications[ASELECT_FILTER_MAX_APP];
@@ -280,7 +281,7 @@ void        aselect_filter_bytes_to_hex(const unsigned char *pcBytes, size_t len
 int         aselect_filter_get_error(pool *pPool, char *pcError);
 char *      aselect_filter_replace_tag(pool *pPool, char *pcTag, char *pcValue, char *pcSource);
 char *      aselect_filter_strip_param(pool *pPool, char * pcASelectServerURL );
-int         aselect_filter_receive_msg(int sd, char *pcReceiveMsg, int ccReceiveMsg );
+char *aselect_filter_receive_msg(pool *pPool, int sd);  //, char *pcReceiveMsg, int ccReceiveMsg );
 char *aselect_filter_send_request(server_rec *pServer, pool *pPool, char *pcASAIP, int iASAPort, char *pcSendMessage, int ccSendMessage,
 		    TIMER_DATA *pt, int toAgent);
 char *      aselect_filter_get_param(pool *pPool, char *pcArgs, char *pcParam, char * pcDelimiter, int bUrlDecode);
