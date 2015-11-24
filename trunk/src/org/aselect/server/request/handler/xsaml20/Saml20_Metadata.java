@@ -52,6 +52,7 @@ public class Saml20_Metadata extends ProtoRequestHandler
 	public final static boolean DEFAULT_ADDKEYNAME = false;
 	public final static boolean DEFAULT_ADDCERTIFICATE = false;
 	public final static boolean DEFAULT_USESHA256 = false;
+	public final static boolean DEFAULT_ADDPDPDESCRIPTOR = true;	// RH, 20151124, n, backward compatibility
 
 	private String workingDir = null;
 	private String redirectURL;
@@ -91,6 +92,7 @@ public class Saml20_Metadata extends ProtoRequestHandler
 	private boolean addkeyname = DEFAULT_ADDKEYNAME;
 	private boolean addcertificate = DEFAULT_ADDCERTIFICATE;
 	private boolean usesha256 = DEFAULT_USESHA256;
+	private boolean addpdpdescriptor = DEFAULT_ADDPDPDESCRIPTOR;
 	
 	
 
@@ -163,6 +165,15 @@ public class Saml20_Metadata extends ProtoRequestHandler
 				}
 				_systemLogger.log(Level.FINER, MODULE, sMethod, "Using use_sha256: " + usesha256);
 				//	RH, 20150910, en
+				// RH, 20151124, sn
+				String metaaddpdp = Utils.getSimpleParam(_configManager, _systemLogger, oConfig, "addpdpdescriptor", false);
+				if (metaaddpdp != null) {
+					addpdpdescriptor = Boolean.parseBoolean(metaaddpdp);
+				} else {
+					addpdpdescriptor = DEFAULT_ADDPDPDESCRIPTOR;
+				}
+				_systemLogger.log(Level.FINER, MODULE, sMethod, "Using addpdpdescriptor: " + addpdpdescriptor);
+				// RH, 20151124, en
 				
 				
 				
@@ -916,5 +927,15 @@ public class Saml20_Metadata extends ProtoRequestHandler
 	public void setUsesha256(boolean usesha256)
 	{
 		this.usesha256 = usesha256;
+	}
+
+	public boolean isAddpdpdescriptor()
+	{
+		return addpdpdescriptor;
+	}
+
+	public void setAddpdpdescriptor(boolean addpdpdescriptor)
+	{
+		this.addpdpdescriptor = addpdpdescriptor;
 	}
 }

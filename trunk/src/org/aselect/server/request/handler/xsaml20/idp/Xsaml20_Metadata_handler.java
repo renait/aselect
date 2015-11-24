@@ -270,8 +270,11 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 
 		pdpDescriptor.getKeyDescriptors().add(createKeyDescriptor(getSigningCertificate()));
 		pdpDescriptor.addSupportedProtocol(SAMLConstants.SAML20P_NS);
-		entityDescriptor.getRoleDescriptors().add(pdpDescriptor);
-
+		// Make pdp descriptor optional
+		if ( isAddpdpdescriptor() ) {
+			entityDescriptor.getRoleDescriptors().add(pdpDescriptor);
+		}
+		
 		// Add option for sha256 and KeyName
 		
 //		entityDescriptor = (EntityDescriptor) SamlTools.signSamlObject(entityDescriptor);// RH, 20150910, o
