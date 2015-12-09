@@ -343,10 +343,7 @@ public class JDBCConnector implements IUDBConnector
 				sAttributeValue = (String) htUserRecord.get(sAttributeName);
 
 				if (sAttributeName.startsWith("ASELECT") && sAttributeName.endsWith("REGISTERED")) {// only store user
-					// attributes of
-					// authsps that are
-					// registered for
-					// the user
+					// attributes of authsps that are registered for the user
 					if (sAttributeValue.equalsIgnoreCase("TRUE")) {
 						// The authsp id is the substring between ASELECT(7 chars) and REGISTERED(10 chars)
 						String sAuthSPID = sAttributeName.substring(7, sAttributeName.length() - 10);
@@ -383,7 +380,6 @@ public class JDBCConnector implements IUDBConnector
 			htResponse.put("result_code", Errors.ERROR_ASELECT_UDB_INTERNAL);
 		}
 		finally {
-			// try { // RH, 20090605, sn
 			if (oResultSet != null) {
 				try {
 					oResultSet.close();
@@ -411,10 +407,6 @@ public class JDBCConnector implements IUDBConnector
 				}
 				oConnection = null;
 			}
-			// }
-			// catch (Exception e) {
-			// } // RH, 20090605, en
-
 		}
 		return htResponse;
 	}
