@@ -381,18 +381,6 @@ public class JDBCAttributeRequestor extends GenericAttributeRequestor
 	 */
 	public static void main(String[] args)
 	{
-		// String url = "jdbc:mysql://localhost/aselect";
-
-		// String query = "SELECT name, value FROM TBL_ATTRIBUTES WHERE " + "(
-		// uid=? OR uid='*' ) AND"
-		// + "( organization=? OR organization='*' ) AND" + "( app_id=? OR
-		// app_id='*' ) AND"
-		// + "( authsp=? OR authsp='*' )";
-
-		// _htReMapAttributes = new HashMap();
-		// _htReMapAttributes.put("match",
-		// "urn:mace:attribute-def:nl.surffederatie:nlEduPersonHomeOrganization");
-
 		try {
 			Class.forName("com.mysql.jdbc.Driver");
 			// Connection con = DriverManager.getConnection(url, "aselect_user",

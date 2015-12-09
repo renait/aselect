@@ -275,7 +275,7 @@ public class XMLConfigHandler implements IConfigHandler
 			_sConfigId = sConfigId;
 			_sDatabaseTableName = sDatabaseTable;
 			// create query
-			StringBuffer sbQuery = new StringBuffer("Select ");
+			StringBuffer sbQuery = new StringBuffer("SELECT ");
 			sbQuery.append(DATA_COLUMN);
 			sbQuery.append(" FROM ");
 			sbQuery.append(_sDatabaseTableName);
