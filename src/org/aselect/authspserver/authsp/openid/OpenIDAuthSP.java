@@ -132,7 +132,8 @@ public class OpenIDAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 			_iAllowedRetries = Utils.getSimpleIntParam(_configManager, _systemLogger, _oAuthSpConfig, "allowed_retries", true);
 
 			// Get return url
-			_sUrl = Utils.getSimpleParam(_configManager, _systemLogger, oConfig, "url", true);
+//			_sUrl = Utils.getSimpleParam(_configManager, _systemLogger, oConfig, "url", true);
+			_sUrl = Utils.getSimpleParam(_configManager, _systemLogger, _oAuthSpConfig, "url", true);
 
 			sbInfo = new StringBuffer("Successfully started ").append(VERSION).append(".");
 			_systemLogger.log(Level.INFO, MODULE, sMethod, sbInfo.toString());
