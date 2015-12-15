@@ -91,7 +91,8 @@ public interface ILDAPProtocolHandler
 	 * @return true if initialisation is successful, otherwise false.
 	 */
 	public boolean init(String sLDAPSUrl, String sDriver, String sBaseDn, String sUserDn, boolean bFullUid,
-			String sUid, String sPrincipalDn, String sPrincipalPwd, String sAttrAllowedLogins, String sAttrValidUntil, AuthSPSystemLogger systemLogger);
+			String sUid, String sPrincipalDn, String sPrincipalPwd, String sAttrAllowedLogins, String sAttrValidUntil,
+			String sLdapEscapes, AuthSPSystemLogger systemLogger);
 
 	/**
 	 * Authenticate a user with LDAP. <br>

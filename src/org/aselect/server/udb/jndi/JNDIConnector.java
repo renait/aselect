@@ -149,6 +149,8 @@ public class JNDIConnector implements IUDBConnector
 	// 20121123, Bauke: added SMS to voice phones
 	private String _sVoicePhoneAttribute = "";  // the attribute might contain a "v"
 
+	private String _sLdapEscapes = "";
+	
 	/**
 	 * Initializes managers and opens a JNDI connection to the A-Select user db. <br>
 	 * <br>
@@ -291,7 +293,10 @@ public class JNDIConnector implements IUDBConnector
 					sUserId = sUserId.substring(0, iIndex);
 			}
 
-			sbQuery = new StringBuffer("(").append(_sUserDN).append("=").append(sUserId).append(")");
+			// 20151210, Bauke: added ldap search escape
+			String sEscapedUid = Utils.ldapEscape(sUserId, _sLdapEscapes, _oASelectSystemLogger);
+
+			sbQuery = new StringBuffer("(").append(_sUserDN).append("=").append(sEscapedUid).append(")");
 			SearchControls oScope = new SearchControls();
 			oScope.setSearchScope(SearchControls.SUBTREE_SCOPE);
 			// No attr specification used: oScope.setReturningAttributes(attrs);*/
@@ -476,7 +481,10 @@ public class JNDIConnector implements IUDBConnector
 					sUserId = sUserId.substring(0, iIndex);
 			}
 
-			sbQuery = new StringBuffer("(").append(_sUserDN).append("=").append(sUserId).append(")");
+			// 20151210, Bauke: added ldap search escape
+			String sEscapedUid = Utils.ldapEscape(sUserId, _sLdapEscapes, _oASelectSystemLogger);
+
+			sbQuery = new StringBuffer("(").append(_sUserDN).append("=").append(sEscapedUid).append(")");
 			SearchControls oScope = new SearchControls();
 			oScope.setSearchScope(SearchControls.SUBTREE_SCOPE);
 			oDirContext = getConnection();
@@ -600,7 +608,10 @@ public class JNDIConnector implements IUDBConnector
 					sUserId = sUserId.substring(0, iIndex);
 			}
 
-			sbQuery = new StringBuffer("(").append(_sUserDN).append("=").append(sUserId).append(")");
+			// 20151210, Bauke: added ldap search escape
+			String sEscapedUid = Utils.ldapEscape(sUserId, _sLdapEscapes, _oASelectSystemLogger);
+
+			sbQuery = new StringBuffer("(").append(_sUserDN).append("=").append(sEscapedUid).append(")");
 			_oASelectSystemLogger.log(Level.FINER, MODULE, sMethod, "Search for "+sbQuery);
 			
 			SearchControls oScope = new SearchControls();
@@ -808,6 +819,9 @@ public class JNDIConnector implements IUDBConnector
 			if (!Utils.hasValue(_sVoicePhoneAttribute))
 				_sVoicePhoneAttribute = "";
 			_oASelectSystemLogger.log(Level.INFO, MODULE, sMethod, "voice_phone_attribute="+_sVoicePhoneAttribute);
+			
+			// 20151210, Bauke: added ldap escape mechanism for Ldap search()
+			_sLdapEscapes = Utils.getSimpleParam(_oASelectConfigManager, _oASelectSystemLogger, oConfigSection, "ldap_escapes", false);
 			
 			try {
 				_sUDBResourceGroup = _oASelectConfigManager.getParam(oConfigSection, "resourcegroup");

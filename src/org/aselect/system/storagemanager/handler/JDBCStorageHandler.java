@@ -287,8 +287,7 @@ public class JDBCStorageHandler implements IStorageHandler
 				_sContextKey = identifierQuote + oConfigManager.getParam(oTableSection, "key") + identifierQuote;
 			}
 			catch (ASelectConfigException e) {
-				_systemLogger
-						.log(Level.WARNING, MODULE, sMethod, "No valid 'key' config item in 'table' section found");
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "No valid 'key' config item in 'table' section found");
 				throw new ASelectStorageException(Errors.ERROR_ASELECT_INIT_ERROR, e);
 			}
 
@@ -296,8 +295,7 @@ public class JDBCStorageHandler implements IStorageHandler
 				_sContextValue = identifierQuote + oConfigManager.getParam(oTableSection, "value") + identifierQuote;
 			}
 			catch (ASelectConfigException e) {
-				_systemLogger.log(Level.WARNING, MODULE, sMethod,
-						"No valid 'value' config item in 'table' section found");
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "No valid 'value' config item in 'table' section found");
 				throw new ASelectStorageException(Errors.ERROR_ASELECT_INIT_ERROR, e);
 			}
 			// getConnection(); // RH, 20090604, o
@@ -513,8 +511,7 @@ public class JDBCStorageHandler implements IStorageHandler
 
 		try {
 			sbBuffer = new StringBuffer();
-			sbBuffer.append("SELECT COUNT(*) ");
-			sbBuffer.append("FROM ").append(_sTableName);
+			sbBuffer.append("SELECT COUNT(*) ").append("FROM ").append(_sTableName);
 
 			// Connection oConnection = getConnection(); // RH, 20090604, o
 			oConnection = getConnection(); // RH, 20090604, n
@@ -568,8 +565,7 @@ public class JDBCStorageHandler implements IStorageHandler
 
 		try {
 			sbBuffer = new StringBuffer();
-			sbBuffer.append("SELECT * ");
-			sbBuffer.append("FROM ").append(_sTableName);
+			sbBuffer.append("SELECT * ").append("FROM ").append(_sTableName);
 			_systemLogger.log(Level.FINER, MODULE, sMethod, "sql=" + sbBuffer);
 
 			// Connection oConnection = getConnection(); // RH, 20090604, o
@@ -1240,15 +1236,9 @@ public class JDBCStorageHandler implements IStorageHandler
 		ResultSet oResultSet = null;
 		int iKey = 0; // oKey.hashCode();
 		
-		// RH, 20111115, sn
-		StringBuffer sbQuery = new StringBuffer("SELECT ");
-		sbQuery.append(_sContextKey);
-		sbQuery.append(" FROM ");
-		// RH, 20111115, en
-		sbQuery.append(_sTableName);
-		sbQuery.append(" WHERE ");
-		// sbQuery.append(_sContextKeyHash); // old // was _sContextKey in the sfs
-		sbQuery.append(_sContextKey); // was _sContextKey in the sfs
+		StringBuffer sbQuery = new StringBuffer("SELECT ").append(_sContextKey);
+		sbQuery.append(" FROM ").append(_sTableName);
+		sbQuery.append(" WHERE ").append(_sContextKey); // was _sContextKey in the sfs
 		// release, saml20 update
 		sbQuery.append(" = ?");
 		_systemLogger.log(Level.FINER, MODULE, sMethod, "sql=" + sbQuery + " -> " + iKey + " key=" + oKey);
