@@ -964,7 +964,8 @@ public class SamlTools
 	public static void sendSOAPResponse(HttpServletRequest servletRequest, HttpServletResponse servletResponse, String envelope)
 	throws IOException
 	{
-		PrintWriter pwOut = Utils.prepareForHtmlOutput(servletRequest, servletResponse);
+//		PrintWriter pwOut = Utils.prepareForHtmlOutput(servletRequest, servletResponse);
+		PrintWriter pwOut = Utils.prepareForHtmlOutput(servletRequest, servletResponse, "text/xml");	// SOAP is xml, compatibility prev. rev.
 		pwOut.write(envelope);
 		pwOut.write("\r\n\r\n\r\n");	// Backward compatibility
 		pwOut.close();
