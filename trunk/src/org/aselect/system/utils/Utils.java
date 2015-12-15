@@ -1484,4 +1484,39 @@ public class Utils
 		oResponse.setHeader("Expires", "-1");
 	}
 
+	/**
+	 * Escape a search value for Ldap search().
+	 * 
+	 * @param sEscapedUid
+	 *     the uid to be escaped
+	 *
+	 * @param sLdapEscapes
+	 *     the ldap escape instructions to be applied, the first character serves as <instr_sep>, the second as <assign_sep>
+	 *     Format of a single instruction: <string_to_be_repaced><assign_sep><replacement_string>
+	 *     format: <instr_sep><assign_sep><instr_sep><replacement_instruction><instr_sep><replacement_instruction><instr_sep>...
+	 *
+	 * @return the escaped value
+	 */
+	public static String ldapEscape(String sEscapedUid, String sLdapEscapes, SystemLogger oSysLog)
+	{
+		String sMethod = "ldapEscape";
+		
+		if (Utils.hasValue(sLdapEscapes) && sLdapEscapes.length() > 2) {
+			//  <ldap_escapes>_=_,=\,_*=\\2a_\=\\5c_(=\\28_)=\\29</ldap_escapes>
+			oSysLog.log(Level.FINER, MODULE, sMethod, "ldap_escapes="+sLdapEscapes);
+			String sGroupSep = sLdapEscapes.substring(0, 1);
+			String sReplSep = sLdapEscapes.substring(1, 2);
+			String[] aSplit = sLdapEscapes.split(sGroupSep);
+			for (int i=2; i<aSplit.length; i++) {
+				// *=\\2a
+				String[] aRepl = aSplit[i].split(sReplSep);
+				if (aRepl.length > 1) {
+					sEscapedUid = sEscapedUid.replace(aRepl[0], aRepl[1]);
+				}
+				oSysLog.log(Level.FINEST, MODULE, sMethod, "i="+i+" instr:"+aSplit[i]+" esc="+sEscapedUid);
+			}			
+		}
+		return sEscapedUid;
+	}
+
 }

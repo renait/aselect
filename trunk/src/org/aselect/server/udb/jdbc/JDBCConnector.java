@@ -171,7 +171,6 @@ public class JDBCConnector implements IUDBConnector
 			}
 			catch (Exception e) {
 				_oASelectSystemLogger.log(Level.WARNING, MODULE, sMethod, "No config item 'users_table' found", e);
-
 				throw new ASelectUDBException(Errors.ERROR_ASELECT_INIT_ERROR, e);
 			}
 
@@ -181,7 +180,6 @@ public class JDBCConnector implements IUDBConnector
 			catch (Exception e) {
 				_oASelectSystemLogger.log(Level.WARNING, MODULE, sMethod,
 						"No config item 'users_table_id_column' found", e);
-
 				throw new ASelectUDBException(Errors.ERROR_ASELECT_INIT_ERROR, e);
 			}
 
@@ -191,7 +189,6 @@ public class JDBCConnector implements IUDBConnector
 			catch (ASelectConfigException e) {
 				_oASelectSystemLogger.log(Level.WARNING, MODULE, sMethod,
 						"No 'resourcegroup' config item found in udb 'connector' config section.", e);
-
 				throw new ASelectUDBException(Errors.ERROR_ASELECT_INIT_ERROR, e);
 			}
 
@@ -205,7 +202,6 @@ public class JDBCConnector implements IUDBConnector
 			catch (Exception e) {
 				_oASelectSystemLogger.log(Level.WARNING, MODULE, sMethod,
 						"No config section 'authsps' found in main A-Select config", e);
-
 				throw new ASelectUDBException(Errors.ERROR_ASELECT_INIT_ERROR, e);
 			}
 
@@ -215,7 +211,6 @@ public class JDBCConnector implements IUDBConnector
 			catch (Exception e) {
 				_oASelectSystemLogger.log(Level.WARNING, MODULE, sMethod,
 						"No config section 'authsps' found in main A-Select config", e);
-
 				throw new ASelectUDBException(Errors.ERROR_ASELECT_INIT_ERROR, e);
 			}
 
@@ -226,7 +221,6 @@ public class JDBCConnector implements IUDBConnector
 				catch (Exception e) {
 					_oASelectSystemLogger.log(Level.WARNING, MODULE, sMethod,
 							"No config item 'id' found in 'authsp' section", e);
-
 					throw new ASelectUDBException(Errors.ERROR_ASELECT_INIT_ERROR, e);
 				}
 
@@ -279,11 +273,8 @@ public class JDBCConnector implements IUDBConnector
 			oConnection = getConnection();
 
 			StringBuffer sbQuery = new StringBuffer();
-			sbQuery.append("SELECT * FROM ");
-			sbQuery.append(_sUsersTableName);
-			sbQuery.append(" WHERE ");
-			sbQuery.append(_sUserIdColumn);
-			sbQuery.append("=?");
+			sbQuery.append("SELECT * FROM ").append(_sUsersTableName);
+			sbQuery.append(" WHERE ").append(_sUserIdColumn).append("=?");
 
 			try {
 				oStatement = oConnection.prepareStatement(sbQuery.toString());
@@ -291,15 +282,12 @@ public class JDBCConnector implements IUDBConnector
 				oResultSet = oStatement.executeQuery();
 			}
 			catch (Exception e) {
-				_oASelectSystemLogger.log(Level.SEVERE, MODULE, sMethod, "Could not execute query: "
-						+ sbQuery.toString(), e);
-
+				_oASelectSystemLogger.log(Level.SEVERE, MODULE, sMethod, "Could not execute query: " + sbQuery.toString(), e);
 				throw new ASelectUDBException(Errors.ERROR_ASELECT_UDB_INTERNAL, e);
 			}
 
 			if (!oResultSet.next()) {
 				logAuthentication(sUserId, Errors.ERROR_ASELECT_UDB_UNKNOWN_USER, "denied");
-
 				throw new ASelectUDBException(Errors.ERROR_ASELECT_UDB_UNKNOWN_USER);
 			}
 

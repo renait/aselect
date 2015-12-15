@@ -140,6 +140,7 @@ public class JNDIAttributeRequestor extends GenericAttributeRequestor
 	private boolean _bNumericalUid = false;
 	private String _sQueryPreFrase = null;
 	private String _sQueryPostFrase = null;
+	private String _sLdapEscapes = null;
 	
 	// Store <sub_attributes> data
 	protected HashMap<String,String> _hmAttributes = new HashMap<String,String>();
@@ -230,6 +231,9 @@ public class JNDIAttributeRequestor extends GenericAttributeRequestor
 						"No valid 'user_dn' config item in 'main' section found", e);
 				throw new ASelectAttributesException(Errors.ERROR_ASELECT_INIT_ERROR, e);
 			}
+			
+			// 20151210, Bauke: added ldap escape mechanism for Ldap search()
+			_sLdapEscapes = Utils.getSimpleParam(_configManager, _systemLogger, oMain, "ldap_escapes", false);
 
 			try { // Bauke: attribute feature
 				_sAltUserDN = _configManager.getParam(oMain, "alt_user_dn");
@@ -463,7 +467,7 @@ public class JNDIAttributeRequestor extends GenericAttributeRequestor
 		Vector<String> vMappedAttributes = new Vector<String>();
 		String sUID = null;
 	
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "GathererVersion="+_iGathererVersion);
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "GathererVersion="+_iGathererVersion+" _sUseKey="+_sUseKey);
 		
 		// Bauke: circumvent udb attribute problems
 		String sAuthspType = (String) htTGTContext.get("authsp_type");
@@ -516,7 +520,7 @@ public class JNDIAttributeRequestor extends GenericAttributeRequestor
 					// 20120927, Bauke: added return to skip further gathering (ran into a null pointer exception)
 					return;
 				}
-				_systemLogger.log(Level.INFO, MODULE, sMethod, "JNDIAttr use UDB finished");
+				_systemLogger.log(Level.INFO, MODULE, sMethod, "JNDIAttr use UDB finished, sUID="+sUID);
 			}
 
 			// Regular JNDI gathering takes place here
@@ -548,9 +552,12 @@ public class JNDIAttributeRequestor extends GenericAttributeRequestor
 					sUID = sUID.substring(0, iIndex);
 			}
 
+			// 20151210, Bauke: added ldap search escape
+			String sEscapedUid = Utils.ldapEscape(sUID, _sLdapEscapes, _systemLogger);
+
 			// Bauke: Allow use of an alternative user DN when the DigiD AuthSP was used
 			String useDnField = (bIsDigid) ? _sAltUserDN: _sUserDN;
-			sbQuery = new StringBuffer("(").append(useDnField).append("=").append(sUID).append(")");
+			sbQuery = new StringBuffer("(").append(useDnField).append("=").append(sEscapedUid).append(")");
 //			20150102, RH, sn
 			// add prefrase and pos-frase
 			if ( _sQueryPreFrase != null ) {

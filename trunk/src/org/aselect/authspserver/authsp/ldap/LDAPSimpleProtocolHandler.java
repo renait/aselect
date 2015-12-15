@@ -90,14 +90,16 @@ public class LDAPSimpleProtocolHandler extends AbstractLDAPProtocolHandler
 		String sRelUserDn = null;
 		NamingEnumeration<SearchResult> enumSearchResults = null;
 		Hashtable<String, String> htEnvironment = new Hashtable<String, String>();
+		
+		String sEscapedUid = Utils.ldapEscape(_sUid, _sLdapEscapes, _systemLogger);
 
 		if (_sPrincipalDn.equals("")) {
-			// If no principal DN is known, we do a simple binding
+			// If no principal DN is known, we do a simple user binding
 			htEnvironment.put(Context.PROVIDER_URL, _sLDAPUrl);
 			htEnvironment.put(Context.INITIAL_CONTEXT_FACTORY, _sDriver);
 			htEnvironment.put(Context.SECURITY_AUTHENTICATION, "simple");
 
-			sbTemp = new StringBuffer(_sUserDn).append("=").append(_sUid);
+			sbTemp = new StringBuffer(_sUserDn).append("=").append(sEscapedUid);  //append(_sUid);
 			sbTemp.append(", ").append(_sBaseDn);
 			htEnvironment.put(Context.SECURITY_PRINCIPAL, sbTemp.toString());
 			htEnvironment.put(Context.SECURITY_CREDENTIALS, sPassword);
@@ -198,7 +200,7 @@ public class LDAPSimpleProtocolHandler extends AbstractLDAPProtocolHandler
 	
 			// DirContext creation using the principal DN succeeded
 			// Step 2: search for user's DN relative to base DN
-			sbTemp = new StringBuffer("(").append(_sUserDn).append("=").append(_sUid).append(")");
+			sbTemp = new StringBuffer("(").append(_sUserDn).append("=").append(sEscapedUid/*_sUid*/).append(")");
 			sQuery = sbTemp.toString();
 	
 			SearchControls oScope = new SearchControls();

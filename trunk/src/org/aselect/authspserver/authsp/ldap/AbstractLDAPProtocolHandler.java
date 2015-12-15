@@ -83,6 +83,7 @@ public abstract class AbstractLDAPProtocolHandler implements ILDAPProtocolHandle
 	
 	protected String _sAttrAllowedLogins;
 	protected String _sAttrValidUntil;
+	protected String _sLdapEscapes;
 	
 	/**
 	 * The logger that logs system information
@@ -117,7 +118,8 @@ public abstract class AbstractLDAPProtocolHandler implements ILDAPProtocolHandle
 	 *      org.aselect.authspserver.log.AuthSPSystemLogger)
 	 */
 	public boolean init(String sLDAPUrl, String sDriver, String sBaseDn, String sUserDn, boolean bFullUid, String sUid,
-			String sPrincipalDn, String sPrincipalPwd, String sAttrAllowedLogins, String sAttrValidUntil, AuthSPSystemLogger systemLogger)
+			String sPrincipalDn, String sPrincipalPwd, String sAttrAllowedLogins, String sAttrValidUntil,
+			String sLdapEscapes, AuthSPSystemLogger systemLogger)
 	{
 		_systemLogger = systemLogger;
 
@@ -131,6 +133,7 @@ public abstract class AbstractLDAPProtocolHandler implements ILDAPProtocolHandle
 		_bFullUid = bFullUid;
 		_sAttrAllowedLogins = sAttrAllowedLogins;
 		_sAttrValidUntil = sAttrValidUntil;
+		_sLdapEscapes = sLdapEscapes;
 		return true;
 	}
 

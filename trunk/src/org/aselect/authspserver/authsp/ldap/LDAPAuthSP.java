@@ -290,7 +290,7 @@ public class LDAPAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit good
 					throw new ASelectException(Errors.ERROR_LDAP_INVALID_REQUEST);
 				}
 
-				// Get the User its contexts
+				// Get the User's context
 				LDAPProtocolHandlerFactory.getContext(_oAuthSpConfig, sUid, _systemLogger);
 
 				// show authentication form

@@ -118,8 +118,7 @@ public class LDAPProtocolHandlerFactory
 	 * @throws ASelectException
 	 *             If instantiation or initialisation fails.
 	 */
-	public static ILDAPProtocolHandler instantiateProtocolHandler(Object oConfig, String sUid,
-			AuthSPSystemLogger systemLogger)
+	public static ILDAPProtocolHandler instantiateProtocolHandler(Object oConfig, String sUid, AuthSPSystemLogger systemLogger)
 	throws ASelectException
 	{
 		String sMethod = "instantiateProtocolHandler";
@@ -142,12 +141,14 @@ public class LDAPProtocolHandlerFactory
 			Boolean boolFullUid = (Boolean) htContext.get("full_uid");
 			String sAttrAllowedLogins = (String) htContext.get("attr_allowed_logins");
 			String sAttrValidUntil = (String) htContext.get("attr_valid_until");
+			String sLdapEscapes = (String) htContext.get("ldap_escapes");
+			systemLogger.log(Level.FINEST, MODULE, sMethod, "sUid="+sUid+ " users_dn="+sUsersDn+" uid_dn="+sUserIdDn);
 
 			Class cClass = Class.forName(sProtocolHandlerName);
 			ILDAPProtocolHandler oProtocolHandler = (ILDAPProtocolHandler) cClass.newInstance();
 
 			if (!oProtocolHandler.init(sLDAPUrl, sStorageDriver, sUsersDn, sUserIdDn, boolFullUid.booleanValue(),
-					sUid, sPrincipalDn, sPrincipalPwd, sAttrAllowedLogins, sAttrValidUntil, systemLogger)) {
+					sUid, sPrincipalDn, sPrincipalPwd, sAttrAllowedLogins, sAttrValidUntil, sLdapEscapes, systemLogger)) {
 				systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not initialize LDAP protocol handler.");
 				throw new ASelectException(Errors.ERROR_LDAP_COULD_NOT_AUTHENTICATE_USER);
 			}
@@ -198,9 +199,9 @@ public class LDAPProtocolHandlerFactory
 	public static HashMap getContext(Object oConfig, String sUid, SystemLogger oSystemLogger)
 	throws ASelectException
 	{
+		String sMethod = "getContext";
 		HashMap htResponse = new HashMap();
 		StringBuffer sbTemp = null;
-		String sMethod = "getContext";
 		String sTemp = null;
 		AuthSPConfigManager oConfigManager = AuthSPConfigManager.getHandle();
 		try {
@@ -311,10 +312,8 @@ public class LDAPProtocolHandlerFactory
 				sLDAPUrl = oConfigManager.getParam(oBackendServer, "url");
 			}
 			catch (ASelectConfigException eAC) {
-				sbTemp = new StringBuffer("No url defined for realm '");
-				sbTemp.append(sRealm);
-				sbTemp.append("' while authenticating '");
-				sbTemp.append(sUid).append("'");
+				sbTemp = new StringBuffer("No url defined for realm '").append(sRealm);
+				sbTemp.append("' while authenticating '").append(sUid).append("'");
 				oSystemLogger.log(Level.WARNING, MODULE, sMethod, sbTemp.toString(), eAC);
 				throw new ASelectException(Errors.ERROR_LDAP_COULD_NOT_AUTHENTICATE_USER, eAC);
 			}
@@ -324,10 +323,8 @@ public class LDAPProtocolHandlerFactory
 				sStorageDriver = oConfigManager.getParam(oBackendServer, "driver");
 			}
 			catch (ASelectConfigException eAC) {
-				sbTemp = new StringBuffer("No driver defined for realm ");
-				sbTemp.append(sRealm);
-				sbTemp.append(" while authenticating '");
-				sbTemp.append(sUid).append("'");
+				sbTemp = new StringBuffer("No driver defined for realm ").append(sRealm);
+				sbTemp.append(" while authenticating '").append(sUid).append("'");
 				oSystemLogger.log(Level.WARNING, MODULE, sMethod, sbTemp.toString(), eAC);
 				throw new ASelectException(Errors.ERROR_LDAP_COULD_NOT_AUTHENTICATE_USER, eAC);
 			}
@@ -337,10 +334,8 @@ public class LDAPProtocolHandlerFactory
 				sUsersDn = oConfigManager.getParam(oBackendServer, "base_dn");
 			}
 			catch (ASelectConfigException eAC) {
-				sbTemp = new StringBuffer("No base_dn defined for realm '");
-				sbTemp.append(sRealm);
-				sbTemp.append("' while authenticating '");
-				sbTemp.append(sUid).append("'");
+				sbTemp = new StringBuffer("No base_dn defined for realm '").append(sRealm);
+				sbTemp.append("' while authenticating '").append(sUid).append("'");
 				oSystemLogger.log(Level.WARNING, MODULE, sMethod, sbTemp.toString(), eAC);
 				throw new ASelectException(Errors.ERROR_LDAP_COULD_NOT_AUTHENTICATE_USER, eAC);
 			}
@@ -350,10 +345,8 @@ public class LDAPProtocolHandlerFactory
 				sUserIdDn = oConfigManager.getParam(oBackendServer, "user_dn");
 			}
 			catch (ASelectConfigException eAC) {
-				sbTemp = new StringBuffer("No user_dn defined for realm '");
-				sbTemp.append(sRealm);
-				sbTemp.append("' while authenticating '");
-				sbTemp.append(sUid).append("'");
+				sbTemp = new StringBuffer("No user_dn defined for realm '").append(sRealm);
+				sbTemp.append("' while authenticating '").append(sUid).append("'");
 				oSystemLogger.log(Level.WARNING, MODULE, sMethod, sbTemp.toString(), eAC);
 				throw new ASelectException(Errors.ERROR_LDAP_COULD_NOT_AUTHENTICATE_USER, eAC);
 			}
@@ -362,10 +355,8 @@ public class LDAPProtocolHandlerFactory
 				sTemp = oConfigManager.getParam(oBackendServer, "method");
 			}
 			catch (ASelectConfigException eAC) {
-				sbTemp = new StringBuffer("No method setting defined for realm '");
-				sbTemp.append(sRealm);
-				sbTemp.append("' while authenticating '");
-				sbTemp.append(sUid).append("'");
+				sbTemp = new StringBuffer("No method setting defined for realm '").append(sRealm);
+				sbTemp.append("' while authenticating '").append(sUid).append("'");
 				oSystemLogger.log(Level.WARNING, MODULE, sMethod, sbTemp.toString(), eAC);
 				throw new ASelectException(Errors.ERROR_LDAP_COULD_NOT_AUTHENTICATE_USER, eAC);
 			}
@@ -398,8 +389,6 @@ public class LDAPProtocolHandlerFactory
 			catch (ASelectConfigException e) {
 				sPrincipalPwd = ""; // use default
 			}
-			String sAttrAllowedLogins = Utils.getSimpleParam(oConfigManager, oSystemLogger, oBackendServer, "attr_allowed_logins", false);
-			String sAttrValidUntil = Utils.getSimpleParam(oConfigManager, oSystemLogger, oBackendServer, "attr_valid_until", false);
 
 			boolean bFullUid = false;
 			String sFullUid = null;
@@ -427,6 +416,11 @@ public class LDAPProtocolHandlerFactory
 				oSystemLogger.log(Level.CONFIG, MODULE, sMethod, sbConfig.toString());
 			}
 
+			String sAttrAllowedLogins = Utils.getSimpleParam(oConfigManager, oSystemLogger, oBackendServer, "attr_allowed_logins", false);
+			String sAttrValidUntil = Utils.getSimpleParam(oConfigManager, oSystemLogger, oBackendServer, "attr_valid_until", false);
+			// 20151209, Bauke: added to escape the ldap search string
+			String sLdapEscapes = Utils.getSimpleParam(oConfigManager, oSystemLogger, oBackendServer, "ldap_escapes", false);
+
 			htResponse.put("url", sLDAPUrl);
 			htResponse.put("driver", sStorageDriver);
 			htResponse.put("users_dn", sUsersDn);
@@ -437,6 +431,7 @@ public class LDAPProtocolHandlerFactory
 			htResponse.put("full_uid", new Boolean(bFullUid));
 			htResponse.put("attr_allowed_logins", sAttrAllowedLogins);
 			htResponse.put("attr_valid_until", sAttrValidUntil);
+			htResponse.put("ldap_escapes", sLdapEscapes);
 
 			return htResponse;
 		}
