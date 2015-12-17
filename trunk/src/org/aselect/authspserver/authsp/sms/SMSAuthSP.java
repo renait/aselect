@@ -32,6 +32,7 @@ import org.aselect.authspserver.authsp.AbstractAuthSP;
 import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * An A-Select AuthtSP that sends an sms with the token <br>
@@ -280,7 +281,7 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 		try {
 			String sQueryString = servletRequest.getQueryString();
 			HashMap htServiceRequest = Utils.convertCGIMessage(sQueryString, false);
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "Enter GET { htServiceRequest=" + htServiceRequest);
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "Enter GET { htServiceRequest=" + Auxiliary.obfuscate(htServiceRequest));
 			sLanguage = (String) htServiceRequest.get("language");  // optional language code
 			if (sLanguage == null || sLanguage.trim().length() < 1)
 				sLanguage = null;
@@ -385,7 +386,7 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 				if (bSendSms || !bValid) {  // 20151014
 					// sUid can have a trailing "v" to indicate a voice phone (without SMS reception)
 					// Should not occur though, the SMSAuthSPHandler must take care of this
-					_systemLogger.log(Level.INFO, MODULE, sMethod, "SMS to sUid=" + sUid+" valid="+bValid);
+					_systemLogger.log(Level.INFO, MODULE, sMethod, "SMS to sUid=" + Auxiliary.obfuscate(sUid)+" valid="+bValid);
 					int iReturnSend = -1;
 					if (bValid) {
 						iReturnSend = generateAndSendSms(servletRequest, sUid);
@@ -395,7 +396,7 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 						// We want to show the challenge form only the first time around,
 						// therefore make sure the form contains a "challenge" input field.
 						if (_bShow_challenge && htServiceRequest.get("challenge") == null ) {
-							_systemLogger.log(Level.FINEST, MODULE, sMethod, "challenge FORM htServiceRequest=" + htServiceRequest);
+							_systemLogger.log(Level.FINEST, MODULE, sMethod, "challenge FORM htServiceRequest=" + Auxiliary.obfuscate(htServiceRequest));
 							
 							// Challenge form should inform user about invalid phone number 
 							/* 20141216, Bauke: set error_code to activate the error message in challenge.html: */
@@ -408,11 +409,11 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 					}
 				}
 				else {
-					_systemLogger.log(Level.INFO, MODULE, sMethod, "No SMS to sUid=" + sUid + ", already sent or bad phonenumber");
+					_systemLogger.log(Level.INFO, MODULE, sMethod, "No SMS to sUid=" + Auxiliary.obfuscate(sUid) + ", already sent or bad phonenumber");
 				}
 				
 				// Code sent successfully
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "FORM htServiceRequest=" + htServiceRequest);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "FORM htServiceRequest=" + Auxiliary.obfuscate(htServiceRequest));
 				showAuthenticateForm(pwOut, ""/*no error*/, htServiceRequest);
 			}
 		}
@@ -520,7 +521,8 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 			sUid = servletRequest.getParameter("uid");
 			String sSignature = servletRequest.getParameter("signature");  // the signature from the server
 			String sRetryCounter = servletRequest.getParameter("retry_counter");
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "uid=" + sUid + " password=" + sPassword + " rid=" + sRid);
+//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "uid=" + sUid + " password=" + sPassword + " rid=" + sRid);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "uid=" + Auxiliary.obfuscate(sUid) + " password=" + "..." + " rid=" + sRid);
 			if (sRid == null || sAsUrl == null || sUid == null || sPassword == null || sAserverId == null ||
 						sRetryCounter == null || sSignature == null) {
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Invalid request received: one or more mandatory parameters missing, handling error locally.");
@@ -567,8 +569,9 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 				sbData.append(sTimeStamp);
 				if (!_cryptoEngine.verifySignature(sAserverId, sbData.toString(), URLDecoder.decode(sSignature, "UTF-8"))) {
 					StringBuffer sbWarning = new StringBuffer("Invalid signature from A-Select Server '");
-					sbWarning.append(sAserverId).append("' for user: ").append(sUid);
-					sbWarning.append(" , handling error locally. Data=").append(sbData.toString());	// RH, 20111021, n
+					sbWarning.append(sAserverId).append("' for user: ").append(Auxiliary.obfuscate(sUid));
+//					sbWarning.append(" , handling error locally. Data=").append(sbData.toString());	// RH, 20111021, n
+					sbWarning.append(" , handling error locally..");	// RH, 20111021, n
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, sbWarning.toString());
 					failureHandling = "local";	// RH, 20111021, n
 					throw new ASelectException(Errors.ERROR_SMS_INVALID_REQUEST);
@@ -586,8 +589,9 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 				if (!_cryptoEngine.verifyMySignature(signedParms, formSignature) || bBadToken) {
 					StringBuffer sbWarning = new StringBuffer("Invalid ");
 					sbWarning.append((bBadToken)?"token":"signature").append(" from User form '");
-					sbWarning.append(sAserverId).append("' for user: ").append(sUid);
-					sbWarning.append(" , handling error locally. Data=").append(sbData.toString());	// RH, 20111021, n
+					sbWarning.append(sAserverId).append("' for user: ").append(Auxiliary.obfuscate(sUid));
+//					sbWarning.append(" , handling error locally. Data=").append(sbData.toString());	// RH, 20111021, n
+					sbWarning.append(" , handling error locally..");
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, sbWarning.toString());
 					failureHandling = "local";	// RH, 20111021, n
 					throw new ASelectException(Errors.ERROR_SMS_INVALID_REQUEST);
@@ -638,7 +642,7 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 					}
 					else { // authenticate failed
 						_authenticationLogger.log(new Object[] {
-							MODULE, sUid, servletRequest.getRemoteAddr(), sAserverId, "denied", Errors.ERROR_SMS_INVALID_PASSWORD
+							MODULE, Auxiliary.obfuscate(sUid), servletRequest.getRemoteAddr(), sAserverId, "denied", Errors.ERROR_SMS_INVALID_PASSWORD
 						});
 						handleResult(servletRequest, servletResponse, pwOut, sResultCode, sLanguage, failureHandling);
 					}
@@ -646,7 +650,7 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 				else if (sResultCode.equals(Errors.ERROR_SMS_SUCCESS)) {  // success
 					// Authentication successfull
 					_authenticationLogger.log(new Object[] {
-						MODULE, sUid, servletRequest.getRemoteAddr(), sAserverId, "granted"
+						MODULE, Auxiliary.obfuscate(sUid), servletRequest.getRemoteAddr(), sAserverId, "granted"
 					});
 
 					_systemLogger.log(Level.INFO, MODULE, sMethod, "Success");
@@ -942,7 +946,7 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 		//String sText = _sSmsText.replaceAll("0", sSecret);
 		
 		// RM_20_04
-		_systemLogger.log(Level.FINEST, MODULE, "generateAndSend", "Text=" + _sSmsText+ " Secret=" + sSecret);
+		_systemLogger.log(Level.FINEST, MODULE, "generateAndSend", "Text=" + _sSmsText+ " Secret=" + Auxiliary.obfuscate(sSecret));
 		int result = 0;
 		if (_fixed_secret == null) {
 			result = _oSmsSender.sendSms(_sSmsText, sSecret, _sSmsFrom, sRecipient);	// RH, 20110913, n

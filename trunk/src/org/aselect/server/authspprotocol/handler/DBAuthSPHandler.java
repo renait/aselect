@@ -26,6 +26,7 @@ import org.aselect.server.session.SessionManager;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectAuthSPException;
 import org.aselect.system.exception.ASelectConfigException;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * The DB AuthSP Handler. <br>
@@ -341,7 +342,7 @@ public class DBAuthSPHandler  extends AbstractAuthSPProtocolHandler implements I
 			String sOrg = (String) htSessionContext.get("organization");
 			if (sResultCode.equalsIgnoreCase(ERROR_DB_ACCESS_DENIED)) {
 				_authenticationLogger.log(new Object[] {
-					"DBAuthSPHandler", sUserId, htAuthspResponse.get("client_ip"), sOrg,
+					"DBAuthSPHandler", Auxiliary.obfuscate(sUserId), htAuthspResponse.get("client_ip"), sOrg,
 					(String) htSessionContext.get("app_id"), "denied", sResultCode
 				});
 				throw new ASelectAuthSPException(Errors.ERROR_ASELECT_AUTHSP_ACCESS_DENIED);
@@ -353,7 +354,7 @@ public class DBAuthSPHandler  extends AbstractAuthSPProtocolHandler implements I
 				throw new ASelectAuthSPException(Errors.ERROR_ASELECT_AUTHSP_COULD_NOT_AUTHENTICATE_USER);
 			}
 			_authenticationLogger.log(new Object[] {
-				"DBAuthSPHandler", sUserId, htAuthspResponse.get("client_ip"), sOrg,
+				"DBAuthSPHandler", Auxiliary.obfuscate(sUserId), htAuthspResponse.get("client_ip"), sOrg,
 				(String) htSessionContext.get("app_id"), "granted"
 			});
 			htResponse.put("rid", sRid);

@@ -97,6 +97,7 @@ import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.logging.AuthenticationLogger;
 import org.aselect.system.sam.agent.SAMResource;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 
 /**
@@ -317,7 +318,7 @@ public class AuthSPBrowserHandler extends AbstractBrowserRequestHandler
 			String sAppId = (String) htSessionContext.get("app_id");
 			String sUserId = (String) htSessionContext.get("user_id");
 			authenticationLogger.log(new Object[] {
-				"Login", sUserId, (String) htServiceRequest.get("client_ip"), _sMyOrg, sAppId, "denied", sResultCode
+				"Login", Auxiliary.obfuscate(sUserId), (String) htServiceRequest.get("client_ip"), _sMyOrg, sAppId, "denied", sResultCode
 			});
 
 			// Issue TGT

@@ -66,6 +66,7 @@ import java.util.StringTokenizer;
 import java.util.logging.Level;
 
 import org.aselect.system.logging.SystemLogger;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * Wrapper to communicate transparent to an incoming Socket request. <br>
@@ -251,7 +252,7 @@ public class TCPProtocolRequest implements IProtocolRequest
 		// sRequestLine can be null if end of stream is already reached
 		if (sRequestLine == null)
 			throw new EOFException(sMethod + "End of stream");
-		_oSystemLogger.log(Level.INFO, MODULE, sMethod, "RequestLine=" + sRequestLine);
+		_oSystemLogger.log(Level.INFO, MODULE, sMethod, "RequestLine=" + Auxiliary.obfuscate(sRequestLine));
 
 		// put string in tokenizer and switch on white space
 		StringTokenizer oTokenizedLine = new StringTokenizer(sRequestLine);

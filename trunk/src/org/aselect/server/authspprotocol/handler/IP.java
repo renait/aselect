@@ -58,6 +58,7 @@ import org.aselect.server.session.SessionManager;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectAuthSPException;
 import org.aselect.system.exception.ASelectConfigException;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * The IP AuthSP Handler. <br>
@@ -537,7 +538,7 @@ public class IP  extends AbstractAuthSPProtocolHandler implements IAuthSPProtoco
 			if (!sResultCode.equalsIgnoreCase(IP_NO_ERROR)) {
 				if (sResultCode.equalsIgnoreCase(IP_ACCESS_DENIED)) {
 					_oASelectAuthenticationLogger.log(new Object[] {
-						MODULE, sUserId, htAuthSPResponse.get("client_ip"), sOrganization, sAppID, "denied", sResultCode
+						MODULE, Auxiliary.obfuscate(sUserId), htAuthSPResponse.get("client_ip"), sOrganization, sAppID, "denied", sResultCode
 					});
 					throw new ASelectAuthSPException(Errors.ERROR_ASELECT_AUTHSP_ACCESS_DENIED);
 				}
@@ -549,7 +550,7 @@ public class IP  extends AbstractAuthSPProtocolHandler implements IAuthSPProtoco
 			}
 
 			_oASelectAuthenticationLogger.log(new Object[] {
-				MODULE, sUserId, htAuthSPResponse.get("client_ip"), sOrganization, sAppID, "granted"
+				MODULE, Auxiliary.obfuscate(sUserId), htAuthSPResponse.get("client_ip"), sOrganization, sAppID, "granted"
 			});
 			htResponse.put("rid", sRid);
 			htResponse.put("authsp_type", "ip");

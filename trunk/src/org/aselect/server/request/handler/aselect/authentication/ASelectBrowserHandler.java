@@ -122,6 +122,7 @@ import org.aselect.system.exception.ASelectException;
 import org.aselect.system.exception.ASelectSAMException;
 import org.aselect.system.sam.agent.SAMResource;
 import org.aselect.system.utils.Tools;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * This class handles requests coming from a a-select server through a users browser. <br>
@@ -262,7 +263,7 @@ public class ASelectBrowserHandler extends AbstractBrowserRequestHandler
 			{
 				if (sResultCode.equals(Errors.ERROR_ASELECT_SERVER_CANCEL)) {
 					_authenticationLogger.log(new Object[] {
-						"Cross", sUID, (String) htServiceRequest.get("client_ip"), sRemoteOrg,
+						"Cross", Auxiliary.obfuscate(sUID), (String) htServiceRequest.get("client_ip"), sRemoteOrg,
 						_htSessionContext.get("app_id"), "denied", sResultCode
 					});
 					// Issue 'CANCEL' TGT
@@ -272,7 +273,7 @@ public class ASelectBrowserHandler extends AbstractBrowserRequestHandler
 				else {
 					// remote server returned error
 					_authenticationLogger.log(new Object[] {
-						"Cross", sUID, (String) htServiceRequest.get("client_ip"), sRemoteOrg,
+						"Cross", Auxiliary.obfuscate(sUID), (String) htServiceRequest.get("client_ip"), sRemoteOrg,
 						_htSessionContext.get("app_id"), "denied", sResultCode
 					});
 					throw new ASelectException(Errors.ERROR_ASELECT_AUTHSP_ACCESS_DENIED);
@@ -281,7 +282,7 @@ public class ASelectBrowserHandler extends AbstractBrowserRequestHandler
 			else {
 				// Log succesful authentication
 				_authenticationLogger.log(new Object[] {
-					"Cross", sUID, (String) htServiceRequest.get("client_ip"), sRemoteOrg,
+					"Cross", Auxiliary.obfuscate(sUID), (String) htServiceRequest.get("client_ip"), sRemoteOrg,
 					_htSessionContext.get("app_id"), "granted"
 				});
 

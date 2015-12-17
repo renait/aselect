@@ -25,6 +25,7 @@ import org.aselect.system.exception.ASelectAttributesException;
 import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  */
@@ -75,7 +76,7 @@ public class CopyAttributeRequestor extends GenericAttributeRequestor
 		final String sMethod = "getAttributes";
 		
 		String sUid = (String)(_bFromTgt? htTGTContext: hmAttributes).get(_sUseKey);  // serves as an example
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "release="+vAttributes+" all so far="+hmAttributes+" "+_sUseKey+"="+sUid+" fromTgt="+_bFromTgt);
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "release="+vAttributes+" all so far="+hmAttributes+" "+_sUseKey+"="+Auxiliary.obfuscate(sUid)+" fromTgt="+_bFromTgt);
 
 		return AttributeSetter.attributeProcessing(htTGTContext, hmAttributes, attributeSetters, _systemLogger);
 	}

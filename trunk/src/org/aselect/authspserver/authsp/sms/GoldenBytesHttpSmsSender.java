@@ -182,7 +182,8 @@ public class GoldenBytesHttpSmsSender extends GenericSmsSender
 		data.append(URLEncoder.encode("BODY", "UTF-8")).append(EQUAL_SIGN);  // Text of the message
 		data.append(URLEncoder.encode(sMessage, "UTF-8"));
 		
-		_systemLogger.log(Level.FINEST, sModule, sMethod, "url=" + providerUrl + " data=" + data.toString());
+//		_systemLogger.log(Level.FINEST, sModule, sMethod, "url=" + providerUrl + " data=" + data.toString());
+		_systemLogger.log(Level.FINEST, sModule, sMethod, "url=" + providerUrl + " data=" + "...");
 		return 0;
 	}
 }

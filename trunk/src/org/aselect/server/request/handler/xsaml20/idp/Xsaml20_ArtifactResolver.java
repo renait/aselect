@@ -30,6 +30,7 @@ import org.aselect.server.request.handler.xsaml20.Saml20_ArtifactManager;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.Tools;
+import org.aselect.system.utils.crypto.Auxiliary;
 import org.joda.time.DateTime;
 import org.opensaml.common.SAMLObjectBuilder;
 import org.opensaml.common.SAMLVersion;
@@ -275,7 +276,7 @@ public class Xsaml20_ArtifactResolver extends Saml20_BaseHandler
 			}
 			Envelope envelope = new SoapManager().buildSOAPMessage(artifactResponse);
 			Element envelopeElem = SamlTools.marshallMessage(envelope);
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "Writing SOAP message:\n" + XMLHelper.nodeToString(envelopeElem));
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "Writing SOAP message:\n" + Auxiliary.obfuscate(XMLHelper.nodeToString(envelopeElem), Auxiliary.REGEX_PATTERNS));
 
 			// Bauke: added, it's considered polite to tell the other side what we are sending
 			SamlTools.sendSOAPResponse(request, response, XMLHelper.nodeToString(envelopeElem));  // x_AssertionConsumer_x

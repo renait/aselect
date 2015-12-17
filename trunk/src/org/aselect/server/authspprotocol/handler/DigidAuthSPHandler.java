@@ -24,6 +24,7 @@ import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.Tools;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * The DigidAuthSPHandler. <br>
@@ -470,14 +471,14 @@ public class DigidAuthSPHandler  extends AbstractAuthSPProtocolHandler  implemen
 
 				resultCode = Errors.ERROR_ASELECT_SUCCESS;
 				_authenticationLogger.log(new Object[] {
-					MODULE, sUid, htResponse.get("client_ip"), sOrganization, sLocalAppId, "granted"
+					MODULE, Auxiliary.obfuscate(sUid), htResponse.get("client_ip"), sOrganization, sLocalAppId, "granted"
 				});
 			}
 			else {
 				resultCode = ("0040".equals(resultCode)) ? Errors.ERROR_ASELECT_SERVER_CANCEL
 						: Errors.ERROR_ASELECT_AUTHSP_COULD_NOT_AUTHENTICATE_USER;
 				_authenticationLogger.log(new Object[] {
-					MODULE, sUid, htResponse.get("client_ip"), sOrganization, sLocalAppId, "denied", resultCode
+					MODULE, Auxiliary.obfuscate(sUid), htResponse.get("client_ip"), sOrganization, sLocalAppId, "denied", resultCode
 				});
 			}
 			result.put("rid", sLocalRid);

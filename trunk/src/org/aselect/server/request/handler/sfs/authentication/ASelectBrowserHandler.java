@@ -128,6 +128,7 @@ import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.exception.ASelectSAMException;
 import org.aselect.system.sam.agent.SAMResource;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 
 /**
@@ -254,7 +255,7 @@ public class ASelectBrowserHandler extends AbstractBrowserRequestHandler
 			if (sResultCode != null) {
 				if (sResultCode.equals(Errors.ERROR_ASELECT_SERVER_CANCEL)) {
 					_authenticationLogger.log(new Object[] {
-						"Cross", sUID, (String) htServiceRequest.get("client_ip"), sRemoteOrg,
+						"Cross", Auxiliary.obfuscate(sUID), (String) htServiceRequest.get("client_ip"), sRemoteOrg,
 						htSessionContext.get("app_id"), "denied", sResultCode
 					});
 					// Issue 'CANCEL' TGT
@@ -264,7 +265,7 @@ public class ASelectBrowserHandler extends AbstractBrowserRequestHandler
 				else {
 					// remote server returned error
 					_authenticationLogger.log(new Object[] {
-						"Cross", sUID, (String) htServiceRequest.get("client_ip"), sRemoteOrg,
+						"Cross", Auxiliary.obfuscate(sUID), (String) htServiceRequest.get("client_ip"), sRemoteOrg,
 						htSessionContext.get("app_id"), "denied", sResultCode
 					});
 
@@ -274,7 +275,7 @@ public class ASelectBrowserHandler extends AbstractBrowserRequestHandler
 			else {
 				// Log succesful authentication
 				_authenticationLogger.log(new Object[] {
-					"Cross", sUID, (String) htServiceRequest.get("client_ip"), sRemoteOrg,
+					"Cross", Auxiliary.obfuscate(sUID), (String) htServiceRequest.get("client_ip"), sRemoteOrg,
 					htSessionContext.get("app_id"), "granted"
 				});
 

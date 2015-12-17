@@ -90,7 +90,8 @@ public class WirelessServicesHttpSmsSender extends GenericSmsSender
 		if (this.gateway != null && !"".equals(this.gateway.trim())) {
 			_systemLogger.log(Level.WARNING, sModule, sMethod, "No alternate gateway support, you must use alternate URL for this");
 		}
-		_systemLogger.log(Level.FINEST, sModule, sMethod, "url=" + providerUrl + " data=" + data.toString());
+//		_systemLogger.log(Level.FINEST, sModule, sMethod, "url=" + providerUrl + " data=" + data.toString());
+		_systemLogger.log(Level.FINEST, sModule, sMethod, "url=" + providerUrl + " data=" + "...");
 		return 0;
 	}
 

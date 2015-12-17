@@ -60,6 +60,7 @@ import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectAuthorizationException;
 import org.aselect.system.logging.SystemLogger;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * Evaluator for authorization rules. <br>
@@ -187,7 +188,7 @@ public class AuthorizationRuleEvaluator
 			String sKey = (String) oKey.getValue();
 
 			Object oValue = htAttributes.get(sKey);
-			_systemLogger.log(Level.FINE, MODULE, sMethod, "Expr key=" + sKey + " value=" + oValue);
+			_systemLogger.log(Level.FINE, MODULE, sMethod, "Expr key=" + sKey + " value=" + Auxiliary.obfuscate(oValue));
 
 			if (oValue == null) // attribute not available
 				bAuthorized = false;

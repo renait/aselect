@@ -74,6 +74,7 @@ import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectSAMException;
 import org.aselect.system.exception.ASelectUDBException;
 import org.aselect.system.sam.agent.SAMResource;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 
 /**
@@ -205,7 +206,7 @@ public class FlatFileConnector implements IUDBConnector
 	{
 		String sMethod = "getUserProfile";
 
-		_oASelectSystemLogger.log(Level.FINE, MODULE, sMethod, "user=" + sUserId);
+		_oASelectSystemLogger.log(Level.FINE, MODULE, sMethod, "user=" + Auxiliary.obfuscate(sUserId));
 		HashMap htResponse = new HashMap();
 		HashMap htUserAttributes = new HashMap();
 		Object oAuthSPsSection = null;
@@ -327,7 +328,7 @@ public class FlatFileConnector implements IUDBConnector
 		String sMethod = "isUserEnabled";
 		boolean bEnabled = false;
 
-		_oASelectSystemLogger.log(Level.INFO, MODULE, sMethod, "user=" + sUserId);
+		_oASelectSystemLogger.log(Level.INFO, MODULE, sMethod, "user=" + Auxiliary.obfuscate(sUserId));
 		// RM_64_01
 		String sUID = sUserId.replace(' ', '+');
 
@@ -345,13 +346,13 @@ public class FlatFileConnector implements IUDBConnector
 			}
 			else {
 				StringBuffer sb = new StringBuffer("User not A-Select enabled: '");
-				sb.append(sUserId).append("' ").append(Errors.ERROR_ASELECT_UDB_USER_ACCOUNT_DISABLED);
+				sb.append(Auxiliary.obfuscate(sUserId)).append("' ").append(Errors.ERROR_ASELECT_UDB_USER_ACCOUNT_DISABLED);
 				_oASelectSystemLogger.log(Level.FINE, MODULE, sMethod, sb.toString());
 			}
 		}
 		else {
 			StringBuffer sb = new StringBuffer("User not found: '");
-			sb.append(sUserId).append("' ").append(Errors.ERROR_ASELECT_UDB_UNKNOWN_USER);
+			sb.append(Auxiliary.obfuscate(sUserId)).append("' ").append(Errors.ERROR_ASELECT_UDB_UNKNOWN_USER);
 			_oASelectSystemLogger.log(Level.FINE, MODULE, sMethod, sb.toString());
 		}
 		return bEnabled;
@@ -371,7 +372,7 @@ public class FlatFileConnector implements IUDBConnector
 	public String getUserAttributes(String sUserId, String sAuthSPId)
 	{
 		String sMethod = "getUserAttributes";
-		_oASelectSystemLogger.log(Level.INFO, MODULE, sMethod, "User=" + sUserId + " Authsp=" + sAuthSPId);
+		_oASelectSystemLogger.log(Level.INFO, MODULE, sMethod, "User=" + Auxiliary.obfuscate(sUserId) + " Authsp=" + sAuthSPId);
 		String sAttributesValue = null;
 		String sUID = sUserId.replace(' ', '+');
 
@@ -380,12 +381,12 @@ public class FlatFileConnector implements IUDBConnector
 
 		sAttributesValue = (String) _propFlatFile.get(sbUserAttributes.toString());
 		if (sAttributesValue == null) {
-			StringBuffer sb = new StringBuffer("User attributes for User=" + sUserId + " Authsp=" + sAuthSPId
+			StringBuffer sb = new StringBuffer("User attributes for User=" + Auxiliary.obfuscate(sUserId) + " Authsp=" + sAuthSPId
 					+ " not found.");
 			_oASelectSystemLogger.log(Level.FINE, MODULE, sMethod, sb.toString(), new ASelectUDBException(
 					Errors.ERROR_ASELECT_UDB_UNKNOWN_USER));
 		}
-		_oASelectSystemLogger.log(Level.INFO, MODULE, sMethod, "Return=" + sAttributesValue);
+		_oASelectSystemLogger.log(Level.INFO, MODULE, sMethod, "Return=" + Auxiliary.obfuscate(sAttributesValue));
 		return sAttributesValue;
 	}
 
@@ -403,7 +404,7 @@ public class FlatFileConnector implements IUDBConnector
 	private void logAuthentication(String sUserID, String sErrorCode, String sMessage)
 	{
 		_oASelectAuthenticationLogger.log(new Object[] {
-			MODULE, sUserID, null, null, null, sMessage, sErrorCode
+			MODULE, Auxiliary.obfuscate(sUserID), null, null, null, sMessage, sErrorCode
 		});
 	}
 }

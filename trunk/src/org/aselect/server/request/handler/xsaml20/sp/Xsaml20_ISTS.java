@@ -12,7 +12,6 @@
 package org.aselect.server.request.handler.xsaml20.sp;
 
 import java.io.PrintWriter;
-
 import java.io.UnsupportedEncodingException;
 import java.security.PrivateKey;
 import java.util.logging.Level;
@@ -43,6 +42,7 @@ import org.aselect.system.utils.BASE64Encoder;
 import org.aselect.system.utils.Base64Codec;
 import org.aselect.system.utils.Tools;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 import org.joda.time.DateTime;
 import org.opensaml.common.SAMLObjectBuilder;
 import org.opensaml.common.SAMLVersion;
@@ -553,7 +553,7 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 				MarshallerFactory marshallerFactory = Configuration.getMarshallerFactory();
 				Marshaller marshaller = marshallerFactory.getMarshaller(messageContext.getOutboundSAMLMessage());
 				Node nodeMessageContext = marshaller.marshall(messageContext.getOutboundSAMLMessage());
-				_systemLogger.log(Level.FINER, MODULE, sMethod, "RelayState="+sRelayState+" OutboundSAMLMessage:\n"+XMLHelper.prettyPrintXML(nodeMessageContext));
+				_systemLogger.log(Level.FINER, MODULE, sMethod, "RelayState="+sRelayState+" OutboundSAMLMessage:\n"+Auxiliary.obfuscate(XMLHelper.prettyPrintXML(nodeMessageContext), Auxiliary.REGEX_PATTERNS));
 				
 				if (useSha256) {
 					Saml20_RedirectEncoder encoder = new Saml20_RedirectEncoder();  // is a HTTPRedirectDeflateEncoder
@@ -575,7 +575,7 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 				_systemLogger.log(Level.FINER, MODULE, sMethod, "Signed the authnRequest ======<"+authnRequest);
 
 				String sAssertion = XMLHelper.nodeToString(authnRequest.getDOM());
-				_systemLogger.log(Level.FINER, MODULE, sMethod, "Assertion=" + sAssertion);
+				_systemLogger.log(Level.FINER, MODULE, sMethod, "Assertion=" + Auxiliary.obfuscate(sAssertion, Auxiliary.REGEX_PATTERNS));
 				try {
 					byte[] bBase64Assertion = sAssertion.getBytes("UTF-8");
 					BASE64Encoder b64enc = new BASE64Encoder();

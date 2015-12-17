@@ -31,6 +31,7 @@ import org.aselect.server.tgt.TGTManager;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
+import org.aselect.system.utils.crypto.Auxiliary;
 import org.joda.time.DateTime;
 import org.opensaml.common.SAMLObject;
 import org.opensaml.common.SAMLObjectBuilder;
@@ -322,7 +323,7 @@ public class SessionSyncRequestSender
 		
 		// Update when requested by caller and not done here yet
 		if (!bTgtUpdated && updateTgt) { // updates at least the timestamp
-			_oSystemLogger.log(Level.INFO, MODULE, _sMethod, "Update TICKET context=" + htTGTContext);
+			_oSystemLogger.log(Level.INFO, MODULE, _sMethod, "Update TICKET context=" + Auxiliary.obfuscate(htTGTContext));
 			_oTGTManager.updateTGT(sTgT, htTGTContext);
 		}
 		return Errors.ERROR_ASELECT_SUCCESS;
@@ -423,7 +424,7 @@ public class SessionSyncRequestSender
 			e.printStackTrace();
 		}
 		_oSystemLogger.log(Level.INFO, MODULE, _sMethod, "FederationUrl=" + _sFederationUrl + " SOAP message:"
-				+ XMLHelper.nodeToString(envelopeElem));
+				+ Auxiliary.obfuscate(XMLHelper.nodeToString(envelopeElem), Auxiliary.REGEX_PATTERNS));
 		return sendMessageToFederation(XMLHelper.nodeToString(envelopeElem), sNameID, sTgT);
 	}
 

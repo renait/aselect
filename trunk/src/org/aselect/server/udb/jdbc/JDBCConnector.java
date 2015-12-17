@@ -84,6 +84,7 @@ import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectSAMException;
 import org.aselect.system.exception.ASelectUDBException;
 import org.aselect.system.sam.agent.SAMResource;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 
 /**
@@ -353,7 +354,7 @@ public class JDBCConnector implements IUDBConnector
 			}
 
 			if (htUserAttributes.size() == 0) {
-				_oASelectSystemLogger.log(Level.FINE, MODULE, sMethod, "No user attributes found for user: " + sUserId);
+				_oASelectSystemLogger.log(Level.FINE, MODULE, sMethod, "No user attributes found for user: " + Auxiliary.obfuscate(sUserId));
 				throw new ASelectUDBException(Errors.ERROR_ASELECT_UDB_COULD_NOT_AUTHENTICATE_USER);
 			}
 
@@ -364,7 +365,7 @@ public class JDBCConnector implements IUDBConnector
 			htResponse.put("result_code", e.getMessage());
 		}
 		catch (Exception e) {
-			_oASelectSystemLogger.log(Level.SEVERE, MODULE, sMethod, "Failed to fetch profile of user: " + sUserId, e);
+			_oASelectSystemLogger.log(Level.SEVERE, MODULE, sMethod, "Failed to fetch profile of user: " + Auxiliary.obfuscate(sUserId), e);
 			htResponse.put("result_code", Errors.ERROR_ASELECT_UDB_INTERNAL);
 		}
 		finally {
@@ -466,7 +467,7 @@ public class JDBCConnector implements IUDBConnector
 			}
 			else {
 				StringBuffer sb = new StringBuffer("User not found: '");
-				sb.append(sUserId).append("'");
+				sb.append(Auxiliary.obfuscate(sUserId)).append("'");
 				_oASelectSystemLogger.log(Level.FINE, MODULE, sMethod, sb.toString(), new ASelectUDBException(
 						Errors.ERROR_ASELECT_UDB_UNKNOWN_USER));
 			}
@@ -565,13 +566,13 @@ public class JDBCConnector implements IUDBConnector
 
 				if (!bEnabled) {
 					StringBuffer sb = new StringBuffer("User not A-Select enabled: '");
-					sb.append(sUserId).append("' ").append(Errors.ERROR_ASELECT_UDB_USER_ACCOUNT_DISABLED);
+					sb.append(Auxiliary.obfuscate(sUserId)).append("' ").append(Errors.ERROR_ASELECT_UDB_USER_ACCOUNT_DISABLED);
 					_oASelectSystemLogger.log(Level.FINE, MODULE, sMethod, sb.toString());
 				}
 			}
 			else {
 				StringBuffer sb = new StringBuffer("User not found: '");
-				sb.append(sUserId).append("'").append(Errors.ERROR_ASELECT_UDB_UNKNOWN_USER);
+				sb.append(Auxiliary.obfuscate(sUserId)).append("'").append(Errors.ERROR_ASELECT_UDB_UNKNOWN_USER);
 				_oASelectSystemLogger.log(Level.FINE, MODULE, sMethod, sb.toString());
 			}
 
@@ -727,7 +728,7 @@ public class JDBCConnector implements IUDBConnector
 	private void logAuthentication(String sUserID, String sErrorCode, String sMessage)
 	{
 		_oASelectAuthenticationLogger.log(new Object[] {
-			MODULE, sUserID, null, null, null, sMessage, sErrorCode
+			MODULE, Auxiliary.obfuscate(sUserID), null, null, null, sMessage, sErrorCode
 		});
 	}
 

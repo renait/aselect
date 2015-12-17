@@ -116,6 +116,7 @@ import org.aselect.system.storagemanager.StorageManager;
 import org.aselect.system.utils.BASE64Decoder;
 import org.aselect.system.utils.BASE64Encoder;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * This class contains crypto-related (helper) methods. It is thread-safe. <br>
@@ -337,7 +338,7 @@ public class CryptoEngine
 			// 20130411, Bauke: allow fixed valued key to symmetrically encode/decode data 
 			String sKey = ASelectConfigManager.getSimpleParam(oASelect, "encryption_key", false);
 			if (Utils.hasValue(sKey)) {
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Using configured encryption key: "+sKey);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Using configured encryption key: "+Auxiliary.obfuscate(sKey));
 				_encryptionKey =  generate3DESKey(sKey, false /* not stored as base64 */);
 			}
 		}
@@ -427,7 +428,8 @@ public class CryptoEngine
 		PublicKey oPublicKey = null;
 		int iLoop = 0;
 		boolean bVerified = false;
-		_systemLogger.log(Level.FINEST, MODULE, sMethod, "==== VS alias="+sAlias + " data="+sData);
+//		_systemLogger.log(Level.FINEST, MODULE, sMethod, "==== VS alias="+sAlias + " data="+sData);
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "==== VS alias="+sAlias + " data="+"...");
 		try {
 			Signature oSignature = null;
 			if (_oSignatureProvider != null)
@@ -573,7 +575,8 @@ public class CryptoEngine
 		try {
 			PrivateKey oPrivateKey = null;
 
-			_systemLogger.log(Level.FINER, MODULE, sMethod, "sAuthsp="+sAuthsp+" data=["+sData+"]");
+//			_systemLogger.log(Level.FINER, MODULE, sMethod, "sAuthsp="+sAuthsp+" data=["+sData+"]");
+			_systemLogger.log(Level.FINER, MODULE, sMethod, "sAuthsp="+sAuthsp+" data=["+"..."+"]");
 			if (sAuthsp != null) {
 				sAuthsp = sAuthsp.toLowerCase();
 
@@ -682,7 +685,8 @@ public class CryptoEngine
 		}
 		try {
 			final Cipher cipher = Cipher.getInstance(sAlgorithm);
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "==== ENCRYPT alias="+sAlias + " data="+Arrays.toString(sData));
+//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "==== ENCRYPT alias="+sAlias + " data="+Arrays.toString(sData));
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "==== ENCRYPT alias="+sAlias + " data="+"...");
 				sAlias = sAlias.toLowerCase();
 				oPublicKey = (PublicKey) _htAuthspSettings.get(sAlias + ".public_key");
 	

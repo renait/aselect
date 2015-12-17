@@ -317,7 +317,8 @@ public class CryptoEngine
 	{
 		String sMethod = "generateSignature";
 		String sSignature = null;
-		_systemLogger.log(Level.FINER, MODULE, sMethod, "Sign ["+sData+"]");
+//		_systemLogger.log(Level.FINER, MODULE, sMethod, "Sign ["+sData+"]");
+		_systemLogger.log(Level.FINER, MODULE, sMethod, "Sign ["+"..." +"]");
 		try {
 			Signature oSignature = null;
 			if (_oSignatureProvider != null)
@@ -334,7 +335,8 @@ public class CryptoEngine
 		}
 		catch (Exception e) {
 			StringBuffer sbError = new StringBuffer("Could not compute signature for data: \"");
-			sbError.append(sData).append("\"");
+//			sbError.append(sData).append("\"");
+			sbError.append("...").append("\"");
 
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, sbError.toString(), e);
 			throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR);
@@ -374,7 +376,8 @@ public class CryptoEngine
 		String sMethod = "verifySignature";
 		boolean bVerifies = false;
 		sAlias = sAlias.toLowerCase();
-		_systemLogger.log(Level.FINER, MODULE, sMethod, "sAlias="+sAlias+" sData=["+sData+"] sign=["+Utils.firstPartOf(sSignature,30)+"]");
+//		_systemLogger.log(Level.FINER, MODULE, sMethod, "sAlias="+sAlias+" sData=["+sData+"] sign=["+Utils.firstPartOf(sSignature,30)+"]");
+		_systemLogger.log(Level.FINER, MODULE, sMethod, "sAlias="+sAlias+" sData=["+"..."+"] sign=["+Utils.firstPartOf(sSignature,30)+"]");
 
 		try {
 			Signature oSignature = null;
@@ -400,7 +403,8 @@ public class CryptoEngine
 				StringBuffer sbInfo = new StringBuffer("Could not verify Signature '");
 				sbInfo.append(sSignature);
 				sbInfo.append("' for data: '");
-				sbInfo.append(sData);
+//				sbInfo.append(sData);
+				sbInfo.append("...");
 				sbInfo.append("' with a public key with Alias: ");
 				sbInfo.append(sAlias);
 				_systemLogger.log(Level.FINE, MODULE, sMethod, sbInfo.toString());
@@ -408,7 +412,8 @@ public class CryptoEngine
 		}
 		catch (Exception e) {
 			StringBuffer sbError = new StringBuffer("Could not verify signature for data: '");
-			sbError.append(sData);
+//			sbError.append(sData);
+			sbError.append("...");
 			sbError.append("' signature: '");
 			sbError.append(sSignature);
 			sbError.append("' alias: ");
@@ -476,13 +481,15 @@ public class CryptoEngine
 				StringBuffer sbInfo = new StringBuffer("Signature '");
 				sbInfo.append(sSignature);
 				sbInfo.append("' is invalid for data: ");
-				sbInfo.append(sData);
+//				sbInfo.append(sData);
+				sbInfo.append("...");
 				_systemLogger.log(Level.FINE, MODULE, sMethod, sbInfo.toString());
 			}
 		}
 		catch (Exception e) {
 			StringBuffer sbError = new StringBuffer("Error while verifying data: '");
-			sbError.append(sData);
+//			sbError.append(sData);
+			sbError.append("...");
 			sbError.append("' with signature: '");
 			sbError.append(sSignature).append("'");
 			_systemLogger.log(Level.SEVERE, MODULE, sMethod, sbError.toString(), e);

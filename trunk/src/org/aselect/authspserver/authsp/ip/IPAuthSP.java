@@ -87,6 +87,7 @@ import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.servlet.ASelectHttpServlet;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 
 /**
@@ -258,7 +259,8 @@ public class IPAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodie
 			pwOut = Utils.prepareForHtmlOutput(servletRequest, servletResponse);
 
 			String sQueryString = servletRequest.getQueryString();
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "IP GET {"+servletRequest+", sQueryString="+sQueryString);
+//			_systemLogger.log(Level.INFO, MODULE, sMethod, "IP GET {"+servletRequest+", sQueryString="+sQueryString);
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "IP GET {" );
 			HashMap htServiceRequest = Utils.convertCGIMessage(sQueryString, false);
 			sLanguage = (String) htServiceRequest.get("language");  // optional language code
 			if (sLanguage == null || sLanguage.trim().length() < 1)
@@ -318,13 +320,13 @@ public class IPAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodie
 			if (!sResultCode.equals(Errors.ERROR_IP_SUCCESS)) {
 				// authenticate failed
 				_authenticationLogger.log(new Object[] {
-					MODULE, sUid, servletRequest.getRemoteAddr(), sAsId, "denied", sResultCode
+					MODULE, Auxiliary.obfuscate(sUid), servletRequest.getRemoteAddr(), sAsId, "denied", sResultCode
 				});
 			}
 			else {
 				// Authentication successful
 				_authenticationLogger.log(new Object[] {
-					MODULE, sUid, servletRequest.getRemoteAddr(), sAsId, "granted"
+					MODULE, Auxiliary.obfuscate(sUid), servletRequest.getRemoteAddr(), sAsId, "granted"
 				});
 			}
 			handleResult(servletRequest, servletResponse, pwOut, sResultCode, sLanguage);

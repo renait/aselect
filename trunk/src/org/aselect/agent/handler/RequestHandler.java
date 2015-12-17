@@ -130,6 +130,7 @@ import java.util.Iterator;
 import java.util.TreeSet;
 import java.util.Vector;
 import java.util.logging.Level;
+
 import org.aselect.agent.authorization.AuthorizationEngine;
 import org.aselect.agent.config.ASelectAgentConfigManager;
 import org.aselect.agent.log.ASelectAgentSystemLogger;
@@ -156,6 +157,7 @@ import org.aselect.system.logging.SystemLogger;
 import org.aselect.system.sam.agent.SAMResource;
 import org.aselect.system.storagemanager.SendQueue;
 import org.aselect.system.utils.*;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * Main A-Select Agent API Request handler. <br>
@@ -714,7 +716,7 @@ public class RequestHandler extends Thread
 //					+ ", sUid=" + sUid + ", sAuthsp=" + sAuthsp + ", sForcedLogon=" + sForcedLogon + ", sRemoteOrg="
 //					+ sRemoteOrg);
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "AuthREQ sAppUrl=" + sAppUrl + ", sAppId=" + sAppId
-					+ ", sUid=" + sUid + ", sAuthsp=" + sAuthsp + ", sForcedLogon=" + sForcedLogon + ", sRemoteOrg="
+					+ ", sUid=" + Auxiliary.obfuscate(sUid) + ", sAuthsp=" + sAuthsp + ", sForcedLogon=" + sForcedLogon + ", sRemoteOrg="
 					+ sRemoteOrg +", " + IP_ATTRIBUTE + "=" + sIP);
 
 			// send an authenticate request to the A-Select Server
@@ -1074,7 +1076,7 @@ public class RequestHandler extends Thread
 			}
 
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "VerCRED rid=" + sRid + " server=" + sAsId +
-					" samlAttr="+sSamlAttributes+" appArgs="+sAppArgs+" sip="+sIp);
+					" samlAttr="+Auxiliary.obfuscate(sSamlAttributes)+" appArgs="+sAppArgs+" sip="+sIp);
 
 			// send the verify_credentials request to the A-Select Server
 			HashMap htRequest = new HashMap();
@@ -1172,7 +1174,7 @@ public class RequestHandler extends Thread
 
 			// all parameters are there; create a ticket for this user and
 			// store it in a ticket context
-			_systemLogger.log(Level.FINER, MODULE, sMethod, "Create the ticket for "+sUID);
+			_systemLogger.log(Level.FINER, MODULE, sMethod, "Create the ticket for "+Auxiliary.obfuscate(sUID));
 			HashMap htTicketContext = new HashMap();
 			htTicketContext.put("uid", sUID);
 			htTicketContext.put("organization", sOrg);
@@ -1203,7 +1205,7 @@ public class RequestHandler extends Thread
 				BASE64Decoder b64d = new BASE64Decoder();
 				MessageDigest md = MessageDigest.getInstance("SHA1");
 
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "attributes:" + b64d.decodeBuffer(sAttributes));
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "attributes:" + Auxiliary.obfuscate(b64d.decodeBuffer(sAttributes)));
 				
 				md.update(b64d.decodeBuffer(sAttributes));
 				htTicketContext.put("attributes_hash", org.aselect.system.utils.Utils.byteArrayToHexString(md.digest()));
@@ -1504,13 +1506,13 @@ public class RequestHandler extends Thread
 			if (_bAuthorization) {
 				
 				if (sAppId==null || sReqAppId == null || !sAppId.equals(sReqAppId)) {
-					_systemLogger.log(Level.INFO, MODULE, sMethod, "No match for app_ids: req="+sReqAppId+" ticket="+sAppId);
+					_systemLogger.log(Level.INFO, MODULE, sMethod, "No match for app_ids: req="+sReqAppId+" sAppId="+sAppId);
 					_sErrorCode = Errors.ERROR_ASELECT_AGENT_DIFFERENT_APPID;
 					return;
 				}
 				// Get user attributes
 				HashMap htUserAttributes = deserializeAttributes((String) htTicketContext.get("attributes"));
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "VerTICKET attr=" + htUserAttributes);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "VerTICKET attr=" + Auxiliary.obfuscate(htUserAttributes));
 
 				// Add ip if applicable
 				if (sIP != null)
@@ -1583,17 +1585,17 @@ public class RequestHandler extends Thread
 				//	20141229, RH, sn
 				// The attributes parameter is optional.
 				String sAttributes = (String) htResponseParameters.get("attributes");
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "attributes from server=" + sAttributes);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "attributes from server=" + Auxiliary.obfuscate(sAttributes));
 				if (sAttributes != null) {
 					HashMap newAttr = org.aselect.system.utils.Utils.deserializeAttributes(sAttributes);
-					_systemLogger.log(Level.FINEST, MODULE, sMethod, "newAttr=" + newAttr);
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "newAttr=" +  Auxiliary.obfuscate(newAttr));
 					String sStoredAttr = (String) htTicketContext.get("attributes");
 
 					HashMap storedAttr = org.aselect.system.utils.Utils.deserializeAttributes(sStoredAttr);
-					_systemLogger.log(Level.FINEST, MODULE, sMethod, "storedAttr=" + storedAttr);
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "storedAttr=" +  Auxiliary.obfuscate(storedAttr));
 
 					storedAttr.putAll(newAttr);// replace stored attributes with new attributes
-					_systemLogger.log(Level.FINEST, MODULE, sMethod, "storedAttr after merge=" + storedAttr);
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "storedAttr after merge=" +  Auxiliary.obfuscate(storedAttr));
 					sAttributes = org.aselect.system.utils.Utils.serializeAttributes(storedAttr);
 					
 					htTicketContext.put("attributes", sAttributes);	// save the new to be retrieved by processAttributeRequest
@@ -2171,9 +2173,9 @@ public class RequestHandler extends Thread
 			signRequest(htParams);
 
 			String sAsUrl = _configManager.getParam(oConfigSection, "url");
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "ToSERVER, url=" + sAsUrl + ", params=" + htParams);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "ToSERVER, url=" + sAsUrl + ", params=" + Auxiliary.obfuscate(htParams));
 			htResponse = sendRequestToASelectServer(sAsUrl, htParams);
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "FromSERVER, htResponse=" + htResponse);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "FromSERVER, htResponse=" + Auxiliary.obfuscate(htResponse));
 		}
 		catch (ASelectSAMException eSAM) {
 			_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Error retrieving A-Select Server resource.", eSAM);
@@ -2240,7 +2242,7 @@ public class RequestHandler extends Thread
 			else
 				oSignature = Signature.getInstance(sSignatureAlgorithm);
 
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "htRequest=" + htRequest);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "htRequest=" + Auxiliary.obfuscate(htRequest));
 			StringBuffer sbData = Tools.assembleSigningData(htRequest);
 
 			/* the following only works for the authenticate request
@@ -2265,7 +2267,7 @@ public class RequestHandler extends Thread
 			sValue = (String)htRequest.get("uid");
 			if (sValue != null)	sbData.append(sValue);*/
 			
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Sign:" + sbData);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Sign:" + Auxiliary.obfuscate(sbData));
 			oSignature.initSign(_configManager.getSigningKey());
 			oSignature.update(sbData.toString().getBytes());
 			byte[] baRawSignature = oSignature.sign();

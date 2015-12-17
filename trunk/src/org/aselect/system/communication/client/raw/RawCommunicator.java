@@ -96,9 +96,7 @@ import java.io.InputStreamReader;
 import java.io.UnsupportedEncodingException;
 import java.net.Authenticator;
 import java.net.MalformedURLException;
-
 import java.net.PasswordAuthentication;
-
 import java.net.URL;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
@@ -113,6 +111,7 @@ import org.aselect.system.communication.client.IClientCommunicator;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectCommunicationException;
 import org.aselect.system.logging.SystemLogger;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * Client communicator which uses CGI messages. <br>
@@ -280,7 +279,7 @@ public class RawCommunicator implements IClientCommunicator
 			brInput = new BufferedReader(new InputStreamReader(urlSomeServer.openStream()), 16000);
 			String s = null;
 			while ( (s = brInput.readLine()) != null) {
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Input from the other server=" +s);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Input from the other server=" +Auxiliary.obfuscate(s));
 				sInputLine += s;
 			}
 			brInput.close();

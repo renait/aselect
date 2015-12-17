@@ -72,6 +72,7 @@ import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectSAMException;
 import org.aselect.system.exception.ASelectUDBException;
 import org.aselect.system.sam.agent.SAMResource;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * No-database connector. <br>
@@ -182,7 +183,7 @@ public class NoUDBConnector implements IUDBConnector
 	{
 		String sMethod = "getUserProfile";
 
-		_oASelectSystemLogger.log(Level.INFO, MODULE, sMethod, "user=" + sUserId);
+		_oASelectSystemLogger.log(Level.INFO, MODULE, sMethod, "user=" + Auxiliary.obfuscate(sUserId));
 		HashMap htResponse = new HashMap();
 		HashMap htUserAttributes = new HashMap();
 		Object oAuthSPsSection = null;
@@ -225,7 +226,7 @@ public class NoUDBConnector implements IUDBConnector
 
 			if (htUserAttributes.size() == 0) {
 				StringBuffer sbBuffer = new StringBuffer("No user attributes found for user: ");
-				sbBuffer.append(sUserId);
+				sbBuffer.append(Auxiliary.obfuscate(sUserId));
 				_oASelectSystemLogger.log(Level.WARNING, MODULE, sMethod, sbBuffer.toString());
 				throw new ASelectUDBException(Errors.ERROR_ASELECT_UDB_COULD_NOT_AUTHENTICATE_USER);
 			}
@@ -237,7 +238,7 @@ public class NoUDBConnector implements IUDBConnector
 		}
 		catch (Exception e) {
 			StringBuffer sbBuffer = new StringBuffer("Failed to fetch profile of user ");
-			sbBuffer.append(sUserId);
+			sbBuffer.append(Auxiliary.obfuscate(sUserId));
 			sbBuffer.append(": ");
 			sbBuffer.append(e.getMessage());
 			_oASelectSystemLogger.log(Level.SEVERE, MODULE, sMethod, sbBuffer.toString(), e);
@@ -263,7 +264,7 @@ public class NoUDBConnector implements IUDBConnector
 		String sMethod = "isUserEnabled";
 		
 		boolean bEnabled = true;
-		_oASelectSystemLogger.log(Level.INFO, MODULE, sMethod, "user=" + sUserId);
+		_oASelectSystemLogger.log(Level.INFO, MODULE, sMethod, "user=" + Auxiliary.obfuscate(sUserId));
 		return bEnabled;
 	}
 
@@ -281,7 +282,7 @@ public class NoUDBConnector implements IUDBConnector
 	public String getUserAttributes(String sUserId, String sAuthSPId)
 	{
 		String sMethod = "getUserAttributes";
-		_oASelectSystemLogger.log(Level.INFO, MODULE, sMethod, "User=" + sUserId + " Authsp=" + sAuthSPId);
+		_oASelectSystemLogger.log(Level.INFO, MODULE, sMethod, "User=" + Auxiliary.obfuscate(sUserId) + " Authsp=" + sAuthSPId);
 		String sAttributesValue = sUserId == null ? "" : sUserId;
 		return sAttributesValue;
 	}
@@ -300,7 +301,7 @@ public class NoUDBConnector implements IUDBConnector
 	private void logAuthentication(String sUserID, String sErrorCode, String sMessage)
 	{
 		_oASelectAuthenticationLogger.log(new Object[] {
-			MODULE, sUserID, null, null, null, sMessage, sErrorCode
+			MODULE, Auxiliary.obfuscate(sUserID), null, null, null, sMessage, sErrorCode
 		});
 	}
 }

@@ -72,6 +72,7 @@ import org.aselect.system.exception.ASelectSAMException;
 import org.aselect.system.logging.SystemLogger;
 import org.aselect.system.sam.agent.SAMResource;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 
 /**
@@ -215,7 +216,7 @@ public class LDAPProtocolHandlerFactory
 				}
 				else {
 					sbTemp = new StringBuffer("Invalid user id '");
-					sbTemp.append(sUid);
+					sbTemp.append(Auxiliary.obfuscate(sUid));
 					sbTemp.append("' User id should be [user]@[realm].");
 					oSystemLogger.log(Level.WARNING, MODULE, sMethod, sbTemp.toString());
 					throw new ASelectException(Errors.ERROR_LDAP_COULD_NOT_AUTHENTICATE_USER);
@@ -226,7 +227,7 @@ public class LDAPProtocolHandlerFactory
 			}
 			if (sRealm.length() <= 0) {
 				sbTemp = new StringBuffer("Could not determine realm for user id '");
-				sbTemp.append(sUid);
+				sbTemp.append(Auxiliary.obfuscate(sUid));
 				sbTemp.append("' User id should be [user]@[realm].");
 				oSystemLogger.log(Level.WARNING, MODULE, sMethod, sbTemp.toString());
 				throw new ASelectException(Errors.ERROR_LDAP_COULD_NOT_AUTHENTICATE_USER);
@@ -312,8 +313,10 @@ public class LDAPProtocolHandlerFactory
 				sLDAPUrl = oConfigManager.getParam(oBackendServer, "url");
 			}
 			catch (ASelectConfigException eAC) {
-				sbTemp = new StringBuffer("No url defined for realm '").append(sRealm);
-				sbTemp.append("' while authenticating '").append(sUid).append("'");
+				sbTemp = new StringBuffer("No url defined for realm '");
+				sbTemp.append(sRealm);
+				sbTemp.append("' while authenticating '");
+				sbTemp.append(Auxiliary.obfuscate(sUid)).append("'");
 				oSystemLogger.log(Level.WARNING, MODULE, sMethod, sbTemp.toString(), eAC);
 				throw new ASelectException(Errors.ERROR_LDAP_COULD_NOT_AUTHENTICATE_USER, eAC);
 			}
@@ -323,8 +326,10 @@ public class LDAPProtocolHandlerFactory
 				sStorageDriver = oConfigManager.getParam(oBackendServer, "driver");
 			}
 			catch (ASelectConfigException eAC) {
-				sbTemp = new StringBuffer("No driver defined for realm ").append(sRealm);
-				sbTemp.append(" while authenticating '").append(sUid).append("'");
+				sbTemp = new StringBuffer("No driver defined for realm ");
+				sbTemp.append(sRealm);
+				sbTemp.append(" while authenticating '");
+				sbTemp.append(Auxiliary.obfuscate(sUid)).append("'");
 				oSystemLogger.log(Level.WARNING, MODULE, sMethod, sbTemp.toString(), eAC);
 				throw new ASelectException(Errors.ERROR_LDAP_COULD_NOT_AUTHENTICATE_USER, eAC);
 			}
@@ -334,8 +339,10 @@ public class LDAPProtocolHandlerFactory
 				sUsersDn = oConfigManager.getParam(oBackendServer, "base_dn");
 			}
 			catch (ASelectConfigException eAC) {
-				sbTemp = new StringBuffer("No base_dn defined for realm '").append(sRealm);
-				sbTemp.append("' while authenticating '").append(sUid).append("'");
+				sbTemp = new StringBuffer("No base_dn defined for realm '");
+				sbTemp.append(sRealm);
+				sbTemp.append("' while authenticating '");
+				sbTemp.append(Auxiliary.obfuscate(sUid)).append("'");
 				oSystemLogger.log(Level.WARNING, MODULE, sMethod, sbTemp.toString(), eAC);
 				throw new ASelectException(Errors.ERROR_LDAP_COULD_NOT_AUTHENTICATE_USER, eAC);
 			}
@@ -345,8 +352,10 @@ public class LDAPProtocolHandlerFactory
 				sUserIdDn = oConfigManager.getParam(oBackendServer, "user_dn");
 			}
 			catch (ASelectConfigException eAC) {
-				sbTemp = new StringBuffer("No user_dn defined for realm '").append(sRealm);
-				sbTemp.append("' while authenticating '").append(sUid).append("'");
+				sbTemp = new StringBuffer("No user_dn defined for realm '");
+				sbTemp.append(sRealm);
+				sbTemp.append("' while authenticating '");
+				sbTemp.append(Auxiliary.obfuscate(sUid)).append("'");
 				oSystemLogger.log(Level.WARNING, MODULE, sMethod, sbTemp.toString(), eAC);
 				throw new ASelectException(Errors.ERROR_LDAP_COULD_NOT_AUTHENTICATE_USER, eAC);
 			}
@@ -355,8 +364,10 @@ public class LDAPProtocolHandlerFactory
 				sTemp = oConfigManager.getParam(oBackendServer, "method");
 			}
 			catch (ASelectConfigException eAC) {
-				sbTemp = new StringBuffer("No method setting defined for realm '").append(sRealm);
-				sbTemp.append("' while authenticating '").append(sUid).append("'");
+				sbTemp = new StringBuffer("No method setting defined for realm '");
+				sbTemp.append(sRealm);
+				sbTemp.append("' while authenticating '");
+				sbTemp.append(Auxiliary.obfuscate(sUid)).append("'");
 				oSystemLogger.log(Level.WARNING, MODULE, sMethod, sbTemp.toString(), eAC);
 				throw new ASelectException(Errors.ERROR_LDAP_COULD_NOT_AUTHENTICATE_USER, eAC);
 			}
@@ -369,7 +380,7 @@ public class LDAPProtocolHandlerFactory
 				sbTemp = new StringBuffer("No protocol handler defined for method '");
 				sbTemp.append(sTemp);
 				sbTemp.append("' while authenticating '");
-				sbTemp.append(sUid).append("'");
+				sbTemp.append(Auxiliary.obfuscate(sUid)).append("'");
 				oSystemLogger.log(Level.WARNING, MODULE, sMethod, sbTemp.toString(), eAC);
 				throw new ASelectException(Errors.ERROR_LDAP_COULD_NOT_AUTHENTICATE_USER, eAC);
 			}
@@ -400,7 +411,7 @@ public class LDAPProtocolHandlerFactory
 				StringBuffer sbWarning = new StringBuffer("No 'full_uid' defined for realm ");
 				sbWarning.append(sRealm);
 				sbWarning.append("; using default: full_uid = ");
-				sbWarning.append(sFullUid);
+				sbWarning.append(Auxiliary.obfuscate(sFullUid));
 				oSystemLogger.log(Level.CONFIG, MODULE, sMethod, sbWarning.toString(), e);
 			}
 			if (sFullUid.equalsIgnoreCase("true"))
@@ -411,7 +422,7 @@ public class LDAPProtocolHandlerFactory
 				StringBuffer sbConfig = new StringBuffer("Invalid 'full_uid' config item defined for realm ");
 				sbConfig.append(sRealm);
 				sbConfig.append(" : ");
-				sbConfig.append(sFullUid);
+				sbConfig.append(Auxiliary.obfuscate(sFullUid));
 				sbConfig.append("; using default: full_uid = false");
 				oSystemLogger.log(Level.CONFIG, MODULE, sMethod, sbConfig.toString());
 			}

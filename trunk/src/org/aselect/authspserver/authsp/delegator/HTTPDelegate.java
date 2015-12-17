@@ -35,9 +35,11 @@ import java.util.Map;
 import java.util.logging.Level;
 
 
+
 import org.apache.commons.codec.binary.Base64;
 import org.aselect.authspserver.log.AuthSPSystemLogger;
 import org.aselect.system.utils.Tools;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * @author RH
@@ -97,7 +99,7 @@ public class HTTPDelegate implements Delegate
 		AuthSPSystemLogger _systemLogger;
 		_systemLogger = AuthSPSystemLogger.getHandle();
 
-		_systemLogger.log(Level.FINEST, sModule, sMethod, "requestparameters=" + requestparameters + " , responseparameters=" + responseparameters);
+//		_systemLogger.log(Level.FINEST, sModule, sMethod, "requestparameters=" + requestparameters + " , responseparameters=" + responseparameters);
 		StringBuffer data = new StringBuffer();
 		String sResult = "";
 		try {
@@ -122,7 +124,7 @@ public class HTTPDelegate implements Delegate
 				  byte [] bEncoded = Base64.encodeBase64((this.delegateuser+":"+(delegatepassword == null ? "" : delegatepassword) ).getBytes("UTF-8")); 
 				  String encoded = new String(bEncoded, "UTF-8");
 				  conn.setRequestProperty("Authorization", "Basic "+encoded);
-				_systemLogger.log(Level.FINEST, sModule, sMethod, "Using basic authentication, user=" + this.delegateuser);
+				_systemLogger.log(Level.FINEST, sModule, sMethod, "Using basic authentication, user=" + Auxiliary.obfuscate(this.delegateuser));
 
 			}
 //			conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded; charset=UTF-8");
@@ -144,7 +146,7 @@ public class HTTPDelegate implements Delegate
 			while ((line = rd.readLine()) != null) {
 				sResult += line;
 			}
-			_systemLogger.log(Level.INFO, sModule, sMethod, "sResult=" + sResult);
+//			_systemLogger.log(Level.INFO, sModule, sMethod, "sResult=" + sResult);
 			// Parse response  here
 			// For test return request parameters
 			responseparameters.putAll(hFields);
@@ -152,7 +154,8 @@ public class HTTPDelegate implements Delegate
 			rd.close();
 		}
 		catch (IOException e) {
-			_systemLogger.log(Level.INFO, sModule, sMethod, "Error while reading sResult data, maybe no data at all. sResult=" + sResult);
+//			_systemLogger.log(Level.INFO, sModule, sMethod, "Error while reading sResult data, maybe no data at all. sResult=" + sResult);
+			_systemLogger.log(Level.INFO, sModule, sMethod, "Error while reading sResult data, maybe no data at all.");
 		}
 		catch (NumberFormatException e) {
 			throw new DelegateException("Sending authenticate request, using \'" + this.url.toString()

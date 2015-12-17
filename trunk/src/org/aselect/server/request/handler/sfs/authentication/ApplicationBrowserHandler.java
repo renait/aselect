@@ -162,6 +162,7 @@ import org.aselect.system.exception.ASelectStorageException;
 import org.aselect.system.logging.AuthenticationLogger;
 import org.aselect.system.sam.agent.SAMResource;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * This class handles login requests coming from applications through a users browser. <br>
@@ -406,7 +407,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 							}
 							ASelectAuthenticationLogger.getHandle().log(
 									new Object[] {
-										"SSO", sUid, (String) htServiceRequest.get("client_ip"),
+										"SSO", Auxiliary.obfuscate(sUid), (String) htServiceRequest.get("client_ip"),
 										htTGTContext.get("organization"), sLogAsAppId, "updated"
 									});
 
@@ -564,7 +565,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 							}
 							ASelectAuthenticationLogger.getHandle().log(
 									new Object[] {
-										"SSO", sUid, (String) htServiceRequest.get("client_ip"),
+										"SSO", Auxiliary.obfuscate(sUid), (String) htServiceRequest.get("client_ip"),
 										htTGTContext.get("organization"), sLogAsAppId, "updated"
 									});
 
@@ -1580,7 +1581,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 
 			// Log succesful authentication
 			authenticationLogger.log(new Object[] {
-				"Login", sUID, (String) htServiceRequest.get("client_ip"), _sMyOrg, sPrivilegedApplication, "granted"
+				"Login", Auxiliary.obfuscate(sUID), (String) htServiceRequest.get("client_ip"), _sMyOrg, sPrivilegedApplication, "granted"
 			});
 
 			// Issue TGT

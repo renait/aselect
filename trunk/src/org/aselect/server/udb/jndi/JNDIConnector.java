@@ -84,6 +84,7 @@ import org.aselect.system.exception.ASelectSAMException;
 import org.aselect.system.exception.ASelectUDBException;
 import org.aselect.system.sam.agent.SAMResource;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * JNDI database connector. <br>
@@ -281,7 +282,7 @@ public class JNDIConnector implements IUDBConnector
 		try {
 			if (sUserId.indexOf("*") >= 0 || sUserId.indexOf("?") >= 0 || sUserId.indexOf("=") >= 0) {
 				StringBuffer sbBuffer = new StringBuffer("User id contains illegal characters: ");
-				sbBuffer.append(sUserId);
+				sbBuffer.append(Auxiliary.obfuscate(sUserId));
 				_oASelectSystemLogger.log(Level.FINE, MODULE, sMethod, sbBuffer.toString());
 				logAuthentication(sUserId, Errors.ERROR_ASELECT_UDB_UNKNOWN_USER, "User unknown");
 				throw new ASelectUDBException(Errors.ERROR_ASELECT_UDB_UNKNOWN_USER);
@@ -308,7 +309,7 @@ public class JNDIConnector implements IUDBConnector
 			}
 			catch (NamingException e) {
 				StringBuffer sbBuffer = new StringBuffer("User unknown: ");
-				sbBuffer.append(sUserId);
+				sbBuffer.append(Auxiliary.obfuscate(sUserId));
 				sbBuffer.append(e.getMessage());
 				_oASelectSystemLogger.log(Level.FINE, MODULE, sMethod, sbBuffer.toString(), e);
 				logAuthentication(sUserId, Errors.ERROR_ASELECT_UDB_UNKNOWN_USER, "User unknown");
@@ -318,7 +319,7 @@ public class JNDIConnector implements IUDBConnector
 			// Check if we got a result
 			if (!oSearchResults.hasMore()) {
 				StringBuffer sbBuffer = new StringBuffer("User '");
-				sbBuffer.append(sUserId);
+				sbBuffer.append(Auxiliary.obfuscate(sUserId));
 				sbBuffer.append("' not found during LDAP search. The filter was: ");
 				sbBuffer.append(sbQuery.toString());
 				_oASelectSystemLogger.log(Level.FINE, MODULE, sMethod, sbBuffer.toString());
@@ -407,7 +408,7 @@ public class JNDIConnector implements IUDBConnector
 
 			if (htUserAttributes.size() == 0) {
 				StringBuffer sbBuffer = new StringBuffer("No user attributes found for user: ");
-				sbBuffer.append(sUserId);
+				sbBuffer.append(Auxiliary.obfuscate(sUserId));
 				_oASelectSystemLogger.log(Level.FINE, MODULE, sMethod, sbBuffer.toString());
 				throw new ASelectUDBException(Errors.ERROR_ASELECT_UDB_COULD_NOT_AUTHENTICATE_USER);
 			}
@@ -420,7 +421,7 @@ public class JNDIConnector implements IUDBConnector
 		}
 		catch (Exception e) {
 			StringBuffer sbBuffer = new StringBuffer("Failed to fetch profile of user ");
-			sbBuffer.append(sUserId);
+			sbBuffer.append(Auxiliary.obfuscate(sUserId));
 			sbBuffer.append(": ");
 			sbBuffer.append(e.getMessage());
 			_oASelectSystemLogger.log(Level.SEVERE, MODULE, sMethod, sbBuffer.toString(), e);
@@ -466,11 +467,11 @@ public class JNDIConnector implements IUDBConnector
 		Attribute oAttribute = null;
 		Attributes oAttributes = null;
 
-		_oASelectSystemLogger.log(Level.INFO, MODULE, sMethod, "sUserId=" + sUserId + " sAuthSPId="+sAuthSPId);
+		_oASelectSystemLogger.log(Level.INFO, MODULE, sMethod, "sUserId=" + Auxiliary.obfuscate(sUserId) + " sAuthSPId="+sAuthSPId);
 		try {
 			if (sUserId.indexOf("*") >= 0 || sUserId.indexOf("?") >= 0 || sUserId.indexOf("=") >= 0) {
 				StringBuffer sbBuffer = new StringBuffer("User id contains illegal characters: '");
-				sbBuffer.append(sUserId).append("'");
+				sbBuffer.append(Auxiliary.obfuscate(sUserId)).append("'");
 				_oASelectSystemLogger.log(Level.FINE, MODULE, sMethod, sbBuffer.toString());
 				return null;
 			}
@@ -489,13 +490,14 @@ public class JNDIConnector implements IUDBConnector
 			oScope.setSearchScope(SearchControls.SUBTREE_SCOPE);
 			oDirContext = getConnection();
 
-			_oASelectSystemLogger.log(Level.FINEST, MODULE, sMethod, "JndiATTR Base=" + _sBaseDN + ", Qry=" + sbQuery);
+//			_oASelectSystemLogger.log(Level.FINEST, MODULE, sMethod, "JndiATTR Base=" + _sBaseDN + ", Qry=" + sbQuery);
+			_oASelectSystemLogger.log(Level.FINEST, MODULE, sMethod, "JndiATTR Base=" + _sBaseDN);
 			try {
 				oSearchResults = oDirContext.search(_sBaseDN, sbQuery.toString(), oScope);
 			}
 			catch (NamingException e) {
 				StringBuffer sbBuffer = new StringBuffer("User unknown: ");
-				sbBuffer.append(sUserId);
+				sbBuffer.append(Auxiliary.obfuscate(sUserId));
 				sbBuffer.append(e.getMessage());
 				_oASelectSystemLogger.log(Level.FINE, MODULE, sMethod, sbBuffer.toString(), e);
 				logAuthentication(sUserId, Errors.ERROR_ASELECT_UDB_UNKNOWN_USER, "User unknown");
@@ -509,7 +511,8 @@ public class JNDIConnector implements IUDBConnector
 				oAttributes = oSearchResult.getAttributes();
 				boolean bFound = false; // attribute found
 
-				_oASelectSystemLogger.log(Level.FINEST, MODULE, sMethod, "JndiATTR Attrs=" + oAttributes);
+//				_oASelectSystemLogger.log(Level.FINEST, MODULE, sMethod, "JndiATTR Attrs=" + oAttributes);
+				_oASelectSystemLogger.log(Level.FINEST, MODULE, sMethod, "Retrieved JndiATTR");
 				StringBuffer sbUserAttributes = new StringBuffer("aselect");
 				sbUserAttributes.append(sAuthSPId);
 				sbUserAttributes.append("UserAttributes");
@@ -523,22 +526,23 @@ public class JNDIConnector implements IUDBConnector
 						}
 						catch (Exception e) {
 							StringBuffer sb = new StringBuffer("Error retrieving A-Select attributes value for authsp: '");
-							sb.append(sAuthSPId).append("', user: '").append(sUserId).append("'");
+							sb.append(sAuthSPId).append("', user: '").append(Auxiliary.obfuscate(sUserId)).append("'");
 							_oASelectSystemLogger.log(Level.WARNING, MODULE, sMethod, sb.toString(), e);
 						}
 						bFound = true;
 					}
 				}
 				if (sAttributeValue == null) {
-					StringBuffer sb = new StringBuffer("AuthSP=").append(sAuthSPId).append(" user=").append(sUserId);
+					StringBuffer sb = new StringBuffer("AuthSP=").append(sAuthSPId).append(" user=").append(Auxiliary.obfuscate(sUserId));
 					sb.append(" attribute '").append(sbUserAttributes).append("' not found");
 					_oASelectSystemLogger.log(Level.FINE, MODULE, sMethod, sb.toString());
 				}
 			}
 			else {
-				StringBuffer sbBuffer = new StringBuffer("User '").append(sUserId);
-				sbBuffer.append("' not found during LDAP search. The filter was: ");
-				sbBuffer.append(sbQuery.toString());
+				StringBuffer sbBuffer = new StringBuffer("User '").append(Auxiliary.obfuscate(sUserId));
+//				sbBuffer.append("' not found during LDAP search. The filter was: ");
+//				sbBuffer.append(sbQuery.toString());
+				sbBuffer.append("' not found during LDAP search");
 				_oASelectSystemLogger.log(Level.FINE, MODULE, sMethod, sbBuffer.toString());
 			}
 		}
@@ -562,7 +566,7 @@ public class JNDIConnector implements IUDBConnector
 			catch (Exception e) {
 			}
 		}
-		_oASelectSystemLogger.log(Level.FINEST, MODULE, sMethod, "Return=" + sAttributeValue);
+		_oASelectSystemLogger.log(Level.FINEST, MODULE, sMethod, "Return=" + Auxiliary.obfuscate(sAttributeValue));
 		return sAttributeValue;
 	}
 
@@ -597,7 +601,7 @@ public class JNDIConnector implements IUDBConnector
 		try {
 			if (sUserId.indexOf("*") >= 0 || sUserId.indexOf("?") >= 0 || sUserId.indexOf("=") >= 0) {
 				StringBuffer sbBuffer = new StringBuffer("User id contains illegal characters: '");
-				sbBuffer.append(sUserId).append("'");
+				sbBuffer.append(Auxiliary.obfuscate(sUserId)).append("'");
 				_oASelectSystemLogger.log(Level.FINE, MODULE, sMethod, sbBuffer.toString());
 				return false;
 			}
@@ -612,7 +616,8 @@ public class JNDIConnector implements IUDBConnector
 			String sEscapedUid = Utils.ldapEscape(sUserId, _sLdapEscapes, _oASelectSystemLogger);
 
 			sbQuery = new StringBuffer("(").append(_sUserDN).append("=").append(sEscapedUid).append(")");
-			_oASelectSystemLogger.log(Level.FINER, MODULE, sMethod, "Search for "+sbQuery);
+//			_oASelectSystemLogger.log(Level.FINER, MODULE, sMethod, "Search for "+sbQuery);
+			_oASelectSystemLogger.log(Level.FINER, MODULE, sMethod, "Search for user");
 			
 			SearchControls oScope = new SearchControls();
 			oScope.setSearchScope(SearchControls.SUBTREE_SCOPE);
@@ -660,16 +665,16 @@ public class JNDIConnector implements IUDBConnector
 							sUdbUserIdent = sValue;
 					}
 				}
-				_oASelectSystemLogger.log(Level.FINE, MODULE, sMethod, "UserIdent="+sUdbUserIdent);
+				_oASelectSystemLogger.log(Level.FINE, MODULE, sMethod, "UserIdent="+Auxiliary.obfuscate(sUdbUserIdent));
 				
 				if (!bIsEnabled) {
 					StringBuffer sb = new StringBuffer("User not A-Select enabled: '");
-					sb.append(sUserId).append("' ").append(Errors.ERROR_ASELECT_UDB_USER_ACCOUNT_DISABLED);
+					sb.append(Auxiliary.obfuscate(sUserId)).append("' ").append(Errors.ERROR_ASELECT_UDB_USER_ACCOUNT_DISABLED);
 					_oASelectSystemLogger.log(Level.FINE, MODULE, sMethod, sb.toString());
 				}
 			}
 			else {
-				StringBuffer sbBuffer = new StringBuffer("User '").append(sUserId);
+				StringBuffer sbBuffer = new StringBuffer("User '").append(Auxiliary.obfuscate(sUserId));
 				sbBuffer.append("' not found during LDAP search. The filter was: ").append(sbQuery.toString());
 				_oASelectSystemLogger.log(Level.FINE, MODULE, sMethod, sbBuffer.toString());
 			}
@@ -812,7 +817,7 @@ public class JNDIConnector implements IUDBConnector
 			_sUdbUserIdent = Utils.getSimpleParam(_oASelectConfigManager, _oASelectSystemLogger, oConfigSection, "udb_user_ident", false);
 			if (!Utils.hasValue(_sUdbUserIdent))
 				_sUdbUserIdent = "";
-			_oASelectSystemLogger.log(Level.INFO, MODULE, sMethod, "udb_user_ident="+_sUdbUserIdent);
+			_oASelectSystemLogger.log(Level.INFO, MODULE, sMethod, "udb_user_ident="+Auxiliary.obfuscate(_sUdbUserIdent));
 
 			// 20121123, Bauke: added SMS to voice phones
 			_sVoicePhoneAttribute = Utils.getSimpleParam(_oASelectConfigManager, _oASelectSystemLogger, oConfigSection, "voice_phone_attribute", false);
@@ -832,7 +837,7 @@ public class JNDIConnector implements IUDBConnector
 				throw new ASelectUDBException(Errors.ERROR_ASELECT_INIT_ERROR, e);
 			}
 			_oASelectSystemLogger.log(Level.INFO, MODULE, sMethod, "JNDIConf _sBaseDN=" + _sBaseDN + ", _sUserDN="
-					+ _sUserDN + ", sFullUid=" + sFullUid + ", _sUDBResourceGroup=" + _sUDBResourceGroup);
+					+ Auxiliary.obfuscate(_sUserDN) + ", sFullUid=" + sFullUid + ", _sUDBResourceGroup=" + _sUDBResourceGroup);
 		}
 		catch (ASelectUDBException e) {
 			throw e;
@@ -951,7 +956,7 @@ public class JNDIConnector implements IUDBConnector
 	private void logAuthentication(String sUserID, String sErrorCode, String sMessage)
 	{
 		_oASelectAuthenticationLogger.log(new Object[] {
-			MODULE, sUserID, null, null, null, sMessage, sErrorCode
+			MODULE, Auxiliary.obfuscate(sUserID), null, null, null, sMessage, sErrorCode
 		});
 	}
 }

@@ -95,7 +95,8 @@ public class MollieHttpSmsSender extends GenericSmsSender
 			data.append(EQUAL_SIGN).append(URLEncoder.encode(this.gateway, "UTF-8"));
 		}
 		// RH, 20080729, en
-		_systemLogger.log(Level.FINEST, sModule, sMethod, "url=" + providerUrl + " data=" + data.toString());
+//		_systemLogger.log(Level.FINEST, sModule, sMethod, "url=" + providerUrl + " data=" + data.toString());
+		_systemLogger.log(Level.FINEST, sModule, sMethod, "url=" + providerUrl + " data=" + "...");
 		return 0;
 	}
 

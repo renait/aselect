@@ -42,6 +42,7 @@ import org.aselect.system.logging.Audit;
 import org.aselect.system.utils.BASE64Encoder;
 import org.aselect.system.utils.Tools;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 import org.joda.time.DateTime;
 import org.opensaml.common.SAMLObjectBuilder;
 import org.opensaml.common.SAMLVersion;
@@ -812,7 +813,7 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 		//_systemLogger.log(Level.INFO, MODULE, sMethod, "Response signing ======<"+response);
 		
 		String sResponse = XMLHelper.nodeToString(response.getDOM());
-		_systemLogger.log(Level.FINER, MODULE, sMethod, "Response=" + sResponse);
+		_systemLogger.log(Level.FINER, MODULE, sMethod, "Response=" + Auxiliary.obfuscate(sResponse, Auxiliary.REGEX_PATTERNS));
 		try {
 			byte[] bBase64Assertion = sResponse.getBytes("UTF-8");
 			BASE64Encoder b64enc = new BASE64Encoder();

@@ -69,6 +69,7 @@ import org.aselect.server.udb.IUDBConnector;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectUDBException;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 
 /**
@@ -632,7 +633,7 @@ public class SASDBConnector implements IUDBConnector
 	private void logAuthentication(String sUserID, String sErrorCode, String sMessage)
 	{
 		_oASelectAuthenticationLogger.log(new Object[] {
-			MODULE, sUserID, null, null, null, sMessage, sErrorCode
+			MODULE, Auxiliary.obfuscate(sUserID), null, null, null, sMessage, sErrorCode
 		});
 	}
 }

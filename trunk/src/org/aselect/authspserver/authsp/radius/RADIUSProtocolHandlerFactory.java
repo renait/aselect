@@ -25,6 +25,7 @@ import java.util.logging.Level;
 import org.aselect.authspserver.config.AuthSPConfigManager;
 import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.logging.SystemLogger;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * The Radius Protocol Handler Factory. <br>
@@ -104,7 +105,7 @@ public class RADIUSProtocolHandlerFactory
 		try {
 			int iIndex = sUid.indexOf('@');
 			if (iIndex <= 0) {
-				sbTemp = new StringBuffer("invalid user id (").append(sUid).append(") ");
+				sbTemp = new StringBuffer("invalid user id (").append(Auxiliary.obfuscate(sUid)).append(") ");
 				sbTemp.append("User id should be [user]@[realm].");
 				oSystemLogger.log(Level.SEVERE, MODULE, sMethod, sbTemp.toString());
 				return null;
@@ -113,7 +114,7 @@ public class RADIUSProtocolHandlerFactory
 			String sRealm = sUid.substring(iIndex);
 			if (sRealm.length() <= 0) {
 				sbTemp = new StringBuffer("could not determine realm for user id ");
-				sbTemp.append(sUid).append(". Should be [user]@[realm].");
+				sbTemp.append(Auxiliary.obfuscate(sUid)).append(". Should be [user]@[realm].");
 				oSystemLogger.log(Level.SEVERE, MODULE, sMethod, sbTemp.toString());
 				return null;
 			}
@@ -165,7 +166,7 @@ public class RADIUSProtocolHandlerFactory
 				if (oBackendServer != null) {
 					sbTemp = new StringBuffer("no radius server defined for realm ");
 					sbTemp.append(sRealm).append(" while authenticating ");
-					sbTemp.append(sUid);
+					sbTemp.append(Auxiliary.obfuscate(sUid));
 
 					oSystemLogger.log(Level.SEVERE, MODULE, sMethod, sbTemp.toString());
 					return null;
@@ -179,7 +180,7 @@ public class RADIUSProtocolHandlerFactory
 			catch (ASelectConfigException e) {
 				sbTemp = new StringBuffer("no radius server defined for realm ");
 				sbTemp.append(sRealm).append(" while authenticating ");
-				sbTemp.append(sUid);
+				sbTemp.append(Auxiliary.obfuscate(sUid));
 
 				oSystemLogger.log(Level.SEVERE, MODULE, sMethod, sbTemp.toString());
 				return null;
@@ -202,7 +203,7 @@ public class RADIUSProtocolHandlerFactory
 			catch (ASelectConfigException e) {
 				sbTemp = new StringBuffer("no shared_secret defined for realm ");
 				sbTemp.append(sRealm).append(" while authenticating ");
-				sbTemp.append(sUid);
+				sbTemp.append(Auxiliary.obfuscate(sUid));
 				oSystemLogger.log(Level.SEVERE, MODULE, sMethod, sbTemp.toString());
 				return null;
 			}
@@ -239,7 +240,7 @@ public class RADIUSProtocolHandlerFactory
 			catch (ASelectConfigException e) {
 				sbTemp = new StringBuffer("no method defined for realm ");
 				sbTemp.append(sRealm).append(" while authenticating ");
-				sbTemp.append(sUid);
+				sbTemp.append(Auxiliary.obfuscate(sUid));
 				oSystemLogger.log(Level.SEVERE, MODULE, sMethod, sbTemp.toString());
 				return null;
 			}
@@ -250,7 +251,7 @@ public class RADIUSProtocolHandlerFactory
 			catch (ASelectConfigException e) {
 				sbTemp = new StringBuffer("no protocol handler defined for realm");
 				sbTemp.append(sRealm).append(" while authenticating ");
-				sbTemp.append(sUid);
+				sbTemp.append(Auxiliary.obfuscate(sUid));
 				oSystemLogger.log(Level.SEVERE, MODULE, sMethod, sbTemp.toString());
 				return null;
 			}

@@ -52,6 +52,7 @@ import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.BASE64Encoder;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * PKI AuthSP. <br>
@@ -174,7 +175,8 @@ public class PKIAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 			String sUserAttributes = servletRequest.getParameter("user_attribute");
 			String sAsId = servletRequest.getParameter("a-select-server");
 			String sPassword = servletRequest.getParameter("password");
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "rid=" + sRid + "user_attr=" + sUserAttributes);
+//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "rid=" + sRid + "user_attr=" + sUserAttributes);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "rid=" + sRid);
 
 			String sTFAuthSpName = servletRequest.getParameter("tf_authsp");
 			String sTFAuthSpUrl = servletRequest.getParameter("tf_url");
@@ -245,7 +247,8 @@ public class PKIAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 			String sRid = servletRequest.getParameter("rid");
 			String sUserAttributes = servletRequest.getParameter("user_attribute");
 			String sAsId = servletRequest.getParameter("a-select-server");
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "rid=" + sRid + " user_attr=" + sUserAttributes);
+//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "rid=" + sRid + " user_attr=" + sUserAttributes);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "rid=" + sRid);
 
 			String sTFAuthSpName = servletRequest.getParameter("tf_authsp");
 			String sTFAuthSpUrl = servletRequest.getParameter("tf_url");
@@ -345,16 +348,18 @@ public class PKIAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 			catch (ASelectConfigException e) {
 			}
 
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Get certificate for '" + sUserAttributes + "'");
+//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Get certificate for '" + sUserAttributes + "'");
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Get certificate");
 			// Get Client Certificate from user
 			oCerts = (X509Certificate[])servletRequest.getAttribute("javax.servlet.request.X509Certificate");
     		if (oCerts == null || oCerts.length <= 0) {
 				_systemLogger.log(Level.FINE, MODULE, sMethod, "No Client Certificate Provided");
 				throw new ASelectException(Errors.PKI_NO_CLIENT_CERT_PROVIDED);
 			}
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "oCerts=" + oCerts + " length=" + oCerts.length);
+//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "oCerts=" + oCerts + " length=" + oCerts.length);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "oCerts length=" + oCerts.length);
 			oClientCert = oCerts[0];
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "ClientCert=" + oClientCert);
+//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "ClientCert=" + oClientCert);
 
 			if (!sValidateDateCheck.equalsIgnoreCase("false")) {
 				// throws an ASelectException when certificate isn't
@@ -409,7 +414,8 @@ public class PKIAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 
 			try {
 				Collection altNames = oClientCert.getSubjectAlternativeNames();
-				_systemLogger.log(Level.INFO, MODULE, sMethod, "altNames=" + altNames);
+//				_systemLogger.log(Level.INFO, MODULE, sMethod, "altNames=" + altNames);
+				_systemLogger.log(Level.INFO, MODULE, sMethod, "Retrieving altNames");
 				if ( altNames != null ) {	// RH, 20131216, n, altnames might be absent
 					for (Iterator i = altNames.iterator(); i.hasNext();) {
 						Object obj = i.next();
@@ -417,12 +423,13 @@ public class PKIAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 						Integer type = (Integer) item.get(0);
 						Object value = item.get(1);
 						byte[] bValue = (byte[]) value;
-						_systemLogger.log(Level.INFO, MODULE, sMethod, "Type=" + type.toString() + " Value="
-								+ value.toString() + " Bytes=" + bValue.length);
+//						_systemLogger.log(Level.INFO, MODULE, sMethod, "Type=" + type.toString() + " Value="
+//								+ value.toString() + " Bytes=" + bValue.length);
+						_systemLogger.log(Level.INFO, MODULE, sMethod, "Type=" + type.toString());
 						String result = "";
 						for (int j = 0; j < bValue.length; j++)
 							result += "." + Integer.toHexString(bValue[j]);
-						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Value=" + result);
+//						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Value=" + result);
 						int j;
 						for (j = bValue.length - 1; j >= 0; j--) {
 							Character c = (char) bValue[j];
@@ -443,7 +450,7 @@ public class PKIAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 								sSubjectId = "";
 							sSubjectId += Character.toString((char) bValue[j]);
 						}
-						_systemLogger.log(Level.FINEST, MODULE, sMethod, "sSubjectId="+sSubjectId);
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "sSubjectId="+Auxiliary.obfuscate(sSubjectId));
 					}
 				}
 				else {	// RH, 20131216, sn
@@ -453,15 +460,15 @@ public class PKIAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 			catch (CertificateParsingException e) {
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "Cert.Pars.Exc=" + e.toString());
 			}
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "SubjectDN=" + sSubjectDN);
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "SubjectDN=" + Auxiliary.obfuscate(sSubjectDN));
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "IssuerDN=" + sIssuerDN);
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "SubjectId=" + sSubjectId);
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "SubjectId=" + Auxiliary.obfuscate(sSubjectId));
 
 			// Bauke: Skip optionally
 			if (sBinBlobCheck.equalsIgnoreCase("false") && sValidateSubjectCheck.equalsIgnoreCase("true")) {
 				if (!sUserAttributes.trim().equalsIgnoreCase(sSubjectDN)) {
-					sbTemp = new StringBuffer("Subject DN: '").append(sSubjectDN).append(
-							"' is different from the one provided in the ASelect UDB: '").append(sUserAttributes)
+					sbTemp = new StringBuffer("Subject DN: '").append(Auxiliary.obfuscate(sSubjectDN)).append(
+							"' is different from the one provided in the ASelect UDB: '").append(Auxiliary.obfuscate(sUserAttributes))
 							.append("'");
 					_systemLogger.log(Level.INFO, MODULE, sMethod, sbTemp.toString());
 					throw new ASelectException(Errors.PKI_SUBJECT_DN_NOT_VALID);
@@ -631,7 +638,8 @@ public class PKIAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 			}
 //			RH, 20131216, en			
 
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Sign[" + sbTemp + "]");
+//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Sign[" + sbTemp + "]");
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Sign[" + "..." + "]");
 			sSignature = _cryptoEngine.generateSignature(sbTemp.toString());
 			if (sSignature == null) {
 				_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Error occured during signature creation");
@@ -660,18 +668,19 @@ public class PKIAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 			sbTemp.append("&pki_subject_id=").append(sSubjectId); // Bauke: added
 		sbTemp.append("&signature=").append(sSignature);
 		try {
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "REDIRECT: " + sbTemp);
+//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "REDIRECT: " + sbTemp);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "REDIRECT");
 			servletResponse.sendRedirect(sbTemp.toString());
 
 			if (sResultCode.equals(Errors.PKI_CLIENT_CERT_SUCCESS)) {  // user authenticated
 				// Authentication successfull
 				_authenticationLogger.log(new Object[] {
-					MODULE, sUid, servletRequest.getRemoteAddr(), sAsId, "granted"
+					MODULE, Auxiliary.obfuscate(sUid), servletRequest.getRemoteAddr(), sAsId, "granted"
 				});
 			}
 			else {  // authenticate failed
 				_authenticationLogger.log(new Object[] {
-					MODULE, sUid, servletRequest.getRemoteAddr(), sAsId, "denied: " + sResultCode
+					MODULE, Auxiliary.obfuscate(sUid), servletRequest.getRemoteAddr(), sAsId, "denied: " + sResultCode
 				});
 			}
 		}
@@ -873,7 +882,8 @@ public class PKIAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 			sbRequest.append("&retry_counter=").append("DUMMY");
 			sbRequest.append("&signature=").append("DUMMY");
 
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Send:" + sbRequest);
+//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Send:" + sbRequest);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Send");
 			String sResponseString = sendGetRequest(sbRequest.toString());
 
 			HashMap xResponse = Utils.convertCGIMessage(sResponseString, false);

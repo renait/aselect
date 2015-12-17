@@ -95,6 +95,7 @@ import org.aselect.system.logging.SystemLogger;
 import org.aselect.system.sam.agent.SAMAgent;
 import org.aselect.system.sam.agent.SAMResource;
 import org.aselect.system.storagemanager.IStorageHandler;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * DBMS storage handler. <br>
@@ -352,7 +353,7 @@ public class JDBCStorageHandler implements IStorageHandler
 				// oRet = decode(oResultSet.getBytes(_sContextValue.replace(identifierQuote, " ").trim())); // o
 				oRet = decode(oResultSet.getBytes(_sContextValue.substring(identifierQuote.length(),
 						_sContextValue.length()	- identifierQuote.length())));
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "result=" + oRet);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "result=" + Auxiliary.obfuscate(oRet));
 			}
 			else {
 				_systemLogger.log(Level.FINE, MODULE, sMethod, "The supplied key is not mapped to any value.");
@@ -737,7 +738,7 @@ public class JDBCStorageHandler implements IStorageHandler
 			sbBuffer.append(") ");
 			// RH, 20080714, en
 			sbBuffer.append("VALUES (?,?,?,?)");
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "sql=" + sbBuffer + " -> " + oValue);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "sql=" + sbBuffer + " -> " + Auxiliary.obfuscate(oValue));
 
 			oStatement = oConnection.prepareStatement(sbBuffer.toString());
 			oStatement.setInt(1, iKey);
@@ -808,7 +809,7 @@ public class JDBCStorageHandler implements IStorageHandler
 				sbBuffer.append("UPDATE ").append(_sTableName).append(" ");
 				sbBuffer.append("SET ").append(_sContextValue).append(" = ? , ").append(_sContextTimestamp).append(" = ? ");
 				sbBuffer.append("WHERE ").append(_sContextKey).append(" = ?"); // new
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "sql=" + sbBuffer + " -> " + oValue);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "sql=" + sbBuffer + " -> " + Auxiliary.obfuscate(oValue));
 
 				oStatement = oConnection.prepareStatement(sbBuffer.toString());
 				oStatement.setBytes(1, baValue);
@@ -874,7 +875,7 @@ public class JDBCStorageHandler implements IStorageHandler
 			sbBuffer.append("FROM ").append(_sTableName).append(" ");
 			// sbBuffer.append("WHERE ").append(_sContextKeyHash).append(" = ?"); // old
 			sbBuffer.append("WHERE ").append(_sContextKey).append(" = ?"); // new
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "sql=" + sbBuffer + " -> " + oValue);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "sql=" + sbBuffer + " -> " + Auxiliary.obfuscate(oValue));
 
 			oConnection = getConnection(); // RH, 20090604, n
 			oStatement = oConnection.prepareStatement(sbBuffer.toString());
@@ -888,7 +889,7 @@ public class JDBCStorageHandler implements IStorageHandler
 						" = ? ");
 				// sbBuffer.append("WHERE ").append(_sContextKeyHash).append(" = ?"); // old
 				sbBuffer.append("WHERE ").append(_sContextKey).append(" = ?"); // new
-				_systemLogger.log(Level.FINER, MODULE, sMethod, "sql=" + sbBuffer + " -> " + oKey);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "sql=" + sbBuffer + " -> " + oKey);
 
 				try { // added 1.5.4
 					oStatement.close();

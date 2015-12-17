@@ -336,6 +336,7 @@ import org.aselect.system.utils.BASE64Decoder;
 import org.aselect.system.utils.BASE64Encoder;
 import org.aselect.system.utils.Tools;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 import org.opensaml.DefaultBootstrap;
 import org.opensaml.saml2.core.Assertion;
 import org.opensaml.xml.ConfigurationException;
@@ -698,7 +699,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 		_sessionManager.setDeleteSession(_htSessionContext, _systemLogger);  // 20120401, Bauke: postpone session action
 		
 		String sAppUrl = (String)_htSessionContext.get("app_url");
-		_systemLogger.log(Level.INFO, _sModule, sMethod, "REDIRECT to " + sAppUrl);
+		_systemLogger.log(Level.FINEST, _sModule, sMethod, "REDIRECT to " + sAppUrl);
 		
 		TGTIssuer oTGTIssuer = new TGTIssuer(_sMyServerId);
 		String sLang = (String)_htTGTContext.get("language");
@@ -755,7 +756,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 			_systemLogger.log(Level.WARNING, _sModule, sMethod, "Invalid parameter maxtries: " +  oboParms.get("maxtries") + ", using default:" + obo_maxRetries );
 		}
 		
-		_systemLogger.log(Level.FINER, _sModule, sMethod, "obouid="+sOBOId + ", step="+sStep + ", oboyn="+sOBOyn + ", obo_retries="+iOboRetries);
+		_systemLogger.log(Level.FINEST, _sModule, sMethod, "obouid="+Auxiliary.obfuscate(sOBOId) + ", step="+sStep + ", oboyn="+sOBOyn + ", obo_retries="+iOboRetries);
 		if ( iOboRetries == null ) {
 			iOboRetries = 0;
 		}
@@ -846,7 +847,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "Marshalling done");
 				String sAssertion = XMLHelper.nodeToString(node);
 
-				_systemLogger.log(Level.INFO, MODULE, sMethod, "sAssertion: " + sAssertion);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "sAssertion: " + Auxiliary.obfuscate(sAssertion, Auxiliary.REGEX_PATTERNS));
 
 				 IClientCommunicator _communicator;
 				
@@ -890,14 +891,16 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 				jsonrequest.put("request", (String)oboParms.get("wsserverrequest"));
 				jsonrequest.put(jsonkey, htRequestpairs);
 //				// set Configuration parameters
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "jsonrequest:" + jsonrequest);
+//				_systemLogger.log(Level.FINEST, MODULE, sMethod, "jsonrequest:" + jsonrequest);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Doing jsonrequest");
 				
 				// send message
 				HashMap jsonResponse = new HashMap();
 
 				try {
 					jsonResponse = _communicator.sendMessage(jsonrequest, sURL);
-					_systemLogger.log(Level.FINEST, MODULE, sMethod, "jsonResponse:" + jsonResponse);
+//					_systemLogger.log(Level.FINEST, MODULE, sMethod, "jsonResponse:" + jsonResponse);
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Retrieved jsonResponse");
 					status = (String)jsonResponse.get((String)oboParms.get("wsserverresponse"));
 					// status can be null if request failed with error
 				} catch ( ASelectCommunicationException cex) {
@@ -906,7 +909,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 						
 				}
 				
-				_systemLogger.log(Level.FINER, MODULE, sMethod, "MachtigenClient returned status: " + status);
+				_systemLogger.log(Level.INFO, MODULE, sMethod, "MachtigenClient returned status: " + status);
 				
 			} else {
 				_systemLogger.log(Level.FINER, MODULE, sMethod, "BSN check failed");
@@ -1019,7 +1022,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 		HashMap<String, String> hmUserIdent = new HashMap<String, String>();
 
 		String sRequest = (String) htServiceRequest.get("request");
-		_systemLogger.log(Level.INFO, _sModule, sMethod, "request="+sRequest+" htServReq="+htServiceRequest);
+		_systemLogger.log(Level.FINEST, _sModule, sMethod, "request="+sRequest+" htServReq="+Auxiliary.obfuscate(htServiceRequest));
 		try {
 			sRid = (String) htServiceRequest.get("rid");
 			String sAuthSPId = (String) _htSessionContext.get("direct_authsp");
@@ -1051,8 +1054,8 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 
 				// check if a request was done for another user-id
 				String sForcedUid = (String) _htSessionContext.get("forced_uid");
-				_systemLogger.log(Level.INFO, _sModule, sMethod, "DLOGIN sTgt=" + sTgt + " sUid=" +
-								sUid + " sServerId=" + sServerId + " sForcedUid=" + sForcedUid);
+				_systemLogger.log(Level.FINEST, _sModule, sMethod, "DLOGIN sTgt=" + sTgt + " sUid=" +
+						Auxiliary.obfuscate(sUid) + " sServerId=" + sServerId + " sForcedUid=" + Auxiliary.obfuscate(sForcedUid));
 				
 				if (sForcedUid != null && !sUid.equals(sForcedUid)) { // user_id does not match
 					_tgtManager.remove(sTgt);
@@ -1109,7 +1112,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 								_htTGTContext.put("sp_issuer", spIssuer); // save latest issuer
 								UserSsoSession ssoSession = (UserSsoSession) _htTGTContext.get("sso_session");
 								if (ssoSession == null) {
-									_systemLogger.log(Level.INFO, MODULE, sMethod, "NEW SSO session for " + sUid
+									_systemLogger.log(Level.INFO, MODULE, sMethod, "NEW SSO session for " + Auxiliary.obfuscate(sUid)
 											+ " issuer=" + spIssuer);
 									ssoSession = new UserSsoSession(sUid, ""); // sTgt);
 								}
@@ -1359,8 +1362,8 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 		String sRid = null;
 		StringBuffer sbUrl;
 
-		_systemLogger.log(Level.INFO, _sModule, sMethod, "Login1 SessionContext:" + _htSessionContext +
-						", ServiceRequest:" + htServiceRequest);
+		_systemLogger.log(Level.FINEST, _sModule, sMethod, "Login1 SessionContext:" + Auxiliary.obfuscate(_htSessionContext) +
+						", ServiceRequest:" + Auxiliary.obfuscate(htServiceRequest));
 		try {
 			sRid = (String) htServiceRequest.get("rid");
 
@@ -1375,7 +1378,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 
 				// Check if a request was done for a different user-id
 				String sForcedUid = (String) _htSessionContext.get("forced_uid");
-				_systemLogger.log(Level.INFO, _sModule, sMethod, "SSO branch uid=" + sUid + " forced_uid=" + sForcedUid);
+				_systemLogger.log(Level.FINEST, _sModule, sMethod, "SSO branch uid=" + Auxiliary.obfuscate(sUid) + " forced_uid=" + Auxiliary.obfuscate(sForcedUid));
 				if (sForcedUid != null && !sForcedUid.equals("saml20_user") && !sForcedUid.equals("siam_user")
 						&& !sUid.equals(sForcedUid)) { 
 					// user_id does not match
@@ -1439,7 +1442,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 								_htTGTContext.put("sp_issuer", spIssuer); // save latest issuer
 								UserSsoSession ssoSession = (UserSsoSession) _htTGTContext.get("sso_session");
 								if (ssoSession == null) {
-									_systemLogger.log(Level.INFO, MODULE, sMethod, "NEW SSO session for " + sUid
+									_systemLogger.log(Level.INFO, MODULE, sMethod, "NEW SSO session for " + Auxiliary.obfuscate(sUid)
 											+ " issuer=" + spIssuer);
 									ssoSession = new UserSsoSession(sUid, ""); // sTgt);
 								}
@@ -1565,7 +1568,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 					htServiceRequest.put("user_id", sForcedUid);
 				if (sForcedAuthsp != null)
 					htServiceRequest.put("forced_authsp", sForcedAuthsp);
-				_systemLogger.log(Level.INFO, _sModule, sMethod, "Forced uid:"+sForcedUid+" OR forced authsp:"+sForcedAuthsp+", to login2");
+				_systemLogger.log(Level.INFO, _sModule, sMethod, "Forced uid:"+Auxiliary.obfuscate(sForcedUid)+" OR forced authsp:"+sForcedAuthsp+", to login2");
 				handleLogin2(htServiceRequest, servletResponse, pwOut);
 				int rc = 0;
 				_systemLogger.log(Level.FINEST, _sModule, sMethod, "Return, rc=" + rc);
@@ -1851,7 +1854,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 		String sMethod = "handleLogin2";
 
 		StringBuffer sb;
-		_systemLogger.log(Level.INFO, _sModule, sMethod, "Login2 " + htServiceRequest);
+		_systemLogger.log(Level.FINEST, _sModule, sMethod, "Login2 " + Auxiliary.obfuscate(htServiceRequest));
 
 		ASelectConfigManager configManager = ASelectConfigManager.getHandle();
 		String sUserInfo = configManager.getUserInfoSettings();
@@ -1927,7 +1930,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 					handleCrossLogin(htServiceRequest, servletResponse, pwOut);
 					return 0;
 				}
-				_systemLogger.log(Level.WARNING, _sModule, sMethod, "Failed to retrieve AuthSPs for user " + sUid);
+				_systemLogger.log(Level.WARNING, _sModule, sMethod, "Failed to retrieve AuthSPs for user " + Auxiliary.obfuscate(sUid));
 				// Would like to go back to login1 to give the user another chance
 				_htSessionContext.put("error_message", Errors.ERROR_ASELECT_SERVER_USER_NOT_ALLOWED);
 				_sessionManager.setUpdateSession(_htSessionContext, _systemLogger);  // 20120401, Bauke: added
@@ -1950,7 +1953,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 				String sFixedUid = (String) _htSessionContext.get("fixed_uid");
 				if (sFixedUid != null) {
 					// From here on use the fixed_uid as 'user_id'
-					_systemLogger.log(Level.INFO, _sModule, sMethod, "Fixed user_id=" + sFixedUid);
+					_systemLogger.log(Level.INFO, _sModule, sMethod, "Fixed user_id=" + Auxiliary.obfuscate(sFixedUid));
 					htServiceRequest.put("user_id", sFixedUid);
 					_htSessionContext.put("user_id", sFixedUid);
 					_sessionManager.setUpdateSession(_htSessionContext, _systemLogger);  // 20120401, Bauke: added
@@ -1964,7 +1967,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 			// Should the user be bothered with the selection form
 			// if only one method is available?
 			String sFormShow = _configManager.getParam(_configManager.getSection(null, "authsps"), "always_show_select_form");
-			_systemLogger.log(Level.INFO, _sModule, sMethod, "User="+sUid+" Authsps="+htAuthsps+" always_show_select_form="+sFormShow);
+			_systemLogger.log(Level.INFO, _sModule, sMethod, "User="+Auxiliary.obfuscate(sUid)+" Authsps="+htAuthsps+" always_show_select_form="+sFormShow);
 			if (htAuthsps.size() == 1 && !bAuthspFromSelect) {
 				try {
 					if (sFormShow.equalsIgnoreCase("false")) {
@@ -2138,7 +2141,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 		String sRedirectUrl = null;
 		String sPopup = null;
 
-		_systemLogger.log(Level.INFO, _sModule, sMethod, "login3 " + htServiceRequest);
+		_systemLogger.log(Level.FINEST, _sModule, sMethod, "login3 " + Auxiliary.obfuscate(htServiceRequest));
 		try {
 			sRid = (String)htServiceRequest.get("rid");
 			sAuthsp = (String)htServiceRequest.get("authsp");
@@ -2224,9 +2227,9 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 				// for test get user_id from form
 				HashMap htAllowedAuthsps = (HashMap) _htSessionContext.get("allowed_user_authsps");
 				_systemLogger.log(Level.FINEST, _sModule, sMethod, "Before lookup htAllowedAuthsps=" + htAllowedAuthsps);
-				_systemLogger.log(Level.FINEST, _sModule, sMethod, "Before lookup _htSessionContext=" + _htSessionContext);
+				_systemLogger.log(Level.FINEST, _sModule, sMethod, "Before lookup _htSessionContext=" +Auxiliary.obfuscate( _htSessionContext));
 				String sUid = (String) _htSessionContext.get("user_id");
-				_systemLogger.log(Level.FINEST, _sModule, sMethod, "Looking up in UDB user_id:" + sUid);
+				_systemLogger.log(Level.FINEST, _sModule, sMethod, "Looking up in UDB user_id:" + Auxiliary.obfuscate(sUid));
 				// RH, 20140424, sn
 				Integer iSubLevel = null;
 				try {
@@ -2276,7 +2279,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 				//	sRedirectUrl = sRedirectUrl + "&" + "social_login" + "="  +  URLEncoder.encode(sSocialAuth, "UTF-8");
 				//}
 
-				_systemLogger.log(Level.INFO, _sModule, sMethod, "REDIRECT " + sRedirectUrl);
+				_systemLogger.log(Level.FINEST, _sModule, sMethod, "REDIRECT " + sRedirectUrl);
 				if (sPopup == null || sPopup.equalsIgnoreCase("false")) {
 					Tools.pauseSensorData(_configManager, _systemLogger, _htSessionContext);  //20111102, control goes to a different server
 					_htSessionContext.put("authsp_visited", "true");
@@ -2353,7 +2356,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 		String sUid = null;
 		String sMethod = "handleCrossLogin";
 
-		_systemLogger.log(Level.INFO, _sModule, sMethod, "CrossLogin htServiceRequest=" + htServiceRequest);
+		_systemLogger.log(Level.FINEST, _sModule, sMethod, "CrossLogin htServiceRequest=" + Auxiliary.obfuscate(htServiceRequest));
 		try {
 			// is cross enabled? (configuration)
 			if (!_crossASelectManager.remoteServersEnabled()) {
@@ -2374,7 +2377,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 			// check if the request was done for a specific user_id
 			sUid = (String) _htSessionContext.get("forced_uid");
 			_systemLogger.log(Level.INFO, _sModule, sMethod, "XLOGIN sRid=" + sRid + ", intAppLevel="
-					+ intAppLevel + ", sRemoteOrg=" + sRemoteOrg + ", forced_uid=" + sUid);
+					+ intAppLevel + ", sRemoteOrg=" + sRemoteOrg + ", forced_uid=" + Auxiliary.obfuscate(sUid));
 
 			if (sRemoteOrg == null) {
 				if (!_crossASelectManager.isCrossSelectorEnabled()) {
@@ -2490,7 +2493,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 			if (_crossASelectManager.useRemoteSigning()) {
 				_cryptoEngine.signRequest(htRequestTable);
 			}
-			_systemLogger.log(Level.INFO, _sModule, sMethod, "XLOGIN htRequestTable=" + htRequestTable);
+			_systemLogger.log(Level.FINEST, _sModule, sMethod, "XLOGIN htRequestTable=" + Auxiliary.obfuscate(htRequestTable));
 
 			HashMap htResponseTable = oCommunicator.sendMessage(htRequestTable, sRemoteAsUrl);
 			if (htResponseTable.isEmpty()) {
@@ -2498,7 +2501,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 						+ sRemoteAsUrl);
 				throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR);
 			}
-			_systemLogger.log(Level.INFO, _sModule, sMethod, "XLOGIN htResponseTable=" + htResponseTable);
+			_systemLogger.log(Level.FINEST, _sModule, sMethod, "XLOGIN htResponseTable=" + htResponseTable);
 
 			String sResultCode = (String) htResponseTable.get("result_code");
 			if (sResultCode == null) {
@@ -2532,7 +2535,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 				StringBuffer sbUrl = new StringBuffer(sRemoteLoginUrl);
 				sbUrl.append("&rid=").append(sRemoteRid);
 				sbUrl.append("&a-select-server=").append(sRemoteServer);
-				_systemLogger.log(Level.INFO, _sModule, sMethod, "REDIR " + sbUrl);
+				_systemLogger.log(Level.FINEST, _sModule, sMethod, "REDIR " + sbUrl);
 				servletResponse.sendRedirect(sbUrl.toString());
 			}
 			catch (IOException e) {
@@ -2661,7 +2664,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 						Tools.calculateAndReportSensorData(_configManager, _systemLogger, "srv_sbh", sRid, _htSessionContext, sTgt, true);
 						_sessionManager.setDeleteSession(_htSessionContext, _systemLogger);  // 20120401, Bauke: postpone session action
 
-						_systemLogger.log(Level.INFO, _sModule, sMethod, "REDIR " + sb);
+						_systemLogger.log(Level.FINEST, _sModule, sMethod, "REDIR " + sb);
 						_servletResponse.sendRedirect(sb.toString());
 					}
 					catch (UnsupportedEncodingException e) {
@@ -2696,7 +2699,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 					sb.append("The IP authsp security level is too low for application '"
 							+ (String) _htSessionContext.get("app_id") + "'.");
 				}
-				_systemLogger.log(Level.INFO, _sModule, sMethod, sb.toString());
+				_systemLogger.log(Level.FINEST, _sModule, sMethod, sb.toString());
 
 				throw new ASelectException(Errors.ERROR_ASELECT_AUTHSP_INVALID_RESPONSE);
 			}
@@ -3011,7 +3014,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 			
 			// Log succesful authentication
 			authenticationLogger.log(new Object[] {
-				"Login", sUID, (String) htServiceRequest.get("client_ip"), _sMyOrg, sPrivilegedApplication, "granted"
+				"Login", Auxiliary.obfuscate(sUID), (String) htServiceRequest.get("client_ip"), _sMyOrg, sPrivilegedApplication, "granted"
 			});
 
 			// 20130825, Bauke: save friendly name after session is gone
@@ -3072,7 +3075,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 				throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR);
 			}
 			String udbType = (String)htUserProfile.get("udb_type");
-			_systemLogger.log(Level.INFO, _sModule, sMethod, "uid=" + sUid + " udb_type="+udbType+" profile=" + htUserProfile
+			_systemLogger.log(Level.FINEST, _sModule, sMethod, "uid=" + Auxiliary.obfuscate(sUid) + " udb_type="+udbType+" profile=" + htUserProfile
 					+ " user_authsps=" + htUserAuthsps + " SessionContext=" + _htSessionContext);
 			
 			
@@ -3120,10 +3123,10 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 				}
 			}
 			if (htAllowedAuthsps.size() == 0) {
-				_systemLogger.log(Level.WARNING, _sModule, sMethod, "No valid AuthSPs found for user: " + sUid);
+				_systemLogger.log(Level.WARNING, _sModule, sMethod, "No valid AuthSPs found for user: " + Auxiliary.obfuscate(sUid));
 				throw new ASelectException(Errors.ERROR_ASELECT_SERVER_USER_NOT_ALLOWED);
 			}
-			_systemLogger.log(Level.INFO, _sModule, sMethod, "Allowed AuthSPs " + htAllowedAuthsps);
+			_systemLogger.log(Level.FINEST, _sModule, sMethod, "Allowed AuthSPs " + htAllowedAuthsps);
 
 			_htSessionContext.put("allowed_user_authsps", htAllowedAuthsps);
 			_htSessionContext.put("user_id", sUid);
@@ -3441,8 +3444,8 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 			sUid = (String) _htSessionContext.get("uid");
 			sUserId = (String) _htSessionContext.get("user_id");
 			sForcedUid = (String) _htSessionContext.get("forced_uid");
-			_systemLogger.log(Level.INFO, _sModule, sMethod, "Login25 uid=" + sUid + " user_id=" + sUserId
-					+ " forced_uid=" + sForcedUid + " authsp=" + sAuthsp);
+			_systemLogger.log(Level.FINEST, _sModule, sMethod, "Login25 uid=" + Auxiliary.obfuscate(sUid) + " user_id=" + Auxiliary.obfuscate(sUserId)
+					+ " forced_uid=" + Auxiliary.obfuscate(sForcedUid) + " authsp=" + sAuthsp);
 			if (sAuthsp == null) {
 				_systemLogger.log(Level.WARNING, _sModule, sMethod, "Invalid request, missing parmeter 'authsp'");
 				throw new ASelectCommunicationException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
@@ -3460,7 +3463,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 			_htSessionContext.put("user_state", "state_login25");  // 20131019, Bauke: remove "state_select"
 			_sessionManager.setUpdateSession(_htSessionContext, _systemLogger);
 			
-			_systemLogger.log(Level.INFO, _sModule, sMethod, "htSessionContext=" + _htSessionContext);
+			_systemLogger.log(Level.FINEST, _sModule, sMethod, "htSessionContext=" + Auxiliary.obfuscate(_htSessionContext));
 			handleLogin1(htServiceRequest, servletResponse, pwOut);
 		}
 		catch (ASelectException ae) {
@@ -3543,18 +3546,18 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 	
 		// No "usi" available in this entry
 		hmRequest.put("usi", Tools.generateUniqueSensorId());  // 20120111, Bauke added
-		_systemLogger.log(Level.FINEST, MODULE, sMethod, "hmRequest=" + hmRequest);
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "hmRequest=" + Auxiliary.obfuscate(hmRequest));
 		
 		// Exception for bad shared_secret:
 		HashMap<String, Object> hmResponse = handleAuthenticateAndCreateSession(hmRequest, null);
-		_systemLogger.log(Level.FINEST, MODULE, sMethod, "hmResponse=" + hmResponse);
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "hmResponse=" + Auxiliary.obfuscate(hmResponse));
 
 		String sResultCode = (String) hmResponse.get("result_code");
 		if (!sResultCode.equals(Errors.ERROR_ASELECT_SUCCESS)) {  // never happens (either success or exception is raised
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, "} AUTHN unsuccessful, result_code=" + sResultCode);
 			throw new ASelectException(Errors.ERROR_ASELECT_IO);
 		}
-		_systemLogger.log(Level.FINEST, MODULE, sMethod, "} AUTHN htResponse=" + hmResponse);
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "} AUTHN htResponse=" + Auxiliary.obfuscate(hmResponse));
 
 		// Retrieve the session just created
 		String sRid = (String)hmResponse.get("rid");
@@ -3583,7 +3586,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 		_systemLogger.log(Level.FINEST, MODULE, sMethod, "HttpSR="+servletResponse);
 		boolean bSuccess = oProtocolHandler.handleDirectLoginRequest(hmDirectRequest, null/*serlvet request*/, null/*servlet response*/,
 					_htSessionContext, null/*additional*/, null /*output writer*/, _sMyServerId, "en", "nl");
-		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Success="+bSuccess+" hm="+hmDirectRequest);
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Success="+bSuccess+" hm="+Auxiliary.obfuscate(hmDirectRequest));
 		
 		// Pass result in the header, but only if successful
 		if (bSuccess) {
@@ -3644,7 +3647,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 				for (int i=1; ; i++) {
 					int len = sResult.length();
 					int hdrLen = (len <= SPLIT_HEADER)? len: SPLIT_HEADER;
-					_systemLogger.log(Level.FINE, MODULE, sMethod, "i="+i+" len="+len+" hdrLen="+hdrLen);
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "i="+i+" len="+len+" hdrLen="+hdrLen);
 					servletResponse.setHeader("X-saml-attribute-token"+Integer.toString(i), sResult.substring(0, hdrLen));
 					// pwOut.flush() at this point will only set the first header 
 					if (len <= SPLIT_HEADER)
@@ -3662,7 +3665,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 				
 		AuthenticationLogger authenticationLogger = ASelectAuthenticationLogger.getHandle();
 		authenticationLogger.log(new Object[] {
-				"login_token", sUid, (String) htServiceRequest.get("client_ip"), _sMyOrg, sAppId, bSuccess ? "granted" : "denied"
+				"login_token", Auxiliary.obfuscate(sUid), (String) htServiceRequest.get("client_ip"), _sMyOrg, sAppId, bSuccess ? "granted" : "denied"
 			});
 		
 		pwOut.flush();  // otherwise: java.lang.ArrayIndexOutOfBoundsException: 8192 when output gets large

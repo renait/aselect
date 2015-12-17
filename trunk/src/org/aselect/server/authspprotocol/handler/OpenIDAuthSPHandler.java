@@ -33,6 +33,7 @@ import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectAuthSPException;
 import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * The OpenID AuthSP Handler. <br>
@@ -443,7 +444,7 @@ public class OpenIDAuthSPHandler extends AbstractAuthSPProtocolHandler implement
 			if (sResultCode.equalsIgnoreCase(ERROR_OPENID_ACCESS_DENIED)) { // access denied
 				// only log to authentication log
 				_authenticationLogger.log(new Object[] {
-					MODULE, sUserId, htAuthspResponse.get("client_ip"), sOrg,
+					MODULE, Auxiliary.obfuscate(sUserId), htAuthspResponse.get("client_ip"), sOrg,
 					(String) htSessionContext.get("app_id"), "denied", sResultCode
 				});
 				throw new ASelectAuthSPException(Errors.ERROR_ASELECT_AUTHSP_ACCESS_DENIED);
@@ -458,7 +459,7 @@ public class OpenIDAuthSPHandler extends AbstractAuthSPProtocolHandler implement
 
 			// everything OK -> log to authentication logger
 			_authenticationLogger.log(new Object[] {
-				MODULE, sUserId, htAuthspResponse.get("client_ip"), sOrg,
+				MODULE, Auxiliary.obfuscate(sUserId), htAuthspResponse.get("client_ip"), sOrg,
 				(String) htSessionContext.get("app_id"), "granted"
 			});
 			// set response

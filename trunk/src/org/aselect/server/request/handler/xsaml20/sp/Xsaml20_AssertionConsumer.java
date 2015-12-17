@@ -48,6 +48,7 @@ import org.aselect.system.exception.ASelectCommunicationException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.Base64Codec;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 import org.joda.time.DateTime;
 import org.opensaml.Configuration;
 import org.opensaml.common.SAMLObjectBuilder;
@@ -297,13 +298,15 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 				Envelope envelope = soapManager.buildSOAPMessage(artifactResolve);
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "Marshall");
 				Element envelopeElem = SamlTools.marshallMessage(envelope);
-				_systemLogger.log(Level.INFO, MODULE, sMethod, "Writing SOAP message:\n"+ XMLHelper.nodeToString(envelopeElem));
+//				_systemLogger.log(Level.INFO, MODULE, sMethod, "Writing SOAP message:\n"+ XMLHelper.nodeToString(envelopeElem));
+				_systemLogger.log(Level.INFO, MODULE, sMethod, "Writing SOAP message:\n"+ Auxiliary.obfuscate(XMLHelper.nodeToString(envelopeElem), Auxiliary.REGEX_PATTERNS));
 				// XMLHelper.prettyPrintXML(envelopeElem));
 	
 				// ------------ Send/Receive the SOAP message
 				String sSamlResponse = soapManager.sendSOAP(XMLHelper.nodeToString(envelopeElem), sASelectServerUrl);  // x_AssertionConsumer_x
 				//byte[] sSamlResponseAsBytes = sSamlResponse.getBytes();
-				_systemLogger.log(Level.INFO, MODULE, sMethod, "Received response: "+sSamlResponse+" length=" + sSamlResponse.length());
+//				_systemLogger.log(Level.INFO, MODULE, sMethod, "Received response: "+sSamlResponse+" length=" + sSamlResponse.length());
+				_systemLogger.log(Level.INFO, MODULE, sMethod, "Received response: "+Auxiliary.obfuscate(sSamlResponse)+" original length=" + sSamlResponse.length());
 				
 				// save original, but, for (internal) transport, encode base64 
 				auth_proof = new String(org.apache.commons.codec.binary.Base64.encodeBase64(sSamlResponse.getBytes("UTF-8")));
@@ -317,9 +320,9 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 				StringReader stringReader = new StringReader(sSamlResponse);
 				InputSource inputSource = new InputSource(stringReader);
 				Document docReceivedSoap = builder.parse(inputSource);
-				_systemLogger.log(Level.INFO, MODULE, sMethod, "parsed="+docReceivedSoap.toString());
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "parsed="+docReceivedSoap.toString());
 				Element elementReceivedSoap = docReceivedSoap.getDocumentElement();
-				_systemLogger.log(Level.INFO, MODULE, sMethod, "getdoc="+elementReceivedSoap.toString());
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "getdoc="+elementReceivedSoap.toString());
 	
 				// Remove all SOAP elements
 				Node eltArtifactResponse = SamlTools.getNode(elementReceivedSoap, "ArtifactResponse");
@@ -413,7 +416,7 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 			if (samlResponseObject instanceof Response) {
 				// SSO
 				Response samlResponse = (Response) samlResponseObject;
-				_systemLogger.log(Level.INFO, MODULE, sMethod, "Processing 'Response'");  // +XMLHelper.prettyPrintXML(samlResponse.getDOM()));
+				_systemLogger.log(Level.INFO, MODULE, sMethod, "Processing 'Response: " + Auxiliary.obfuscate(XMLHelper.prettyPrintXML(samlResponse.getDOM()),Auxiliary.REGEX_PATTERNS));
 
 				
 				// RH, 20121205, sn
@@ -471,7 +474,7 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 				}
 				
 				if (sStatusCode.equals(StatusCode.SUCCESS_URI)) {
-					_systemLogger.log(Level.INFO, MODULE, sMethod, "Response was successful " + samlResponse.toString());
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Response was successful " + samlResponse.toString());
 					_systemLogger.log(Level.INFO, MODULE, sMethod, "Number of Assertions found:  " +  samlResponse.getAssertions().size());
 					Assertion samlAssertion = samlResponse.getAssertions().get(0);
 					_systemLogger.log(Level.INFO, MODULE, sMethod, "Assertion ID:" +samlAssertion.getID());
@@ -575,7 +578,8 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 //								String sAttrValue = xsString.getValue();// RH, 20120124, o
 //								sAttrValue = xsString.getValue();// RH, 20120124, eo
 								sAttrValue = xmlObj.getDOM().getFirstChild().getTextContent();
-								_systemLogger.log(Level.INFO, MODULE, sMethod, "Name=" + sAttrName + " Value=" + sAttrValue);
+//								_systemLogger.log(Level.INFO, MODULE, sMethod, "Name=" + sAttrName + " Value=" + sAttrValue);
+								_systemLogger.log(Level.INFO, MODULE, sMethod, "Name=" + sAttrName + " Value=" + Auxiliary.obfuscate(sAttrValue));
 							}
 							else {
 								_systemLogger.log(Level.INFO, MODULE, sMethod, "Only single valued attributes allowed, skipped attribute Name=" + sAttrName);
@@ -741,7 +745,8 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 					 */
 					// End of IdP token
 
-					_systemLogger.log(Level.INFO, MODULE, sMethod, "htRemoteAttributes=" + hmSamlAttributes);
+//					_systemLogger.log(Level.INFO, MODULE, sMethod, "htRemoteAttributes=" + hmSamlAttributes);
+					_systemLogger.log(Level.FINER, MODULE, sMethod, "htRemoteAttributes=" + Auxiliary.obfuscate(hmSamlAttributes));
 					handleSSOResponse(_htSessionContext, hmSamlAttributes, servletRequest, servletResponse);
 				}
 				else {
@@ -863,7 +868,7 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 						|| sResultCode.equals(Errors.ERROR_ASELECT_AUTHSP_COULD_NOT_AUTHENTICATE_USER)) {
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, "Cancel");
 					_authenticationLogger.log(new Object[] {
-						"Saml", sUID, (String) htServiceRequest.get("client_ip"), sRemoteOrg,
+						"Saml", Auxiliary.obfuscate(sUID), (String) htServiceRequest.get("client_ip"), sRemoteOrg,
 						htSessionContext.get("app_id"), "denied", sFederationId, sResultCode
 					});
 					// Issue 'CANCEL' TGT
@@ -873,7 +878,7 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 				else { // remote server returned error
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, "Error");
 					_authenticationLogger.log(new Object[] {
-						"Saml", sUID, (String) htServiceRequest.get("client_ip"), sRemoteOrg,
+						"Saml", Auxiliary.obfuscate(sUID), (String) htServiceRequest.get("client_ip"), sRemoteOrg,
 						htSessionContext.get("app_id"), "denied", sFederationId, sResultCode
 					});
 					throw new ASelectException(Errors.ERROR_ASELECT_AUTHSP_ACCESS_DENIED);
@@ -881,7 +886,7 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 			}
 			else { // No result_code set, log successful authentication
 				_authenticationLogger.log(new Object[] {
-					"Saml", sUID, (String) htServiceRequest.get("client_ip"), sRemoteOrg,
+					"Saml", Auxiliary.obfuscate(sUID), (String) htServiceRequest.get("client_ip"), sRemoteOrg,
 					htSessionContext.get("app_id"), "granted", sFederationId
 				});
 				if ( isLogAuthProof() ) {	// Log auth_proof here if enabled

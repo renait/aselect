@@ -286,7 +286,7 @@ public class MD5Crypt
 //		String salt = encryptedPassword.substring(0, 3); // RH, 20100809, o
 		String salt = encryptedPassword.substring(0, 15);	// RH, 20100809, n, allow for longer salt, maybe even $apr1$ in future
 		String newCrypt = crypt(enteredPassword, salt);
-		System.err.println("compare b newCrypt=\"" + newCrypt + " with: \"" + encryptedPassword);
+//		System.err.println("compare b newCrypt=\"" + newCrypt + " with: \"" + encryptedPassword);
 		return newCrypt.equals(encryptedPassword);
 	}
 

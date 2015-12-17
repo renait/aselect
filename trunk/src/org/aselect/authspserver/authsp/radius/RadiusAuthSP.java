@@ -112,6 +112,7 @@ import org.aselect.authspserver.authsp.radius.Errors;
 import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * The Radius AuthSP. <br>
@@ -271,9 +272,9 @@ public class RadiusAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "servletRequest=" + servletRequest);
 		try {
 			sQueryString = servletRequest.getQueryString();
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "query=" + sQueryString);
+//			_systemLogger.log(Level.INFO, MODULE, sMethod, "query=" + sQueryString);
 			HashMap htServiceRequest = Utils.convertCGIMessage(sQueryString, false);
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "htServiceRequest=" + htServiceRequest);
+//			_systemLogger.log(Level.INFO, MODULE, sMethod, "htServiceRequest=" + htServiceRequest);
 
 			sLanguage = (String) htServiceRequest.get("language");  // optional language code
 			if (sLanguage == null || sLanguage.trim().length() < 1)
@@ -293,7 +294,7 @@ public class RadiusAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 			String sAsId = (String) htServiceRequest.get("a-select-server");
 			String sSignature = (String) htServiceRequest.get("signature");
 
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "uid=" + sUid);
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "uid=" + Auxiliary.obfuscate(sUid));
 			if ((sRid == null) || (sAsUrl == null) || (sUid == null) || (sAsId == null) || (sSignature == null)) {
 				throw new ASelectException(Errors.ERROR_RADIUS_INVALID_REQUEST);
 			}
@@ -315,11 +316,12 @@ public class RadiusAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 			if (sLanguage != null)
 				sbSignature.append(sLanguage);
 
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "Check signature:" + sbSignature);
+//			_systemLogger.log(Level.INFO, MODULE, sMethod, "Check signature:" + sbSignature);
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "Check signature");
 			if (!_cryptoEngine.verifySignature(sAsId, sbSignature.toString(), sSignature)) {
 				StringBuffer sbWarning = new StringBuffer("Invalid signature from A-Select Server '");
 				sbWarning.append(sAsId);
-				sbWarning.append("' for user: ").append(sUid);
+				sbWarning.append("' for user: ").append(Auxiliary.obfuscate(sUid));
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, sbWarning.toString());
 				throw new ASelectException(Errors.ERROR_RADIUS_INVALID_REQUEST);
 			}
@@ -438,11 +440,12 @@ public class RadiusAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 			if (sLanguage != null)
 				sbSignature.append(sLanguage);
 			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Check signature:" + sbSignature);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Check signature");
 			if (!_cryptoEngine.verifySignature(sAsId, sbSignature.toString(), sSignature)) {
 				StringBuffer sbWarning = new StringBuffer("Invalid signature from A-Select Server '");
 				sbWarning.append(sAsId);
 				sbWarning.append("' for user: ");
-				sbWarning.append(sUid);
+				sbWarning.append(Auxiliary.obfuscate(sUid));
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, sbWarning.toString());
 				throw new ASelectException(Errors.ERROR_RADIUS_INVALID_REQUEST);
 			}
@@ -456,7 +459,7 @@ public class RadiusAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 				StringBuffer sbWarning = new StringBuffer("Invalid retry counter parameter in request '");
 				sbWarning.append(sRetryCounter);
 				sbWarning.append("' for user: ");
-				sbWarning.append(sUid);
+				sbWarning.append(Auxiliary.obfuscate(sUid));
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, sbWarning.toString(), e);
 				throw new ASelectException(Errors.ERROR_RADIUS_INVALID_REQUEST, e);
 			}
@@ -490,12 +493,12 @@ public class RadiusAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 
 			if (sResultCode.equals(Errors.ERROR_RADIUS_SUCCESS)) {
 				_authenticationLogger.log(new Object[] {
-					MODULE, sUid, servletRequest.getRemoteAddr(), sAsId, "granted"
+					MODULE, Auxiliary.obfuscate(sUid), servletRequest.getRemoteAddr(), sAsId, "granted"
 				});
 			}
 			else {
 				_authenticationLogger.log(new Object[] {
-					MODULE, sUid, servletRequest.getRemoteAddr(), sAsId, "denied", sResultCode
+					MODULE, Auxiliary.obfuscate(sUid), servletRequest.getRemoteAddr(), sAsId, "denied", sResultCode
 				});
 			}
 
