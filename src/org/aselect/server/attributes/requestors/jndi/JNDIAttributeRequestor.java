@@ -109,6 +109,7 @@ import org.aselect.system.exception.ASelectSAMException;
 import org.aselect.system.exception.ASelectUDBException;
 import org.aselect.system.sam.agent.SAMResource;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * The JNDI Attribute Requestor. <br>
@@ -480,8 +481,8 @@ public class JNDIAttributeRequestor extends GenericAttributeRequestor
 				sUID = (String)(_bFromTgt? htTGTContext: hmAttributes).get(_sUseKey);
 			else
 				sUID = (String) htTGTContext.get("uid");
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "authsp_type="+sAuthspType+" _sAuthSPUID="+_sAuthSPUID+
-					", _sUserDN="+_sUserDN+" numerical="+_bNumericalUid+" "+_sUseKey+"="+sUID+" fromTgt="+_bFromTgt);
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "authsp_type="+sAuthspType+" _sAuthSPUID="+Auxiliary.obfuscate(_sAuthSPUID)+
+					", _sUserDN="+Auxiliary.obfuscate(_sUserDN)+" numerical="+_bNumericalUid+" "+_sUseKey+"="+Auxiliary.obfuscate(sUID)+" fromTgt="+_bFromTgt);
 			
 			if (!Utils.hasValue(sUID)) {
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Attribute '"+_sUseKey+"' not found, from_tgt="+_bFromTgt);
@@ -568,7 +569,7 @@ public class JNDIAttributeRequestor extends GenericAttributeRequestor
 			}
 //			20150102, RH, en
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "Search BaseDN=" + _sBaseDN +
-					", sbQuery=" + sbQuery + ", oScope=" + oScope.getSearchScope());
+					", sbQuery=" + Auxiliary.obfuscate(sbQuery.toString()) + ", oScope=" + oScope.getSearchScope());
 
 			oDirContext = getConnection();
 			try {
@@ -585,7 +586,7 @@ public class JNDIAttributeRequestor extends GenericAttributeRequestor
 				throw new ASelectAttributesException(Errors.ERROR_ASELECT_INTERNAL_ERROR, e);
 			}
 			catch (NamingException e) {
-				StringBuffer sbFailed = new StringBuffer("User unknown: ").append(sUID);
+				StringBuffer sbFailed = new StringBuffer("User unknown: ").append(Auxiliary.obfuscate(sUID));
 				_systemLogger.log(Level.INFO, MODULE, sMethod, sbFailed.toString(), e);
 				throw new ASelectAttributesException(Errors.ERROR_ASELECT_UNKNOWN_USER, e);
 			}
@@ -593,8 +594,8 @@ public class JNDIAttributeRequestor extends GenericAttributeRequestor
 			_systemLogger.log(Level.FINE, MODULE, sMethod, "Check Result");
 			// Check if we got a result
 			if (!oSearchResults.hasMore()) {
-				StringBuffer sbFailed = new StringBuffer("User '").append(sUID);
-				sbFailed.append("' not found during LDAP search. The filter was: ").append(sbQuery.toString());
+				StringBuffer sbFailed = new StringBuffer("User '").append(Auxiliary.obfuscate(sUID));
+				sbFailed.append("' not found during LDAP search. The filter was: ").append(Auxiliary.obfuscate(sbQuery.toString()));
 				_systemLogger.log(Level.INFO, MODULE, sMethod, sbFailed.toString());
 				return;
 				// 20100318, was: throw new ASelectAttributesException(Errors.ERROR_ASELECT_UNKNOWN_USER);

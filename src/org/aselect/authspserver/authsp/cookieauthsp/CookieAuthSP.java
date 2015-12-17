@@ -31,6 +31,7 @@ import org.aselect.authspserver.session.AuthSPPreviousSessionManager;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.exception.ASelectStorageException;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * . <br>
@@ -235,7 +236,7 @@ public class CookieAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 			String v = null;
 			Hashtable htPreviousSessionContext = null;
 			for ( Cookie c : cookies) {
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Found cookie: " + c.getName() + ", with value: " +  c.getValue());
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Found cookie: " + c.getName() + ", with value: " +  Auxiliary.obfuscate(c.getValue()));
 				if (c.getName().equalsIgnoreCase(sCookiename)) {
 					v = c.getValue();
 					break;
@@ -244,7 +245,7 @@ public class CookieAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 			_sAuthMode = Errors.ERROR_COOKIE_ACCESS_DENIED;
 			
 			if ( v != null ) { // we found a value for our cookie
-				_systemLogger.log(Level.INFO, MODULE, sMethod, "Found cookie value:" + v);
+				_systemLogger.log(Level.INFO, MODULE, sMethod, "Using cookie value:" +  Auxiliary.obfuscate(v));
 				// We verify if we know this cookie here
 				
 				try {
@@ -257,14 +258,14 @@ public class CookieAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 				if (htPreviousSessionContext != null) {
 					_sAuthMode = Errors.ERROR_COOKIE_SUCCESS;
 					_authenticationLogger.log(new Object[] {
-							MODULE, sCookiename, servletRequest.getRemoteAddr(), sAsId, "granted"
+							MODULE, Auxiliary.obfuscate(sCookiename), servletRequest.getRemoteAddr(), sAsId, "granted"
 					});
 					
 				} else {
 					_systemLogger.log(Level.INFO, MODULE, sMethod, "No cookie found with name:" + sCookiename);
 					_sAuthMode = Errors.ERROR_COOKIE_ACCESS_DENIED;
 					_authenticationLogger.log(new Object[] {
-							MODULE, sCookiename, servletRequest.getRemoteAddr(), sAsId, "denied", _sAuthMode
+							MODULE, Auxiliary.obfuscate(sCookiename), servletRequest.getRemoteAddr(), sAsId, "denied", _sAuthMode
 					});
 					
 				}
@@ -272,7 +273,7 @@ public class CookieAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "No cookie found with name:" + sCookiename);
 				_sAuthMode = Errors.ERROR_COOKIE_ACCESS_DENIED;
 				_authenticationLogger.log(new Object[] {
-						MODULE, sCookiename, servletRequest.getRemoteAddr(), sAsId, "denied", _sAuthMode
+						MODULE, Auxiliary.obfuscate(sCookiename), servletRequest.getRemoteAddr(), sAsId, "denied", _sAuthMode
 				});
 			}
 			
@@ -431,7 +432,8 @@ public class CookieAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 					sbRedirect.append("&a-select-server=").append(sAsId);
 					sbRedirect.append("&signature=").append(URLEncoder.encode(sSignature, "UTF-8"));
 
-					_systemLogger.log(Level.INFO, MODULE, sMethod, "REDIR " + sbRedirect);
+//					_systemLogger.log(Level.INFO, MODULE, sMethod, "REDIR " + sbRedirect);
+					_systemLogger.log(Level.INFO, MODULE, sMethod, "REDIR");
 					servletResponse.sendRedirect(sbRedirect.toString());
 				}
 			}

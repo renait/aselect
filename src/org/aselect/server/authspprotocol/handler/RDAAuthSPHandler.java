@@ -49,6 +49,7 @@ import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.BASE64Decoder;
 import org.aselect.system.utils.BASE64Encoder;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 
 /**
@@ -460,12 +461,12 @@ public class RDAAuthSPHandler extends AbstractAuthSPProtocolHandler implements I
 			// Log authentication
 			if (ERROR_RDA_OK.equalsIgnoreCase(sResultCode)) {
 				_authenticationLogger.log(new Object[] {
-					MODULE, sUserId, htAuthspResponse.get("client_ip"), sOrg, (String) htSessionContext.get("app_id"),
+					MODULE, Auxiliary.obfuscate(sUserId), htAuthspResponse.get("client_ip"), sOrg, (String) htSessionContext.get("app_id"),
 					"granted"
 				});
 			} else {
 				_authenticationLogger.log(new Object[] {
-						MODULE, sUserId, htAuthspResponse.get("client_ip"), sOrg, (String) htSessionContext.get("app_id"),
+						MODULE, Auxiliary.obfuscate(sUserId), htAuthspResponse.get("client_ip"), sOrg, (String) htSessionContext.get("app_id"),
 						"denied", sResultCode
 					});
 			}

@@ -29,6 +29,7 @@ import org.aselect.authspserver.authsp.AbstractAuthSP;
 import org.aselect.authspserver.authsp.openid.Errors;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 import org.openid4java.discovery.DiscoveryInformation;
 import org.openid4java.message.AuthRequest;
 
@@ -180,7 +181,7 @@ public class OpenIDAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 			String sQueryString = servletRequest.getQueryString();
 			HashMap htServiceRequest = Utils.convertCGIMessage(sQueryString, false);
 			HashMap htServiceRequestAsMap = (HashMap) servletRequest.getParameterMap();
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "htServiceRequest:" + htServiceRequest);
+//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "htServiceRequest:" + htServiceRequest);
 
 			sLanguage = (String) htServiceRequest.get("language");  // optional language code
 			if (sLanguage == null || sLanguage.trim().length() < 1)
@@ -240,7 +241,7 @@ public class OpenIDAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 					if (!_cryptoEngine.verifySignature(sAsId, sbSignature.toString(), sSignature)) {
 						StringBuffer sbWarning = new StringBuffer("Invalid signature from A-Select Server '");
 						sbWarning.append(sAsId);
-						sbWarning.append("' for user: ").append(sUid);
+						sbWarning.append("' for user: ").append(Auxiliary.obfuscate(sUid));
 						_systemLogger.log(Level.WARNING, MODULE, sMethod, sbWarning.toString());
 						throw new ASelectException(Errors.ERROR_DB_INVALID_REQUEST);
 					}
@@ -272,7 +273,7 @@ public class OpenIDAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 					// get info from QueryString
 					String sRid = URLDecoder.decode((String) htServiceRequest.get("rid"), "UTF-8");
 			        HashMap<String , Object> htSessionContext = _sessionManager.getSessionContext(sRid + RID_POSTFIX);
-					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Retrieved sessionContext:" + htSessionContext);
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Retrieved sessionContext:" + Auxiliary.obfuscate(htSessionContext));
 			        
 					// get info from sessionContext
 					DiscoveryInformation discoveryinfo = (DiscoveryInformation) htSessionContext.get("discoveryinfo");
@@ -306,7 +307,7 @@ public class OpenIDAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 						StringBuffer sbWarning = new StringBuffer("Invalid signature from OpenID Server '");
 						sbWarning.append(sAsId);
 						sbWarning.append("' for user: ");
-						sbWarning.append(sUid);
+						sbWarning.append(Auxiliary.obfuscate(sUid));
 						_systemLogger.log(Level.WARNING, MODULE, sMethod, sbWarning.toString());
 						throw new ASelectException(Errors.ERROR_DB_INVALID_REQUEST);
 					}
@@ -315,14 +316,15 @@ public class OpenIDAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 					// handle openidresponse and find out if the user is authentic
 			        RegistrationModel registrationModel = RegistrationService.processReturn(discoveryinfo, htServiceRequestAsMap, sReturnURL, _systemLogger);
 			        if (registrationModel != null) {
-						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Retrieved OpenID:" + registrationModel.getOpenId());
+//						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Retrieved OpenID:" + registrationModel.getOpenId());
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Retrieved OpenID:");
 			        	matches = true;
 			        }
 					if (matches) {
 						sUid = URLEncoder.encode(registrationModel.getOpenId(), "UTF-8");
-						_systemLogger.log(Level.INFO, MODULE, sMethod, "Authenticate success, returning to aselect OpenID:" + sUid);
+						_systemLogger.log(Level.INFO, MODULE, sMethod, "Authenticate success, returning to aselect OpenID:" + Auxiliary.obfuscate(sUid));
 						_authenticationLogger.log(new Object[] {
-							MODULE, sUid, servletRequest.getRemoteAddr(), sAsId, "granted"
+							MODULE, Auxiliary.obfuscate(sUid), servletRequest.getRemoteAddr(), sAsId, "granted"
 						});
 						handleResult(servletRequest, servletResponse, pwOut, Errors.ERROR_DB_SUCCESS, sLanguage, sUid);
 					}
@@ -365,7 +367,7 @@ public class OpenIDAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 						else {
 							// authenticate failed
 							_authenticationLogger.log(new Object[] {
-								MODULE, sUid, servletRequest.getRemoteAddr(), sAsId, "denied", Errors.ERROR_DB_INVALID_PASSWORD
+								MODULE, Auxiliary.obfuscate(sUid), servletRequest.getRemoteAddr(), sAsId, "denied", Errors.ERROR_DB_INVALID_PASSWORD
 							});
 							// RM_18_07
 							handleResult(servletRequest, servletResponse, pwOut, Errors.ERROR_DB_INVALID_PASSWORD, sLanguage, sUid);
@@ -440,7 +442,7 @@ public class OpenIDAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 			_systemLogger.log(Level.FINEST, MODULE, sMethod, "signature:" + sSignature);
 			String sRetryCounter = servletRequest.getParameter("retry_counter");
 			
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "User entered OpenID: " + sUid);
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "User entered OpenID: " + Auxiliary.obfuscate(sUid));
 
 			// RM_18_08
 			if ((sRid == null) || (sAsUrl == null) || (sUid == null)  || (sAsId == null)
@@ -484,7 +486,7 @@ public class OpenIDAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 					StringBuffer sbWarning = new StringBuffer("Invalid signature from User form '");
 					sbWarning.append(sAsId);
 					sbWarning.append("' for user: ");
-					sbWarning.append(sUid);
+					sbWarning.append(Auxiliary.obfuscate(sUid));
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, sbWarning.toString());
 					throw new ASelectException(Errors.ERROR_DB_INVALID_REQUEST);
 				}
@@ -496,7 +498,8 @@ public class OpenIDAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 			        DiscoveryInformation discoveryInformation = RegistrationService.performDiscoveryOnUserSuppliedIdentifier(userSuppliedIdentifier.trim(), _systemLogger);
 			        // Store the discovery results in session.
 			        HashMap<String, Object> hDiscovery = new HashMap<String, Object>();
-					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Stored discoveryInformation:" + discoveryInformation);
+//					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Stored discoveryInformation:" + discoveryInformation);
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Stored discoveryInformation");
 
 			        hDiscovery.put("discoveryinfo", discoveryInformation);
 			        hDiscovery.put("my_url", sMyUrl);
@@ -526,7 +529,8 @@ public class OpenIDAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 						"&uid=" + URLEncoder.encode(sUid, "UTF-8") + "&signature=" + URLEncoder.encode(sSignature, "UTF-8") +
 						"&retry_counter=" + URLEncoder.encode(sRetryCounter, "UTF-8");
 					
-					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Stored returnURL:" + returnURL);
+//					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Stored returnURL:" + returnURL);
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Stored returnURL");
 					hDiscovery.put("siam_url", returnURL);
 					
 			        // We must NOT overwrite our aselectsession, therefore the RID_POSTFIX construction will store a separate session					
@@ -553,7 +557,8 @@ public class OpenIDAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 			        // Now take the AuthRequest and forward it on to the OP
 			        
 			        // maybe implement new handler or special request parameter in doGet
-					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Starting redirect with redirectURL:" + authRequest.getDestinationUrl(true));			        
+//					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Starting redirect with redirectURL:" + authRequest.getDestinationUrl(true));			        
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Starting redirect");			        
 			        servletResponse.sendRedirect(authRequest.getDestinationUrl(true));
 				}
 			}
@@ -733,8 +738,8 @@ public class OpenIDAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 					}
 					catch (IOException eIO) // could not send redirect
 					{
-						StringBuffer sbError = new StringBuffer("Could not send redirect to: \"");
-						sbError.append(sbTemp.toString()).append("\"");
+						StringBuffer sbError = new StringBuffer("Could not send redirect");
+//						sbError.append(sbTemp.toString()).append("\"");
 						_systemLogger.log(Level.WARNING, MODULE, sMethod, sbError.toString(), eIO);
 					}
 				}
@@ -788,7 +793,7 @@ public class OpenIDAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 		StringBuffer sbResponse = new StringBuffer("&rid=");
 		// add rid to response
 		sbResponse.append(sRid);
-		_systemLogger.log(Level.FINEST, MODULE, sMethod, "sbResponse so far:" + sbResponse );
+//		_systemLogger.log(Level.FINEST, MODULE, sMethod, "sbResponse so far:" + sbResponse );
 
 		try {
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Invalid request received, API request not supported (yet).");

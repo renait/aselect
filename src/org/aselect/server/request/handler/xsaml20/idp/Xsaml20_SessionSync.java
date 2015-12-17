@@ -12,7 +12,6 @@
 package org.aselect.server.request.handler.xsaml20.idp;
 
 import java.io.IOException;
-
 import java.io.PrintWriter;
 import java.io.StringReader;
 import java.util.Date;
@@ -39,6 +38,7 @@ import org.aselect.server.tgt.TGTManager;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 import org.joda.time.DateTime;
 import org.opensaml.common.SAMLObjectBuilder;
 import org.opensaml.common.SAMLVersion;
@@ -290,7 +290,7 @@ public class Xsaml20_SessionSync extends Saml20_BaseHandler
 		try {
 			envelopeElem = SamlTools.marshallMessage(envelope);
 			_systemLogger.log(Level.INFO, MODULE, _sMethod, "Send SAML response:\n"
-					+ XMLHelper.nodeToString(envelopeElem));
+					+ Auxiliary.obfuscate(XMLHelper.nodeToString(envelopeElem),Auxiliary.REGEX_PATTERNS));
 			// XMLHelper.prettyPrintXML(envelopeElem));
 		}
 		catch (MessageEncodingException e) {
@@ -612,7 +612,7 @@ public class Xsaml20_SessionSync extends Saml20_BaseHandler
 		try {
 			Node node = marshaller.marshall(response);
 			String msg = XMLHelper.prettyPrintXML(node);
-			_systemLogger.log(Level.INFO, MODULE, sMethod, msg);
+			_systemLogger.log(Level.INFO, MODULE, sMethod, Auxiliary.obfuscate(msg, Auxiliary.REGEX_PATTERNS));
 		}
 		catch (MarshallingException e) {
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, e.getMessage(), e);

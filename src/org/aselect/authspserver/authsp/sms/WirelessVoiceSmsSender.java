@@ -79,7 +79,8 @@ public class WirelessVoiceSmsSender extends GenericSmsSender
 		data.append(AMPERSAND).append(URLEncoder.encode("phonenumber", "UTF-8"));
 		data.append(EQUAL_SIGN).append(URLEncoder.encode(recipients, "UTF-8"));
 
-		_systemLogger.log(Level.FINEST, sModule, sMethod, "url=" + providerUrl + " data=" + data.toString());
+//		_systemLogger.log(Level.FINEST, sModule, sMethod, "url=" + providerUrl + " data=" + data.toString());
+		_systemLogger.log(Level.FINEST, sModule, sMethod, "url=" + providerUrl + " data=" + "...");
 		return 0;
 	}
 	

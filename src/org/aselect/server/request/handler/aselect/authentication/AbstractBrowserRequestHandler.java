@@ -113,6 +113,7 @@ import org.aselect.system.storagemanager.SendQueue;
 import org.aselect.system.utils.TimerSensor;
 import org.aselect.system.utils.Tools;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * Abstract browser request handler. <br>
@@ -239,7 +240,7 @@ public abstract class AbstractBrowserRequestHandler extends BasicRequestHandler 
 			// Also reads TGT into _htTGTContext if available
 			htServiceRequest = createServiceRequest(_servletRequest);
 			String sRequest = (String) htServiceRequest.get("request");
-			_systemLogger.log(Level.FINEST, _sModule, sMethod, "AbstBrowREQ "+_servletRequest.getMethod()+" htServiceRequest=" + htServiceRequest);
+			_systemLogger.log(Level.FINEST, _sModule, sMethod, "AbstBrowREQ "+_servletRequest.getMethod()+" htServiceRequest=" + Auxiliary.obfuscate(htServiceRequest));
 			String sUsi = null;
 			try {
 				sUsi = (String)htServiceRequest.get("usi");  // unique sensor id

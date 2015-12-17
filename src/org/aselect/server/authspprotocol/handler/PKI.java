@@ -45,6 +45,7 @@ import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.BASE64Decoder;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * The PKI AuthSP Handler. <br>
@@ -448,7 +449,7 @@ public class PKI extends AbstractAuthSPProtocolHandler implements IAuthSPProtoco
 			// Log the user authentication
 			if (sResultCode.equalsIgnoreCase(PKI_NO_ERROR)) {
 				_authenticationLogger.log(new Object[] {
-					MODULE, sUserId, htAuthspResponse.get("client_ip"), sOrg, (String) htSessionContext.get("app_id"),
+					MODULE, Auxiliary.obfuscate(sUserId), htAuthspResponse.get("client_ip"), sOrg, (String) htSessionContext.get("app_id"),
 					"granted"
 				});
 
@@ -478,7 +479,7 @@ public class PKI extends AbstractAuthSPProtocolHandler implements IAuthSPProtoco
 				return hmResponse;
 			}
 			_authenticationLogger.log(new Object[] {
-				MODULE, sUserId, htAuthspResponse.get("client_ip"), sOrg, (String) htSessionContext.get("app_id"),
+				MODULE, Auxiliary.obfuscate(sUserId), htAuthspResponse.get("client_ip"), sOrg, (String) htSessionContext.get("app_id"),
 				"denied", sResultCode
 			});
 			if (sResultCode.equalsIgnoreCase(PKI_INVALID_REQUEST)) {

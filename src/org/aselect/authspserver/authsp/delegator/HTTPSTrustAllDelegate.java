@@ -102,7 +102,7 @@ public class HTTPSTrustAllDelegate implements Delegate
 		AuthSPSystemLogger _systemLogger;
 		_systemLogger = AuthSPSystemLogger.getHandle();
 
-		_systemLogger.log(Level.FINEST, sModule, sMethod, "requestparameters=" + requestparameters + " , responseparameters=" + responseparameters);
+//		_systemLogger.log(Level.FINEST, sModule, sMethod, "requestparameters=" + requestparameters + " , responseparameters=" + responseparameters);
 		StringBuffer data = new StringBuffer();
 		String sResult = "";;
 
@@ -176,7 +176,7 @@ public class HTTPSTrustAllDelegate implements Delegate
 			while ((line = rd.readLine()) != null) {
 				sResult += line;
 			}
-			_systemLogger.log(Level.INFO, sModule, sMethod, "sResult=" + sResult);
+//			_systemLogger.log(Level.INFO, sModule, sMethod, "sResult=" + sResult);
 			// Parse response  here
 			// For test return request parameters
 //			responseparameters.putAll(requestparameters);
@@ -185,7 +185,7 @@ public class HTTPSTrustAllDelegate implements Delegate
 			rd.close();
 		}
 		catch (IOException e) {
-			_systemLogger.log(Level.INFO, sModule, sMethod, "Error while reading sResult data, maybe no data at all. sResult=" + sResult);
+			_systemLogger.log(Level.INFO, sModule, sMethod, "Error while reading sResult data, maybe no data at all.");
 		}
 
 		catch (NumberFormatException e) {

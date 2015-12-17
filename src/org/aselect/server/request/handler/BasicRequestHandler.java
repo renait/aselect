@@ -32,6 +32,7 @@ import org.aselect.system.exception.ASelectException;
 import org.aselect.system.exception.ASelectUDBException;
 import org.aselect.system.utils.Tools;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 //
 // The mother of all RequestHandlers ...
@@ -179,7 +180,7 @@ public abstract class BasicRequestHandler
 		if (sUid == null) {
 			sUid = aApp.getForcedUid();
 		}
-		_systemLogger.log(Level.FINE, MODULE, sMethod, "sAuthsp="+sAuthsp+" sUid="+sUid);
+		_systemLogger.log(Level.FINE, MODULE, sMethod, "sAuthsp="+sAuthsp+" sUid="+Auxiliary.obfuscate(sUid));
 				
 		// Create Session
 		HashMap htSessionContext = new HashMap();

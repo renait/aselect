@@ -93,7 +93,8 @@ public abstract class GenericSmsSender
 		// Assemble HTTP request
 		try {
 			iReturnCode = assembleSmsMessage(sTemplate, sSecret, from, recipients, data);
-			_systemLogger.log(Level.FINEST, sModule, sMethod, "data=" + data.toString()+ " iReturnCode="+iReturnCode);
+//			_systemLogger.log(Level.FINEST, sModule, sMethod, "data=" + data.toString()+ " iReturnCode="+iReturnCode);
+			_systemLogger.log(Level.FINEST, sModule, sMethod, "data=" + "..." + " iReturnCode="+iReturnCode);
 			if (iReturnCode != 0)
 				return iReturnCode;
 			
@@ -111,7 +112,8 @@ public abstract class GenericSmsSender
 				url = new URL(providerUrl+"?"+data.toString());
 				conn = (HttpURLConnection)url.openConnection();
 			}
-			_systemLogger.log(Level.FINEST, sModule, sMethod, "Send URL="+url);
+//			_systemLogger.log(Level.FINEST, sModule, sMethod, "Send URL="+url);
+			_systemLogger.log(Level.FINEST, sModule, sMethod, "Send URL="+providerUrl + "...");
 			conn.setRequestProperty("Host", url.getHost());	// Wireless Services requires 'Host' header
 
 			//conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");	// Wireless Services requires this for POST
@@ -166,7 +168,8 @@ public abstract class GenericSmsSender
 		// 20130502, Bauke: added '%s' alternative
 		String sReplace = (sTemplate.contains("%s"))? "%s": "0";
 		String sMessage = sTemplate.replaceAll(sReplace, sSecret);
-		_systemLogger.log(Level.FINEST, sModule, sMethod, "sMessage="+sMessage);
+//		_systemLogger.log(Level.FINEST, sModule, sMethod, "sMessage="+sMessage);
+		_systemLogger.log(Level.FINEST, sModule, sMethod, "sMessage="+"...");
 		return sMessage;
 	}
 

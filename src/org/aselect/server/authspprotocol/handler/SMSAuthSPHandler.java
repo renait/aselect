@@ -26,6 +26,7 @@ import org.aselect.system.exception.ASelectAuthSPException;
 import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * The SMS AuthSP Handler. <br>
@@ -205,7 +206,7 @@ public class SMSAuthSPHandler extends AbstractAuthSPProtocolHandler implements I
 			}
 
 			String sUserId = (String) htAllowedAuthsps.get(_sAuthsp);
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "Allowed=" + htAllowedAuthsps + " sUserId=" + sUserId);
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "Allowed=" + htAllowedAuthsps + " sUserId=" + Auxiliary.obfuscate(sUserId));
 			
 			// 20111013, Bauke: added absent phonenumber handling
 			String sCF = (String)htSessionContext.get("sms_correction_facility");
@@ -337,7 +338,7 @@ public class SMSAuthSPHandler extends AbstractAuthSPProtocolHandler implements I
 		HashMap htResponse = new HashMap();
 
 		htResponse.put("result", Errors.ERROR_ASELECT_INTERNAL_ERROR);
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "htAuthspRespone=" + htAuthspResponse);
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "htAuthspRespone=" + Auxiliary.obfuscate(htAuthspResponse));
 		try {
 			String sRid = (String) htAuthspResponse.get("rid");
 			String sAsUrl = (String) htAuthspResponse.get("my_url");
@@ -372,7 +373,7 @@ public class SMSAuthSPHandler extends AbstractAuthSPProtocolHandler implements I
 			String sUserId = (String) htSessionContext.get("user_id");
 			if (sUserId == null)
 				sUserId = (String) htSessionContext.get("sel_uid");
-			_systemLogger.log(Level.FINER, MODULE, sMethod, "sUserId="+sUserId);
+			_systemLogger.log(Level.FINER, MODULE, sMethod, "sUserId="+Auxiliary.obfuscate(sUserId));
 			
 			// 20130618, Bauke: no don't, this is not the phonenumber as it is in the SMS authspserver
 			// 20121124, Bauke: strip trailing voice indicator
@@ -384,13 +385,13 @@ public class SMSAuthSPHandler extends AbstractAuthSPProtocolHandler implements I
 			// Log authentication
 			if (sResultCode.equalsIgnoreCase(ERROR_SMS_ACCESS_DENIED) || sResultCode.equalsIgnoreCase(ERROR_SMS_INVALID_PHONE)) {
 				_authenticationLogger.log(new Object[] {
-					MODULE, sUserId, htAuthspResponse.get("client_ip"), sOrg, (String) htSessionContext.get("app_id"),
+					MODULE, Auxiliary.obfuscate(sUserId), htAuthspResponse.get("client_ip"), sOrg, (String) htSessionContext.get("app_id"),
 					"denied", sResultCode
 				});
 			}
 			else if (sResultCode.equalsIgnoreCase(ERROR_SMS_OK)) {
 				_authenticationLogger.log(new Object[] {
-					MODULE, sUserId, htAuthspResponse.get("client_ip"), sOrg, (String) htSessionContext.get("app_id"),
+					MODULE, Auxiliary.obfuscate(sUserId), htAuthspResponse.get("client_ip"), sOrg, (String) htSessionContext.get("app_id"),
 					"granted"
 				});
 			}

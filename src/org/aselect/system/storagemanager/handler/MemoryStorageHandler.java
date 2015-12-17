@@ -24,6 +24,7 @@ import org.aselect.system.sam.agent.SAMAgent;
 import org.aselect.system.storagemanager.IStorageHandler;
 import org.aselect.system.utils.Tools;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * Concurrent Memory storage handler. <br>
@@ -119,7 +120,7 @@ public class MemoryStorageHandler implements IStorageHandler
 			HashMap htStorageContainer = (HashMap) _htStorage.get(oKey);
 			if (htStorageContainer != null) {
 				oValue = htStorageContainer.get("contents");
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "MSH get(" + sTxt + ") -->" + htStorageContainer);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "MSH get(" + sTxt + ") -->" + Auxiliary.obfuscate(htStorageContainer));
 			}
 		}
 		catch (NullPointerException eNP) {
@@ -267,13 +268,17 @@ public class MemoryStorageHandler implements IStorageHandler
 	{
 		String sMethod = "put";
 		_systemLogger.log(Level.FINEST, MODULE, sMethod, "this=" + this); // +" store="+_htStorage);
-		_systemLogger.log(Level.FINEST, MODULE, sMethod, "MSH put(" + Utils.firstPartOf(oKey.toString(), 30) + ") ="
-				+ oValue.toString() + " TS=" + lTimestamp);
+//		_systemLogger.log(Level.FINEST, MODULE, sMethod, "MSH put(" + Utils.firstPartOf(oKey.toString(), 30) + ") ="
+//				+ oValue.toString() + " TS=" + lTimestamp);
+//		_systemLogger.log(Level.FINEST, MODULE, sMethod, "MSH put(" + Utils.firstPartOf(oKey.toString(), 30) + ") ="
+//				+ Auxiliary.obfuscate(oValue.toString()) + " TS=" + lTimestamp);
 
 		HashMap htStorageContainer = new HashMap();
 		try {
 			htStorageContainer.put("timestamp", lTimestamp);
 			htStorageContainer.put("contents", oValue);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "MSH put(" + Utils.firstPartOf(oKey.toString(), 30) + ") ="
+					+ Auxiliary.obfuscate(htStorageContainer) + " TS=" + lTimestamp);
 		}
 		catch (NullPointerException eNP) {
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, "The supplied value was null", eNP);

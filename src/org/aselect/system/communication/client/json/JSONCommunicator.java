@@ -32,6 +32,7 @@ import org.aselect.system.communication.client.IClientCommunicator;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectCommunicationException;
 import org.aselect.system.logging.SystemLogger;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * Client communicator which uses CGI messages in json. <br>
@@ -99,7 +100,7 @@ public class JSONCommunicator implements IClientCommunicator
 		HashMap htReturn = new HashMap();
 		HashMap request = new HashMap();
 
-		_systemLogger.log( Level.FINEST, MODULE, sMethod, "composing message from:" +  parameters);
+		_systemLogger.log( Level.FINEST, MODULE, sMethod, "composing message from:" +  Auxiliary.obfuscate(parameters));
 
 		StringBuffer sRequest = new StringBuffer();
 		Iterator itr = parameters.keySet().iterator();
@@ -114,28 +115,28 @@ public class JSONCommunicator implements IClientCommunicator
 			first = false;
 		}
 		
-		_systemLogger.log( Level.FINEST, MODULE, sMethod, "sending message():" + sRequest.toString() );
+		_systemLogger.log( Level.FINEST, MODULE, sMethod, "sending message():" + Auxiliary.obfuscate(sRequest.toString()) );
 		
 		// Send request to server
 		String sResponse = sendRequestToAnotherServer(target, sRequest.toString());
-		_systemLogger.log( Level.FINEST, MODULE, sMethod, "received sResponse:" + sResponse );
+		_systemLogger.log( Level.FINEST, MODULE, sMethod, "received sResponse:" + Auxiliary.obfuscate(sResponse) );
 		// Convert response to HashMap
 		if (sResponse != null) {
 //				htReturn = convertCGIMessage(sResponse);
 			_systemLogger.log( Level.FINEST, MODULE, sMethod, "parsing message." );
 			try {
 			JSONArray jsonArray = (JSONArray) JSONSerializer.toJSON( sResponse );  
-			_systemLogger.log( Level.FINEST, MODULE, sMethod, "received message parsed to JSONArray:" + jsonArray.toString() );
+			_systemLogger.log( Level.FINEST, MODULE, sMethod, "received message parsed to JSONArray:" + Auxiliary.obfuscate(jsonArray.toString()) );
 			htReturn = new HashMap((Map<String, Object>) JSONObject.toBean(jsonArray.getJSONObject(0), Map.class));
 			} catch (java.lang.ClassCastException cce) {	// not a JSONArray
 				// maybe a JSONObject
 				JSONObject jsonObject = (JSONObject) JSONSerializer.toJSON( sResponse );  
-				_systemLogger.log( Level.FINEST, MODULE, sMethod, "received message parsed to JSONObject:" + jsonObject.toString() );
+				_systemLogger.log( Level.FINEST, MODULE, sMethod, "received message parsed to JSONObject:" + Auxiliary.obfuscate(jsonObject.toString()) );
 				htReturn = new HashMap((Map<String, Object>) JSONObject.toBean(jsonObject, Map.class));
 				
 				
 			}
-			_systemLogger.log( Level.FINEST, MODULE, sMethod, "created HashMap:" + htReturn );
+			_systemLogger.log( Level.FINEST, MODULE, sMethod, "created HashMap:" + Auxiliary.obfuscate(htReturn) );
 		}
 		
 		return htReturn;
@@ -210,7 +211,7 @@ public class JSONCommunicator implements IClientCommunicator
 		}
 
 
-		_systemLogger.log(Level.FINEST, MODULE, sMethod, "URL=" + sbBuffer.toString());
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "URL=" + Auxiliary.obfuscate(sbBuffer.toString()));
 		try {
 			
 			if ( user != null) {
@@ -227,7 +228,7 @@ public class JSONCommunicator implements IClientCommunicator
 			brInput = new BufferedReader(new InputStreamReader(urlSomeServer.openStream()), 16000);
 			String s = null;
 			while ( (s = brInput.readLine()) != null) {
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Input from the other server=" +s);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Input from the other server=" +Auxiliary.obfuscate(s));
 				sInputLine += s;
 			}
 			brInput.close();

@@ -34,6 +34,7 @@ import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.BASE64Decoder;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 import org.opensaml.saml2.core.Assertion;
 import org.opensaml.saml2.core.AttributeStatement;
 import org.opensaml.xml.Configuration;
@@ -323,7 +324,7 @@ public class Xsaml20_AttributeRequestHandler extends Saml20_BaseHandler
 			Element elementReceivedAssertion = docReceivedAssertion.getDocumentElement();
 
 			_systemLogger.log(Level.FINER, MODULE, sMethod, "unmarhalling DOM:"
-					+ XMLHelper.prettyPrintXML(elementReceivedAssertion));
+					+ Auxiliary.obfuscate(XMLHelper.prettyPrintXML(elementReceivedAssertion), Auxiliary.REGEX_PATTERNS));
 			assertion = unmarshallAssertion(elementReceivedAssertion);
 		}
 		catch (ParserConfigurationException e) {

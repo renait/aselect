@@ -61,6 +61,7 @@ import java.util.Random;
 import java.util.logging.Level;
 
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * The Radius Protocol Handler which handles the Radius CHAP requests. <br>
@@ -96,7 +97,7 @@ public class RADIUSCHAPProtocolHandler extends AbstractRADIUSProtocolHandler
 	{
 		String sMethod = "authenticate";
 		_sErrorCode = Errors.ERROR_RADIUS_COULD_NOT_AUTHENTICATE_USER;
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "CHAP uid=" + _sUid);
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "CHAP uid=" + Auxiliary.obfuscate(_sUid));
 		try {
 			DatagramPacket oRADIUSPacket;
 			byte[] baRadiusPacketBuffer = new byte[MAX_RADIUS_PACKET_SIZE];
@@ -144,7 +145,7 @@ public class RADIUSCHAPProtocolHandler extends AbstractRADIUSProtocolHandler
 				_systemLogger.log(Level.SEVERE, MODULE, sMethod, "exception while closing connection with RADIUS "
 						+ " server at " + _sRadiusServer + ": ", e2);
 			}
-			_systemLogger.log(Level.SEVERE, MODULE, sMethod, "exception while authenticating user " + _sUid
+			_systemLogger.log(Level.SEVERE, MODULE, sMethod, "exception while authenticating user " + Auxiliary.obfuscate(_sUid)
 					+ " with with RADIUS " + "server at " + _sRadiusServer + ": ", e);
 			_sErrorCode = Errors.ERROR_RADIUS_COULD_NOT_AUTHENTICATE_USER;
 		}
@@ -168,7 +169,7 @@ public class RADIUSCHAPProtocolHandler extends AbstractRADIUSProtocolHandler
 		String sMethod = "composeRequest";
 		_sErrorCode = Errors.ERROR_RADIUS_INTERNAL_ERROR;
 
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "uid=" + _sUid);
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "uid=" + Auxiliary.obfuscate(_sUid));
 		try {
 			Random randomGenerator;
 			byte[] baTempBuffer;
@@ -254,7 +255,7 @@ public class RADIUSCHAPProtocolHandler extends AbstractRADIUSProtocolHandler
 		String sMethod = "handleResponse";
 		_sErrorCode = Errors.ERROR_RADIUS_INTERNAL_ERROR;
 
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "uid=" + _sUid);
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "uid=" + Auxiliary.obfuscate(_sUid));
 		try {
 			byte[] baResponseBuffer = oRADIUSPacket.getData();
 
@@ -262,7 +263,7 @@ public class RADIUSCHAPProtocolHandler extends AbstractRADIUSProtocolHandler
 			iReponseBufferIndex = 0;
 			if (baResponseBuffer[iReponseBufferIndex++] != ACCESS_ACCEPT) {
 				StringBuffer sbFine = new StringBuffer("RADIUS returned ACCESS DENIED for user: ");
-				sbFine.append(_sUid);
+				sbFine.append(Auxiliary.obfuscate(_sUid));
 				_systemLogger.log(Level.FINE, MODULE, sMethod, sbFine.toString());
 				_sErrorCode = Errors.ERROR_RADIUS_ACCESS_DENIED;
 				return;
@@ -270,7 +271,7 @@ public class RADIUSCHAPProtocolHandler extends AbstractRADIUSProtocolHandler
 			// check identifier
 			if (baResponseBuffer[iReponseBufferIndex++] != _bIdentifier) {
 				StringBuffer sbFine = new StringBuffer("RADIUS Identifier mismatch for user: ");
-				sbFine.append(_sUid);
+				sbFine.append(Auxiliary.obfuscate(_sUid));
 				_systemLogger.log(Level.FINE, MODULE, sMethod, sbFine.toString());
 				_sErrorCode = Errors.ERROR_RADIUS_COULD_NOT_AUTHENTICATE_USER;
 				return;

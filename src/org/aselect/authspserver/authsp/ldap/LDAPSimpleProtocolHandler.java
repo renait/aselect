@@ -30,6 +30,7 @@ import javax.naming.directory.SearchResult;
 
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * A basic LDAP protocol handler. <br>
@@ -105,8 +106,7 @@ public class LDAPSimpleProtocolHandler extends AbstractLDAPProtocolHandler
 			htEnvironment.put(Context.SECURITY_CREDENTIALS, sPassword);
 			additionalSettings(htEnvironment);
 
-			_systemLogger.log(Level.FINEST, _sModule, sMethod, "USR_BIND " + _sLDAPUrl + "_" + _sDriver + "_" + "simple1"
-					+ "_" + sbTemp.toString());
+			_systemLogger.log(Level.FINEST, _sModule, sMethod, "USR_BIND " + _sLDAPUrl + "_" + _sDriver + "_" + "simple1");
 			try {
 				oDirContext = new InitialDirContext(htEnvironment);
 				// NOTE: the user may not have permissions to upd/del his own account
@@ -119,7 +119,7 @@ public class LDAPSimpleProtocolHandler extends AbstractLDAPProtocolHandler
 				 * program is invalid or otherwise fails to authenticate the user to the naming/directory service.
 				 */
 				StringBuffer sbFine = new StringBuffer("Could not authenticate user (invalid password): ");
-				sbFine.append(_sUid);
+				sbFine.append(Auxiliary.obfuscate(_sUid));
 				_systemLogger.log(Level.FINEST, _sModule, sMethod, sbFine.toString());
 				throw new ASelectException(Errors.ERROR_LDAP_INVALID_PASSWORD);
 			}
@@ -171,8 +171,9 @@ public class LDAPSimpleProtocolHandler extends AbstractLDAPProtocolHandler
 			htEnvironment.put(Context.SECURITY_CREDENTIALS, _sPrincipalPwd);
 			additionalSettings(htEnvironment);
 	
-			_systemLogger.log(Level.FINEST, _sModule, sMethod, "PRINCP_BIND " + _sLDAPUrl + "_" + _sDriver + "_" + "simple2"
-					+ "_" + _sPrincipalDn + "_" + _sPrincipalPwd);
+//			_systemLogger.log(Level.FINEST, _sModule, sMethod, "PRINCP_BIND " + _sLDAPUrl + "_" + _sDriver + "_" + "simple2"
+//					+ "_" + _sPrincipalDn + "_" + _sPrincipalPwd);
+			_systemLogger.log(Level.FINEST, _sModule, sMethod, "PRINCP_BIND " + _sLDAPUrl + "_" + _sDriver + "_" + "simple2");
 			try {
 				oPrincipalContext = new InitialDirContext(htEnvironment);
 				_systemLogger.log(Level.INFO, _sModule, sMethod, "Principal login OK");
@@ -206,20 +207,22 @@ public class LDAPSimpleProtocolHandler extends AbstractLDAPProtocolHandler
 			SearchControls oScope = new SearchControls();
 			oScope.setSearchScope(SearchControls.SUBTREE_SCOPE);
 	
-			_systemLogger.log(Level.FINEST, _sModule, sMethod, "SRCH " + _sBaseDn + "_" + sQuery + "_sub");
+//			_systemLogger.log(Level.FINEST, _sModule, sMethod, "SRCH " + _sBaseDn + "_" + sQuery + "_sub");
+			_systemLogger.log(Level.FINEST, _sModule, sMethod, "SRCH " + _sBaseDn + "_sub");
 			try {
 				enumSearchResults = oPrincipalContext.search(_sBaseDn, sQuery, oScope);
 			}
 			catch (NamingException eN) {
-				sbTemp = new StringBuffer("User '").append(_sUid).append("' is unknown");
+				sbTemp = new StringBuffer("User '").append(Auxiliary.obfuscate(_sUid)).append("' is unknown");
 				_systemLogger.log(Level.WARNING, _sModule, sMethod, sbTemp.toString(), eN);
 				throw new ASelectException(Errors.ERROR_LDAP_COULD_NOT_AUTHENTICATE_USER);
 			}
 	
 			try {  // Check if we got a result
 				if (!enumSearchResults.hasMore()) {
-					sbTemp = new StringBuffer("User '").append(_sUid);
-					sbTemp.append("' not found during LDAP search. The filter was: '").append(sQuery).append("'.");
+					sbTemp = new StringBuffer("User '").append(Auxiliary.obfuscate(_sUid));
+//					sbTemp.append("' not found during LDAP search. The filter was: '").append(sQuery).append("'.");
+					sbTemp.append("' not found during LDAP search.");
 					_systemLogger.log(Level.WARNING, _sModule, sMethod, sbTemp.toString());
 					throw new ASelectException(Errors.ERROR_LDAP_COULD_NOT_AUTHENTICATE_USER);
 				}
@@ -229,13 +232,13 @@ public class LDAPSimpleProtocolHandler extends AbstractLDAPProtocolHandler
 				// prevent memory leaks in shaky LDAP implementations(154)
 				enumSearchResults.close();
 				if (sRelUserDn == null) {
-					sbTemp = new StringBuffer("No user DN was returned for '").append(_sUid).append("'.");
+					sbTemp = new StringBuffer("No user DN was returned for '").append(Auxiliary.obfuscate(_sUid)).append("'.");
 					_systemLogger.log(Level.WARNING, _sModule, sMethod, sbTemp.toString());
 					throw new ASelectException(Errors.ERROR_LDAP_COULD_NOT_AUTHENTICATE_USER);
 				}
 			}
 			catch (NamingException eN) {
-				sbTemp = new StringBuffer("failed to fetch profile of user '").append(_sUid).append("'");
+				sbTemp = new StringBuffer("failed to fetch profile of user '").append(Auxiliary.obfuscate(_sUid)).append("'");
 				_systemLogger.log(Level.WARNING, _sModule, sMethod, sbTemp.toString(), eN);
 				throw new ASelectException(Errors.ERROR_LDAP_COULD_NOT_AUTHENTICATE_USER);
 			}
@@ -251,7 +254,7 @@ public class LDAPSimpleProtocolHandler extends AbstractLDAPProtocolHandler
 			additionalSettings(htEnvironment);
 	
 			_systemLogger.log(Level.FINEST, _sModule, sMethod, "USR_BIND " + _sLDAPUrl + "_" + _sDriver +
-					"_" + "simple3"	+ "_" + sbTemp.toString());
+					"_" + "simple3");
 			try {
 				oDirContext = new InitialDirContext(htEnvironment);
 				// User login succeeded
@@ -268,7 +271,7 @@ public class LDAPSimpleProtocolHandler extends AbstractLDAPProtocolHandler
 				throw new ASelectException(Errors.ERROR_LDAP_INVALID_PASSWORD, eP);
 			}
 			catch (AuthenticationException e) {
-				StringBuffer sbFine = new StringBuffer("Could not authenticate user (invalid password): ").append(_sUid)
+				StringBuffer sbFine = new StringBuffer("Could not authenticate user (invalid password): ").append(Auxiliary.obfuscate(_sUid))
 									.append(" expl="+e.getExplanation()).append(" cause="+e.getCause());
 				_systemLogger.log(Level.INFO, _sModule, sMethod, sbFine.toString());
 				throw new ASelectException(Errors.ERROR_LDAP_INVALID_PASSWORD);
@@ -326,12 +329,14 @@ public class LDAPSimpleProtocolHandler extends AbstractLDAPProtocolHandler
 		int rc;
 		
 		Attributes attrs = oDirContext.getAttributes(sUserDN);
-		_systemLogger.log(Level.FINEST, _sModule, sMethod, "attr_valid_until="+_sAttrValidUntil+" attr_allowed_logins="+_sAttrAllowedLogins+" Attributes="+attrs);
+//		_systemLogger.log(Level.FINEST, _sModule, sMethod, "attr_valid_until="+_sAttrValidUntil+" attr_allowed_logins="+_sAttrAllowedLogins+" Attributes="+attrs);
+		_systemLogger.log(Level.FINEST, _sModule, sMethod, "attr_valid_until="+_sAttrValidUntil+" attr_allowed_logins="+_sAttrAllowedLogins
+				+" number of Attributes="+( attrs == null ? String.valueOf(0) : String.valueOf(attrs.size()) ));	// might contain sensitive information so only log number
 		
 		// Check validity time first
 		if (Utils.hasValue(_sAttrValidUntil)) {
 			String sValidUntil = getAttribute(attrs, _sAttrValidUntil);
-			if (Utils.hasValue(sValidUntil)) {  // validity time was set
+			if (Utils.hasValue(sValidUntil)) {  // validity time attrswas set
 				long now = new Date().getTime();
 				long validUntil = Long.valueOf(sValidUntil);
 				_systemLogger.log(Level.FINEST, _sModule, sMethod, "now="+now+" validUntil="+validUntil+" Seconds left: "+String.valueOf((validUntil-now)/1000));
@@ -409,11 +414,11 @@ public class LDAPSimpleProtocolHandler extends AbstractLDAPProtocolHandler
 
     	int mode = DirContext.REPLACE_ATTRIBUTE;
     	try {
-    		_systemLogger.log(Level.FINE, _sModule, sMethod, "Upd: "+userDN+" mode="+mode);
+    		_systemLogger.log(Level.FINE, _sModule, sMethod, "Upd: "+Auxiliary.obfuscate(userDN)+" mode="+mode);
     		ldapContext.modifyAttributes(userDN, mode, attrs);
 		}
     	catch (NamingException e) {
-    		_systemLogger.log(Level.FINE, _sModule, sMethod, "updLDAPentry("+userDN+") -> FAILED: "+e);
+    		_systemLogger.log(Level.FINE, _sModule, sMethod, "updLDAPentry("+Auxiliary.obfuscate(userDN)+") -> FAILED: "+e);
     		return -1;
 		}
     	return 0;
@@ -435,11 +440,11 @@ public class LDAPSimpleProtocolHandler extends AbstractLDAPProtocolHandler
     	final String sMethod = "delLDAPEntry";
     	
     	try {
-    		_systemLogger.log(Level.FINE, _sModule, sMethod, "Del: "+userDN);
+    		_systemLogger.log(Level.FINE, _sModule, sMethod, "Del: "+Auxiliary.obfuscate(userDN));
 			ldapContext.destroySubcontext(userDN);
 		}
     	catch (NamingException e) {
-    		_systemLogger.log(Level.FINE, _sModule, sMethod, "delLDAPentry("+userDN+") -> FAILED: "+e);
+    		_systemLogger.log(Level.FINE, _sModule, sMethod, "delLDAPentry("+Auxiliary.obfuscate(userDN)+") -> FAILED: "+e);
     		return -1;
 		}
     	return 0;

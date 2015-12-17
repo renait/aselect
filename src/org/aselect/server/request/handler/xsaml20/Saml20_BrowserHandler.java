@@ -39,6 +39,7 @@ import org.aselect.system.exception.ASelectException;
 import org.aselect.system.exception.ASelectStorageException;
 import org.aselect.system.logging.Audit;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 import org.joda.time.DateTime;
 import org.opensaml.common.SAMLObjectBuilder;
 import org.opensaml.common.SAMLVersion;
@@ -318,7 +319,8 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 				sRelayState = null;
 			
 			SignableSAMLObject samlMessage = (SignableSAMLObject) messageContext.getInboundSAMLMessage();
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "Class="+samlMessage.getClass().getName()+" SamlMsg="+XMLHelper.prettyPrintXML(samlMessage.getDOM()));
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "Class="+samlMessage.getClass().getName()+" SamlMsg="
+					+Auxiliary.obfuscate(XMLHelper.prettyPrintXML(samlMessage.getDOM()), Auxiliary.REGEX_PATTERNS));
 			
 			// Decide what part of the message we need, also sets _oSamlIssuer
 			samlMessage = extractSamlObject(samlMessage);

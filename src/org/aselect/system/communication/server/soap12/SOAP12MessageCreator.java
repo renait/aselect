@@ -70,6 +70,7 @@ import org.aselect.system.communication.server.IProtocolResponse;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectCommunicationException;
 import org.aselect.system.logging.SystemLogger;
+import org.aselect.system.utils.crypto.Auxiliary;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -297,7 +298,7 @@ public class SOAP12MessageCreator implements IMessageCreatorInterface
 			sbBuffer.append(Errors.ERROR_ASELECT_USE_ERROR);
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, sbBuffer.toString());
 			// log additional info
-			_systemLogger.log(Level.FINE, MODULE, sMethod, "Received SOAP inputmessage:\n" + _oRequest.getMessage());
+			_systemLogger.log(Level.FINE, MODULE, sMethod, "Received SOAP inputmessage:\n" + Auxiliary.obfuscate(_oRequest.getMessage()));
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, "SOAP fault sent: " + sCodeString + ", " + sReason + ", "+sDetail);
 			throw new ASelectCommunicationException(Errors.ERROR_ASELECT_USE_ERROR);
 		}
@@ -536,7 +537,7 @@ public class SOAP12MessageCreator implements IMessageCreatorInterface
 			oFormat.setIndenting(true);
 			oFormat.setLineWidth(80);
 			// Create serializer
-			_systemLogger.log(Level.WARNING, MODULE, sMethod, "getOutPutStream");
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "getOutPutStream");
 			XMLSerializer oSerializer = new XMLSerializer(_oResponse.getOutputStream(), oFormat);
 			oSerializer.setNamespaces(true);
 			// serialize outputmessage to outputstream

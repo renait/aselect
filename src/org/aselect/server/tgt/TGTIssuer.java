@@ -77,6 +77,7 @@ import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.Tools;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * Issues ASelect TGT's. <br>
@@ -529,7 +530,8 @@ public class TGTIssuer
 			
 			// overwrite or set additional properties in the newly created tgt context
 			if (htAdditional != null) {
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "htAdditional="+htAdditional);
+//				_systemLogger.log(Level.FINEST, MODULE, sMethod, "htAdditional="+htAdditional);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "htAdditional="+Auxiliary.obfuscate(htAdditional));
 				htTGTContext.putAll(htAdditional);
 			}
 			

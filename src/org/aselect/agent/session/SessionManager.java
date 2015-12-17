@@ -59,6 +59,7 @@ import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectStorageException;
 import org.aselect.system.logging.SystemLogger;
 import org.aselect.system.storagemanager.StorageManager;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * Manages A-Select Agent sessions. <br>
@@ -334,7 +335,7 @@ public class SessionManager
 
 		try {
 			htResponse = (HashMap) _oSessionTable.get(sSessionId);
-			_systemLogger.log(Level.FINEST, MODULE, "getSessionContext", "SessionId=" + sSessionId + ", Context=" + htResponse);
+			_systemLogger.log(Level.FINEST, MODULE, "getSessionContext", "SessionId=" + sSessionId + ", Context=" + Auxiliary.obfuscate(htResponse));
 		}
 		catch (Exception e) {
 			_systemLogger.log(Level.WARNING, MODULE, "getSessionContext", "Exception: " + e.getMessage());

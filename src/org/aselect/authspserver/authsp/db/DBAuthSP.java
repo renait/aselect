@@ -32,12 +32,12 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.aselect.authspserver.authsp.AbstractAuthSP;
 import org.aselect.authspserver.sam.AuthSPSAMAgent;
-
 import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.exception.ASelectSAMException;
 import org.aselect.system.sam.agent.SAMResource;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * An A-Select AuthSP that uses a database as back-end. <br>
@@ -222,7 +222,7 @@ public class DBAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodie
 					StringBuffer sbWarning = new StringBuffer("Invalid signature from A-Select Server '");
 					sbWarning.append(sAsId);
 					sbWarning.append("' for user: ");
-					sbWarning.append(sUid);
+					sbWarning.append(Auxiliary.obfuscate(sUid));
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, sbWarning.toString());
 					throw new ASelectException(Errors.ERROR_DB_INVALID_REQUEST);
 				}
@@ -345,7 +345,7 @@ public class DBAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodie
 					StringBuffer sbWarning = new StringBuffer("Invalid signature from A-Select Server '");
 					sbWarning.append(sAsId);
 					sbWarning.append("' for user: ");
-					sbWarning.append(sUid);
+					sbWarning.append(Auxiliary.obfuscate(sUid));
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, sbWarning.toString());
 					throw new ASelectException(Errors.ERROR_DB_INVALID_REQUEST);
 				}
@@ -384,7 +384,7 @@ public class DBAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodie
 
 					if (matches) {
 						_authenticationLogger.log(new Object[] {
-							MODULE, sUid, servletRequest.getRemoteAddr(), sAsId, "granted"
+							MODULE, Auxiliary.obfuscate(sUid), servletRequest.getRemoteAddr(), sAsId, "granted"
 						});
 						handleResult(servletRequest, servletResponse, pwOut, Errors.ERROR_DB_SUCCESS, sLanguage);
 					}
@@ -409,7 +409,7 @@ public class DBAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodie
 						else {
 							// authenticate failed
 							_authenticationLogger.log(new Object[] {
-								MODULE, sUid, servletRequest.getRemoteAddr(), sAsId, "denied", Errors.ERROR_DB_INVALID_PASSWORD
+								MODULE, Auxiliary.obfuscate(sUid), servletRequest.getRemoteAddr(), sAsId, "denied", Errors.ERROR_DB_INVALID_PASSWORD
 							});
 							handleResult(servletRequest, servletResponse, pwOut, Errors.ERROR_DB_INVALID_PASSWORD, sLanguage);
 						}
@@ -669,7 +669,7 @@ public class DBAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodie
 				htSessionContext.put("allowed_retries", intAllowedRetries);
 				// 20120401: Bauke: optimize update/create
 				if (sessionPresent)
-					_sessionManager.updateSession(sRid, htSessionContext); // Let's store the sucker (154)
+					_sessionManager.updateSession(sRid, htSessionContext); // Let's store
 				else
 					_sessionManager.createSession(sRid, htSessionContext);
 				if (iAllowedRetries < 0) {
@@ -806,12 +806,12 @@ public class DBAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodie
 
 			if (matches) {
 				_authenticationLogger.log(new Object[] {
-					MODULE, sUid, servletRequest.getRemoteAddr(), sAsID, "granted"
+					MODULE, Auxiliary.obfuscate(sUid), servletRequest.getRemoteAddr(), sAsID, "granted"
 				});
 			}
 			else {
 				_authenticationLogger.log(new Object[] {
-					MODULE, sUid, servletRequest.getRemoteAddr(), sAsID, "denied", Errors.ERROR_DB_INVALID_PASSWORD
+					MODULE, Auxiliary.obfuscate(sUid), servletRequest.getRemoteAddr(), sAsID, "denied", Errors.ERROR_DB_INVALID_PASSWORD
 				});
 				throw new ASelectException(Errors.ERROR_DB_INVALID_PASSWORD);
 			}
@@ -819,7 +819,7 @@ public class DBAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodie
 		else {
 			// no results for uid
 			_authenticationLogger.log(new Object[] {
-				MODULE, sUid, servletRequest.getRemoteAddr(), sAsID, "denied", sResultCode
+				MODULE, Auxiliary.obfuscate(sUid), servletRequest.getRemoteAddr(), sAsID, "denied", sResultCode
 			});
 			throw new ASelectException(sResultCode);
 		}

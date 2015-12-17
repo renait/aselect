@@ -31,6 +31,7 @@ import org.aselect.system.exception.ASelectException;
 import org.aselect.system.exception.ASelectSAMException;
 import org.aselect.system.sam.agent.SAMResource;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * - <br>
@@ -203,7 +204,7 @@ public class FlatFileAttributeRequestor extends GenericAttributeRequestor
 						_systemLogger.log(Level.FINE, MODULE, sMethod, "'uid' not found in TGT");
 						return htReturn;
 					}
-					_systemLogger.log(Level.FINE, MODULE, sMethod, "Get uid=" + sKeyValue);
+					_systemLogger.log(Level.FINE, MODULE, sMethod, "Get uid=" + Auxiliary.obfuscate(sKeyValue));
 				}
 			}
 
@@ -213,7 +214,7 @@ public class FlatFileAttributeRequestor extends GenericAttributeRequestor
 				oUser = _oFlatFileManager.getSection(null, sSection, "id=" + sKeyValue);
 			}
 			catch (ASelectException e) {
-				_systemLogger.log(Level.FINE, MODULE, sMethod, "No section '"+sSection+"' found, no attributes for "+sKeyValue);
+				_systemLogger.log(Level.FINE, MODULE, sMethod, "No section '"+sSection+"' found, no attributes for "+Auxiliary.obfuscate(sKeyValue));
 				return htReturn;
 			}
 
@@ -222,7 +223,7 @@ public class FlatFileAttributeRequestor extends GenericAttributeRequestor
 				oAttribute = _oFlatFileManager.getSection(oUser, "attribute");
 			}
 			catch (ASelectException e) {
-				_systemLogger.log(Level.FINE, MODULE, sMethod, "No section 'attribute' found, no more attributes for "+sKeyValue);
+				_systemLogger.log(Level.FINE, MODULE, sMethod, "No section 'attribute' found, no more attributes for "+Auxiliary.obfuscate(sKeyValue));
 				return htReturn;
 			}
 			htReturn.putAll(readAttributes(oAttribute));

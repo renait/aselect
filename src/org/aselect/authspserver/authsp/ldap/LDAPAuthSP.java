@@ -113,6 +113,7 @@ import org.aselect.authspserver.authsp.ldap.Errors;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.servlet.ASelectHttpServlet;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * An A-Select AuthtSP that uses LDAP as back-end. <br>
@@ -250,8 +251,9 @@ public class LDAPAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit good
 
 			// check if the request is an API call
 			String sRequestName = (String) htServiceRequest.get("request");
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "LDAP GET { query-->" + sQueryString);
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "req="+sRequestName+" pwd="+(String)htServiceRequest.get("password"));
+//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "LDAP GET { query-->" + sQueryString);
+//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "req="+sRequestName+" pwd="+(String)htServiceRequest.get("password"));
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "LDAP GET { query-->" + "request="+sRequestName  + ", rid="+htServiceRequest.get("rid"));
 
 			if (sRequestName != null) {  // API request, no URL decoding done yet
 				handleApiRequest(htServiceRequest, servletRequest, pwOut, servletResponse);
@@ -284,7 +286,7 @@ public class LDAPAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit good
 				if (!_cryptoEngine.verifySignature(sAsId, sbSignature.toString(), sSignature)) {
 					StringBuffer sbWarning = new StringBuffer("Invalid signature from A-Select Server '");
 					sbWarning.append(sAsId);
-					sbWarning.append("' for user: ").append(sUid).append(", handling error locally.");
+					sbWarning.append("' for user: ").append(Auxiliary.obfuscate(sUid)).append(", handling error locally.");
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, sbWarning.toString());
 					failureHandling = "local";	// RH, 20111021, n
 					throw new ASelectException(Errors.ERROR_LDAP_INVALID_REQUEST);
@@ -352,7 +354,8 @@ public class LDAPAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit good
 
 
 		String sRequest = servletRequest.getParameter("request");
-		_systemLogger.log(Level.FINEST, MODULE, sMethod, "LDAP POST { req="+sRequest+" query-->" + servletRequest.getQueryString()+" len="+servletRequest.getContentLength());
+//		_systemLogger.log(Level.FINEST, MODULE, sMethod, "LDAP POST { req="+sRequest+" query-->" + servletRequest.getQueryString()+" len="+servletRequest.getContentLength());
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "LDAP POST { req="+sRequest+" query-->" + " len="+servletRequest.getContentLength());
 		try {
 			pwOut = Utils.prepareForHtmlOutput(servletRequest, servletResponse);
 
@@ -372,7 +375,7 @@ public class LDAPAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit good
 			String sPassword = servletRequest.getParameter("password");
 			String sSignature = servletRequest.getParameter("signature");
 			String sRetryCounter = servletRequest.getParameter("retry_counter");
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "req="+sRequest+" pwd=["+sPassword+"]");
+//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "req="+sRequest+" pwd=["+sPassword+"]");
 			
 			if ("authenticate".equals(sRequest)) {
 				HashMap htServiceRequest = new HashMap();
@@ -384,12 +387,13 @@ public class LDAPAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit good
 				if (sRid != null) htServiceRequest.put("rid", sRid);
 				if (sPassword != null) htServiceRequest.put("password", sPassword);
 				if (sSignature != null) htServiceRequest.put("signature", sSignature);
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "htServiceRequest="+htServiceRequest);
+//				_systemLogger.log(Level.FINEST, MODULE, sMethod, "htServiceRequest="+htServiceRequest);
 				handleApiRequest(htServiceRequest, servletRequest, pwOut, servletResponse);
 				return;
 			}
 
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "sRequest="+sRequest+" sRid="+sRid+" sUid="+sUid+" sPassword="+sPassword);
+//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "sRequest="+sRequest+" sRid="+sRid+" sUid="+sUid+" sPassword="+sPassword);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "sRequest="+sRequest+" sRid="+sRid+" sUid="+Auxiliary.obfuscate(sUid));
 			if (sRid == null || sAsUrl == null || sUid == null || sPassword == null || sAsId == null ||
 								sRetryCounter == null || sSignature == null) {
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Invalid request received: one or more mandatory parameters missing, handling error locally.");
@@ -429,7 +433,7 @@ public class LDAPAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit good
 				if (!_cryptoEngine.verifySignature(sAsId, sbSignature.toString(), sSignature)) {
 					StringBuffer sbWarning = new StringBuffer("Invalid signature from A-Select Server '");
 					sbWarning.append(sAsId);
-					sbWarning.append("' for user: ").append(sUid).append(", handling error locally");	// RH, 20111021, n
+					sbWarning.append("' for user: ").append(Auxiliary.obfuscate(sUid)).append(", handling error locally");	// RH, 20111021, n
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, sbWarning.toString());
 					failureHandling = "local";	// RH, 20111021, n
 					throw new ASelectException(Errors.ERROR_LDAP_INVALID_REQUEST);
@@ -461,7 +465,7 @@ public class LDAPAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit good
 					else {
 						// authenticate failed
 						_authenticationLogger.log(new Object[] {
-							MODULE, sUid, servletRequest.getRemoteAddr(), sAsId, "denied", Errors.ERROR_LDAP_INVALID_PASSWORD
+							MODULE, Auxiliary.obfuscate(sUid), servletRequest.getRemoteAddr(), sAsId, "denied", Errors.ERROR_LDAP_INVALID_PASSWORD
 						});
 						handleResult(servletRequest, servletResponse, pwOut, sResultCode, sLanguage, failureHandling);
 					}
@@ -470,7 +474,7 @@ public class LDAPAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit good
 				{
 					// Authentication successfull
 					_authenticationLogger.log(new Object[] {
-						MODULE, sUid, servletRequest.getRemoteAddr(), sAsId, "granted"
+						MODULE, Auxiliary.obfuscate(sUid), servletRequest.getRemoteAddr(), sAsId, "granted"
 					});
 
 					handleResult(servletRequest, servletResponse, pwOut, sResultCode, sLanguage, failureHandling);
@@ -670,7 +674,7 @@ public class LDAPAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit good
 			htSessionContext.put("allowed_retries", intAllowedRetries);
 			// 20120401: Bauke: optimize update/create
 			if (sessionPresent)
-				_sessionManager.updateSession(sRid, htSessionContext); // Let's store the sucker (154)
+				_sessionManager.updateSession(sRid, htSessionContext); // Let's store
 			else
 				_sessionManager.createSession(sRid, htSessionContext);
 			if (iAllowedRetries < 0) {
@@ -737,12 +741,12 @@ public class LDAPAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit good
 		String sResultCode = oProtocolHandler.authenticate(sPassword);
 		if (sResultCode.equals(Errors.ERROR_LDAP_SUCCESS)) {  // Authentication successful
 			_authenticationLogger.log(new Object[] {
-				MODULE, sUid, servletRequest.getRemoteAddr(), sAsID, "granted"
+				MODULE, Auxiliary.obfuscate(sUid), servletRequest.getRemoteAddr(), sAsID, "granted"
 			});
 		}
 		else if (sResultCode.equals(Errors.ERROR_LDAP_INVALID_PASSWORD)) {  // invalid password
 			_authenticationLogger.log(new Object[] {
-				MODULE, sUid, servletRequest.getRemoteAddr(), sAsID, "denied", Errors.ERROR_LDAP_INVALID_PASSWORD
+				MODULE, Auxiliary.obfuscate(sUid), servletRequest.getRemoteAddr(), sAsID, "denied", Errors.ERROR_LDAP_INVALID_PASSWORD
 			});
 			throw new ASelectException(sResultCode);
 		}

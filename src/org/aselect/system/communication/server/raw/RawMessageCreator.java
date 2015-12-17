@@ -75,6 +75,7 @@ import org.aselect.system.communication.server.IProtocolResponse;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectCommunicationException;
 import org.aselect.system.logging.SystemLogger;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * Message creator which uses CGI messages. <br>
@@ -337,7 +338,7 @@ public class RawMessageCreator implements IMessageCreatorInterface
 		String sMethod = "setParam";
 		StringBuffer sbBuffer = null;
 
-		_systemLogger.log(Level.FINEST, MODULE, sMethod, "param="+sName +" value="+sValue +" encode="+doUrlEncode);
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "param="+sName +" value="+Auxiliary.obfuscate(sValue) +" encode="+doUrlEncode);
 		boolean bRetValue = false;
 		if (sName != null && sValue != null) // name and value may not be empty
 		{
@@ -349,8 +350,8 @@ public class RawMessageCreator implements IMessageCreatorInterface
 			catch (UnsupportedEncodingException eUE) {
 				sbBuffer = new StringBuffer("Could not URL encode parameter '");
 				sbBuffer.append(sName);
-				sbBuffer.append("' with value '");
-				sbBuffer.append(sName).append("'");
+//				sbBuffer.append("' with value '");
+//				sbBuffer.append(sName).append("'");
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, sbBuffer.toString(), eUE);
 				throw new ASelectCommunicationException(Errors.ERROR_ASELECT_INTERNAL_ERROR);
 			}
@@ -586,7 +587,7 @@ public class RawMessageCreator implements IMessageCreatorInterface
 		try {
 //			_systemLogger.log(Level.WARNING, MODULE, sMethod, "getOutPutStream");
 			BufferedOutputStream oStream = new BufferedOutputStream(_oResponse.getOutputStream());
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Sending message:" + sMsg);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Sending message:" + Auxiliary.obfuscate(sMsg));
 			oStream.write(sMsg.getBytes());
 			oStream.close();	// close() on BufferedOutputStream calls flush()
 			bRetVal = true;

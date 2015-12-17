@@ -98,6 +98,7 @@ import org.aselect.system.storagemanager.SendQueue;
 import org.aselect.system.utils.TimerSensor;
 import org.aselect.system.utils.Tools;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * This class handles cross-authentication requests coming from a remote A-Select Server, except for the
@@ -264,9 +265,9 @@ public class AuthSPBrowserHandler extends AbstractBrowserRequestHandler
 			// Let the AuthSP protocol handler verify the response from the AuthSP
 			// htAuthResponse will contain the result data
 			// 20120403, Bauke: added _htSessionContext:
-			_systemLogger.log(Level.INFO, _sModule, sMethod, "AuthSP verify, Request=" + htServiceRequest);
+			_systemLogger.log(Level.INFO, _sModule, sMethod, "AuthSP verify, Request=" + Auxiliary.obfuscate(htServiceRequest));
 			HashMap htAuthspResponse = oProtocolHandler.verifyAuthenticationResponse(htServiceRequest, _htSessionContext);
-			_systemLogger.log(Level.INFO, _sModule, sMethod, "AuthSP verify, Response=" + htAuthspResponse);
+			_systemLogger.log(Level.INFO, _sModule, sMethod, "AuthSP verify, Response=" + Auxiliary.obfuscate(htAuthspResponse));
 
 			String sResultCode = (String)htAuthspResponse.get("result");
 			_systemLogger.log(Level.INFO, _sModule, sMethod, "VA result=" + sResultCode);
@@ -525,7 +526,7 @@ public class AuthSPBrowserHandler extends AbstractBrowserRequestHandler
 			String sAppId = (String) _htSessionContext.get("app_id");
 			String sUserId = (String) _htSessionContext.get("user_id");
 			authenticationLogger.log(new Object[] {
-				"Login", sUserId, (String) htServiceRequest.get("client_ip"), _sMyOrg, sAppId, "denied", sResultCode
+				"Login", Auxiliary.obfuscate(sUserId), (String) htServiceRequest.get("client_ip"), _sMyOrg, sAppId, "denied", sResultCode
 			});
 
 			// Issue error TGT

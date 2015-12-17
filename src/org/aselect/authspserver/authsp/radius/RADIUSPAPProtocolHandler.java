@@ -66,6 +66,7 @@ import javax.crypto.SecretKey;
 import javax.crypto.spec.SecretKeySpec;
 
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * The Radius Protocol Handler which handles the Radius PAP requests. <br>
@@ -103,7 +104,7 @@ public class RADIUSPAPProtocolHandler extends AbstractRADIUSProtocolHandler
 		String sMethod = "authenticate";
 		_sErrorCode = Errors.ERROR_RADIUS_COULD_NOT_AUTHENTICATE_USER;
 
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "PAP uid=" + _sUid);
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "PAP uid=" + Auxiliary.obfuscate(_sUid));
 		try {
 			DatagramPacket oRADIUSPacket;
 			byte xBuffer[] = new byte[MAX_RADIUS_PACKET_SIZE];
@@ -122,7 +123,8 @@ public class RADIUSPAPProtocolHandler extends AbstractRADIUSProtocolHandler
 			_listenSocket = new DatagramSocket();
 			oRADIUSPacket = new DatagramPacket(xBuffer, xBuffer.length);
 
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "compose pass=" + sPassword);
+//			_systemLogger.log(Level.INFO, MODULE, sMethod, "compose pass=" + sPassword);
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "composed pass");
 			composeRequest(sPassword, oRADIUSPacket);
 			if (_sErrorCode != Errors.ERROR_RADIUS_SUCCESS) {
 				try {
@@ -163,7 +165,7 @@ public class RADIUSPAPProtocolHandler extends AbstractRADIUSProtocolHandler
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "exception while closing connection with RADIUS "
 						+ " server at " + _sRadiusServer + ": " + e2);
 			}
-			_systemLogger.log(Level.WARNING, MODULE, sMethod, "exception while authenticating user " + _sUid
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "exception while authenticating user " + Auxiliary.obfuscate(_sUid)
 					+ " with with RADIUS " + "server at " + _sRadiusServer + ": ", e);
 			_sErrorCode = Errors.ERROR_RADIUS_COULD_NOT_AUTHENTICATE_USER;
 		}
@@ -188,7 +190,7 @@ public class RADIUSPAPProtocolHandler extends AbstractRADIUSProtocolHandler
 		String sMethod = "composeRequest";
 		_sErrorCode = Errors.ERROR_RADIUS_INTERNAL_ERROR;
 
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "uid=" + _sUid);
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "uid=" + Auxiliary.obfuscate(_sUid));
 		try {
 			Random randomGenerator;
 			byte[] baTempBuffer1, baTempBuffer2, baTempBuffer3;
@@ -313,7 +315,8 @@ public class RADIUSPAPProtocolHandler extends AbstractRADIUSProtocolHandler
 			// Cut off the buffer
 			byte[] newBuf = new byte[iIndex];
 			System.arraycopy(baOutputBuffer, 0, newBuf, 0, iIndex);
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "len="+iIndex+ " request=" + Utils.byteArrayToHexString(newBuf));
+//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "len="+iIndex+ " request=" + Utils.byteArrayToHexString(newBuf));
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "data len="+iIndex);
 			
 			oRADIUSPacket.setData(newBuf);
 			_sErrorCode = Errors.ERROR_RADIUS_SUCCESS;
@@ -340,16 +343,17 @@ public class RADIUSPAPProtocolHandler extends AbstractRADIUSProtocolHandler
 		String sMethod = "handleResponse";
 		_sErrorCode = Errors.ERROR_RADIUS_INTERNAL_ERROR;
 
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "uid=" + _sUid);
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "uid=" + Auxiliary.obfuscate(_sUid));
 		try {
 			byte[] baResponseBuffer = oRADIUSPacket.getData();
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "response=" + Utils.byteArrayToHexString(baResponseBuffer));
+//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "response=" + Utils.byteArrayToHexString(baResponseBuffer));
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Received response");
 
 			// check code
 			iResponseBufferIndex = 0;
 			if (baResponseBuffer[iResponseBufferIndex++] != ACCESS_ACCEPT) {
 				StringBuffer sbFine = new StringBuffer("RADIUS returned ACCESS DENIED for user: ");
-				sbFine.append(_sUid);
+				sbFine.append(Auxiliary.obfuscate(_sUid));
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, sbFine.toString());
 				_sErrorCode = Errors.ERROR_RADIUS_ACCESS_DENIED;
 				return;
@@ -357,7 +361,7 @@ public class RADIUSPAPProtocolHandler extends AbstractRADIUSProtocolHandler
 			// check identifier
 			if (baResponseBuffer[iResponseBufferIndex++] != _bIdentifier) {
 				StringBuffer sbFine = new StringBuffer("RADIUS Identifier mismatch for user: ");
-				sbFine.append(_sUid);
+				sbFine.append(Auxiliary.obfuscate(_sUid));
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, sbFine.toString());
 				_sErrorCode = Errors.ERROR_RADIUS_COULD_NOT_AUTHENTICATE_USER;
 				return;

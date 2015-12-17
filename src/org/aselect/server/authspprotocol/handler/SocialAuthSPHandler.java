@@ -27,6 +27,7 @@ import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectAuthSPException;
 import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * The SocialAuth AuthSP Handler. <br>
@@ -269,7 +270,7 @@ public class SocialAuthSPHandler extends AbstractAuthSPProtocolHandler implement
 			String sSocialLogin = (String)htSessionContext.get("social_login");
 			if (sResultCode.equalsIgnoreCase(SOCIAL_NO_ERROR)) {
 				// Log the user authentication
-				_authenticationLogger.log(new Object[] { MODULE, sUid, htAuthspResponse.get("client_ip"),
+				_authenticationLogger.log(new Object[] { MODULE, Auxiliary.obfuscate(sUid), htAuthspResponse.get("client_ip"),
 						sOrg, (String) htSessionContext.get("app_id"), "granted,"+sSocialLogin
 				});
 				htResponse.put("rid", sRid);
@@ -279,7 +280,7 @@ public class SocialAuthSPHandler extends AbstractAuthSPProtocolHandler implement
 			}
 			
 			// Access denied
-			_authenticationLogger.log(new Object[] { MODULE, sUid, htAuthspResponse.get("client_ip"),
+			_authenticationLogger.log(new Object[] { MODULE, Auxiliary.obfuscate(sUid), htAuthspResponse.get("client_ip"),
 				sOrg, (String) htSessionContext.get("app_id"), "denied", sResultCode+","+sSocialLogin
 			});
 			htResponse.put("authsp_type", "social");

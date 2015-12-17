@@ -99,8 +99,9 @@ public class CmHttpSmsSender extends GenericSmsSender
 		_systemLogger.log(Level.INFO, sModule, sMethod, "url=" + providerUrl);
 		
 		String sMessage = applySmsTemplate(sTemplate, sSecret, false);
-		_systemLogger.log(Level.FINEST, sModule, sMethod, "msg="+escapeXmlString(sMessage)+" cust="+sCustomerId+
-				" user="+this.user+" password="+this.password+" from="+from+" rcp="+recipients);
+//		_systemLogger.log(Level.FINEST, sModule, sMethod, "msg="+escapeXmlString(sMessage)+" cust="+sCustomerId+
+//				" user="+this.user+" password="+this.password+" from="+from+" rcp="+recipients);
+		_systemLogger.log(Level.FINEST, sModule, sMethod, "msg="+"..." +" from="+from);
 		String sData = xmlSmsMessage.replaceAll("\\[MESSAGE\\]", escapeXmlString(sMessage));
 		sData = sData.replaceAll("\\[CUSTOMER\\]", sCustomerId);
 		sData = sData.replaceAll("\\[LOGIN\\]", escapeXmlString(this.user));

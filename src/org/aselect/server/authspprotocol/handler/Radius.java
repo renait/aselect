@@ -90,6 +90,7 @@ import org.aselect.server.log.ASelectSystemLogger;
 import org.aselect.server.session.SessionManager;
 import org.aselect.system.exception.ASelectAuthSPException;
 import org.aselect.system.exception.ASelectConfigException;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * The Radius AuthSP Handler. <br>
@@ -458,7 +459,7 @@ public class Radius extends AbstractAuthSPProtocolHandler implements IAuthSPProt
 
 			if (sResultCode.equalsIgnoreCase(ERROR_RADIUS_ACCESS_DENIED)) {
 				_oASelectAuthenticationLogger.log(new Object[] {
-					MODULE, sUserId, htAuthspResponse.get("client_ip"), sOrg, (String) htSessionContext.get("app_id"),
+					MODULE, Auxiliary.obfuscate(sUserId), htAuthspResponse.get("client_ip"), sOrg, (String) htSessionContext.get("app_id"),
 					"denied", sResultCode
 				});
 				throw new ASelectAuthSPException(Errors.ERROR_ASELECT_AUTHSP_ACCESS_DENIED);
@@ -471,7 +472,7 @@ public class Radius extends AbstractAuthSPProtocolHandler implements IAuthSPProt
 			}
 
 			_oASelectAuthenticationLogger.log(new Object[] {
-				MODULE, sUserId, htAuthspResponse.get("client_ip"), sOrg, (String) htSessionContext.get("app_id"),
+				MODULE, Auxiliary.obfuscate(sUserId), htAuthspResponse.get("client_ip"), sOrg, (String) htSessionContext.get("app_id"),
 				"granted"
 			});
 

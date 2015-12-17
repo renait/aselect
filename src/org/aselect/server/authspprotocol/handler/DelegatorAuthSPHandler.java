@@ -27,6 +27,7 @@ import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectAuthSPException;
 import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.utils.BASE64Decoder;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * The Delegator AuthSP Handler. <br>
@@ -409,7 +410,7 @@ public class DelegatorAuthSPHandler  extends AbstractAuthSPProtocolHandler imple
 			// Log the user authentication
 			if (sResultCode.equalsIgnoreCase(DELEGATOR_NO_ERROR)) {
 				_authenticationLogger.log(new Object[] {
-					MODULE, sUserId, htAuthspResponse.get("client_ip"), sOrg, (String) htSessionContext.get("app_id"),
+					MODULE, Auxiliary.obfuscate(sUserId), htAuthspResponse.get("client_ip"), sOrg, (String) htSessionContext.get("app_id"),
 					"granted"
 				});
 
@@ -430,7 +431,7 @@ public class DelegatorAuthSPHandler  extends AbstractAuthSPProtocolHandler imple
 				return htResponse;
 			}
 			_authenticationLogger.log(new Object[] {
-				MODULE, sUserId, htAuthspResponse.get("client_ip"), sOrg, (String) htSessionContext.get("app_id"),
+				MODULE, Auxiliary.obfuscate(sUserId), htAuthspResponse.get("client_ip"), sOrg, (String) htSessionContext.get("app_id"),
 				"denied", sResultCode
 			});
 			htResponse.put("authsp_type", "delegator");

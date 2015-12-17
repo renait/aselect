@@ -44,6 +44,7 @@ import org.aselect.authspserver.config.AuthSPConfigManager;
 import org.aselect.authspserver.log.AuthSPSystemLogger;
 import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 
 /**
@@ -209,15 +210,15 @@ public class LDAPCertificateHandler implements ICertificateHandler
 			}
 		}
 		catch (NamingException e) {
-			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Failed to get certificates for: " + sSubjectDn, e);
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Failed to get certificates for: " + Auxiliary.obfuscate(sSubjectDn), e);
 			throw new ASelectException(Errors.PKI_INTERNAL_SERVER_ERROR);
 		}
 		catch (CertificateException e) {
-			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Failed to get certificates for: " + sSubjectDn, e);
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Failed to get certificates for: " + Auxiliary.obfuscate(sSubjectDn), e);
 			throw new ASelectException(Errors.PKI_INTERNAL_SERVER_ERROR);
 		}
 		catch (KeyStoreException e) {
-			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Failed to get certificates for: " + sSubjectDn, e);
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Failed to get certificates for: " + Auxiliary.obfuscate(sSubjectDn), e);
 			throw new ASelectException(Errors.PKI_INTERNAL_SERVER_ERROR);
 		}
 		finally { // prevent memory leaks (154)

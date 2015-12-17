@@ -135,6 +135,7 @@ import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.logging.Audit;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * A-Select Agent Main Class. <br>
@@ -792,9 +793,9 @@ public class ASelectAgent
 					PrintStream osOutput = new PrintStream(oSocket.getOutputStream());
 
 					String sRequestString = isInput.readLine();
-					_oASelectAgentSystemLogger.log(Level.FINEST, MODULE, sMethod, "Request="+sRequestString);
+					_oASelectAgentSystemLogger.log(Level.FINEST, MODULE, sMethod, "Request="+Auxiliary.obfuscate(sRequestString));
 					HashMap htParameters = Utils.convertCGIMessage(sRequestString, false);
-					_oASelectAgentSystemLogger.log(Level.FINEST, MODULE, sMethod, "Parameters="+htParameters);
+					_oASelectAgentSystemLogger.log(Level.FINEST, MODULE, sMethod, "Parameters="+Auxiliary.obfuscate(htParameters));
 					String sRequest = (String) htParameters.get("request");
 					if ("reload_config".equals(sRequest)) {
 						restartTimerSensorThread(_oASelectAgentConfigManager, _oASelectAgentSystemLogger, _sWorkingDir);

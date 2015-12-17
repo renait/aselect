@@ -94,6 +94,7 @@ import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectCommunicationException;
 import org.aselect.system.logging.SystemLogger;
 import org.aselect.system.utils.Tools;
+import org.aselect.system.utils.crypto.Auxiliary;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
@@ -203,7 +204,7 @@ public class SOAP11Communicator implements IClientCommunicator
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, sbBuffer.toString(), eMU);
 			throw new ASelectCommunicationException(Errors.ERROR_ASELECT_USE_ERROR, eMU);
 		}
-		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Response=" + sResponse);
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Response=" + Auxiliary.obfuscate(sResponse));
 
 		// Parse and return response
 		elBody = this.parse(sResponse);
@@ -243,7 +244,7 @@ public class SOAP11Communicator implements IClientCommunicator
 		}
 		// int len = sResponse.length();
 		// _systemLogger.log(Level.INFO, MODULE, sMethod, "Response="+sResponse.substring(0, (len<40)?len:40));
-		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Response=" + sResponse);
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Response=" + Auxiliary.obfuscate(sResponse));
 		return sResponse;
 	}
 
@@ -480,11 +481,11 @@ public class SOAP11Communicator implements IClientCommunicator
 				parser.setErrorHandler(new DefaultHandler());
 				// parse message as String to DOM object
 
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "PARSE " + sMessage);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "PARSE " + Auxiliary.obfuscate(sMessage));
 				parser.parse(new InputSource(new StringReader(sMessage)));
 				// get root XML tag
 				DocumentImpl doc = (DocumentImpl) parser.getDocument();
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "doc=" + doc);
+//				_systemLogger.log(Level.FINEST, MODULE, sMethod, "doc=" + doc);
 				// get body element
 				NodeList nlNodes = doc.getDocumentElement().getElementsByTagNameNS(URI_SOAP11_ENV, "Body");
 

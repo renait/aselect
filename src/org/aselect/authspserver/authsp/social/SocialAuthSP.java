@@ -18,6 +18,7 @@ import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.BASE64Decoder;
 import org.aselect.system.utils.BASE64Encoder;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 import org.brickred.socialauth.AuthProvider;
 import org.brickred.socialauth.Permission;
 import org.brickred.socialauth.Profile;
@@ -120,9 +121,10 @@ public class SocialAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 		PrintWriter pwOut = Utils.prepareForHtmlOutput(servletRequest, servletResponse);
 
 		String sQueryString = servletRequest.getQueryString();
-		_systemLogger.log(Level.FINEST, MODULE, sMethod, "qry="+sQueryString);
+//		_systemLogger.log(Level.FINEST, MODULE, sMethod, "qry="+sQueryString);
 		HashMap htServiceRequest = Utils.convertCGIMessage(sQueryString, true);  // URL decoded result
-		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Enter - htServiceRequest:" + htServiceRequest);
+//		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Enter - htServiceRequest:" + htServiceRequest);
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Enter");
 		
 		// If 'state' is present this is the return call from the socialauth provider
 		String sState = (String)htServiceRequest.get("state");
@@ -260,7 +262,8 @@ public class SocialAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created session with id:" + sFabricatedRid);
 			}
 			
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "REDIRECT to: " + sUrl);
+//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "REDIRECT to: " + sUrl);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "REDIRECT");
 			servletResponse.sendRedirect(sUrl);
 		}
 		catch (ASelectException ae) {
@@ -365,8 +368,9 @@ public class SocialAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 			Profile p = provider.getUserProfile();
 			
 			// You can obtain profile information
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "Result: First="+p.getFirstName()+" Last="+p.getLastName()+
-					" Display="+p.getDisplayName()+" Email="+p.getEmail()+" ValidId="+p.getValidatedId()+" ProviderId="+p.getProviderId());
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "Result: First="+Auxiliary.obfuscate(p.getFirstName())+" Last="+Auxiliary.obfuscate(p.getLastName())+
+					" Display="+Auxiliary.obfuscate(p.getDisplayName())+" Email="+Auxiliary.obfuscate(p.getEmail())+" ValidId="+Auxiliary.obfuscate(p.getValidatedId())+
+					" ProviderId="+Auxiliary.obfuscate(p.getProviderId()));
 			
 			// We're using the email address as 'uid'
 			sUid = p.getEmail();
@@ -382,7 +386,7 @@ public class SocialAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 			
 			String sSocialLogin = "google"; //= (String)htSessionContext.get("social_login");
 			_authenticationLogger.log(new Object[] {
-				MODULE, sUid, servletRequest.getRemoteAddr(), p.getEmail(), "granted,"+sSocialLogin
+				MODULE, Auxiliary.obfuscate(sUid), servletRequest.getRemoteAddr(), Auxiliary.obfuscate(p.getEmail()), "granted,"+sSocialLogin
 			});
 			handleResult(htSessionContext, servletResponse, pwOut, Errors.ERROR_SOCIAL_SUCCESS, sLanguage, sUid);
 		}
@@ -424,7 +428,8 @@ public class SocialAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 		String sMethod = "doPost";
 
 		// Google likes to return using a POST request
-		_systemLogger.log(Level.FINEST, MODULE, sMethod, "POST " + servletRequest + ", qry="+servletRequest.getQueryString());
+//		_systemLogger.log(Level.FINEST, MODULE, sMethod, "POST " + servletRequest + ", qry="+servletRequest.getQueryString());
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "POST " + servletRequest);
 		doGet(servletRequest, servletResponse);
 	}
 
@@ -483,7 +488,8 @@ public class SocialAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 					}
 					sbTemp.append("&signature=").append(URLEncoder.encode(sSignature, "UTF-8"));
 
-					_systemLogger.log(Level.FINEST, MODULE, sMethod, "REDIRECT TO: "+sbTemp.toString());
+//					_systemLogger.log(Level.FINEST, MODULE, sMethod, "REDIRECT TO: "+sbTemp.toString());
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "REDIRECT");
 					servletResponse.sendRedirect(sbTemp.toString());
 				}
 			}

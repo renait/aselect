@@ -35,6 +35,7 @@ import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.BASE64Encoder;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * An A-Select AuthtSP that delegates authentication to a Delgate class <br>
@@ -452,7 +453,8 @@ public class DelegatorAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit
 		String sLanguage = null;
 		String failureHandling = _sFailureHandling;	// Initially we use default from config, this might change if we suspect parameter tampering
 
-		_systemLogger.log(Level.FINEST, MODULE, sMethod, "POST htServiceRequest=" + servletRequest);
+//		_systemLogger.log(Level.FINEST, MODULE, sMethod, "POST htServiceRequest=" + servletRequest);
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Received POST");
 		try {
 			sLanguage = servletRequest.getParameter("language");  // optional language code
 			if (sLanguage == null || sLanguage.trim().length() < 1)
@@ -474,7 +476,7 @@ public class DelegatorAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit
 			String sChallenge = servletRequest.getParameter("delegate_challenge");
 			String sChallengeResponse = servletRequest.getParameter("delegate_challenge_response");
 			String sDelegateSession = servletRequest.getParameter("delegate_session");
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "uid=" + sUid + " rid=" + sRid);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "uid=" + Auxiliary.obfuscate(sUid) + " rid=" + sRid);
 
 			if ((sRid == null) || (sAsUrl == null) || (sUid == null) || (sAsId == null)
 					|| (sRetryCounter == null) || (sSignature == null)) {
@@ -534,7 +536,7 @@ public class DelegatorAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "sRetryCounter:" +sa[1] + ", formtoken:" + formtoken + ", app_id:" + app_id);
 				if ( !_cryptoEngine.verifyMySignature(signedParms, formSignature) || !sa[1].equals(formtoken) ) {
 					StringBuffer sbWarning = new StringBuffer("Invalid signature from User form '");
-					sbWarning.append(sAsId).append("' for user: ").append(sUid);
+					sbWarning.append(sAsId).append("' for user: ").append(Auxiliary.obfuscate(sUid));
 					sbWarning.append(" , handling error locally. ").append(sUid);	// RH, 20111021, n
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, sbWarning.toString());
 					failureHandling = "local";	// RH, 20111021, n
@@ -594,7 +596,7 @@ public class DelegatorAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit
 					
 					// Authentication successfull
 					_authenticationLogger.log(new Object[] {
-						MODULE, sUid, servletRequest.getRemoteAddr(), sAsId, "granted"
+						MODULE, Auxiliary.obfuscate(sUid), servletRequest.getRemoteAddr(), sAsId, "granted"
 					});
 
 					_systemLogger.log(Level.INFO, MODULE, sMethod, "Success");
@@ -665,16 +667,16 @@ public class DelegatorAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit
 						if (sLanguage != null)
 							htServiceRequest.put("language", sLanguage);
 						
-						_systemLogger.log(Level.FINEST, MODULE, sMethod, "FORM htServiceRequest=" + htServiceRequest);
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Preparing FORM ");
 						showAuthenticateForm(pwOut, ""/*no error*/, htServiceRequest);
 					}
 					else {
 						_systemLogger.log(Level.WARNING, MODULE, sMethod, "Too many retries" );
 						_authenticationLogger.log(new Object[] {
-							MODULE, sUid, servletRequest.getRemoteAddr(), sAsId, "denied", Errors.DELEGATOR_DELEGATE_FAIL
+							MODULE, Auxiliary.obfuscate(sUid), servletRequest.getRemoteAddr(), sAsId, "denied", Errors.DELEGATOR_DELEGATE_FAIL
 							});
 						_systemLogger.log(Level.INFO, MODULE, sMethod, "Fail");
-						_systemLogger.log(Level.FINEST, MODULE, sMethod, "responseparameters:" + responseparameters);
+//						_systemLogger.log(Level.FINEST, MODULE, sMethod, "responseparameters:" + responseparameters);
 						handleResult(servletRequest, servletResponse, pwOut, Integer.toString(iResultCode), sLanguage, failureHandling);
 					}					
 					break;
@@ -906,7 +908,8 @@ public class DelegatorAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit
 		StringBuffer sbTemp = null;
 		
 		try {
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "sResultCode=" + sResultCode + ", failureHandling=" + failureHandling + ", responseParameters=" + responseParameters);
+//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "sResultCode=" + sResultCode + ", failureHandling=" + failureHandling + ", responseParameters=" + responseParameters);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "sResultCode=" + sResultCode + ", failureHandling=" + failureHandling);
 			sResultCode = translateResult(sResultCode);
 
 			// Prevent tampering with request parameters, potential fishing leak
@@ -924,7 +927,7 @@ public class DelegatorAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit
 //					sDelegateSession = (String) responseParameters.get("delegate_session");
 //					sDelegateTimeout = (String) responseParameters.get("delegate_timeout");
 					sDelegateFields = Utils.serializeAttributes(responseParameters);	// creates base64
-					_systemLogger.log(Level.FINEST, MODULE, sMethod, "sDelegateFields=" + sDelegateFields);
+//					_systemLogger.log(Level.FINEST, MODULE, sMethod, "sDelegateFields=" + sDelegateFields);
 				}
 				if (sRid == null || sAsUrl == null || sAsId == null) {
 					getTemplateAndShowErrorPage(pwOut, sResultCode, sResultCode, sLanguage, VERSION);
@@ -964,13 +967,14 @@ public class DelegatorAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit
 					sbTemp.append("&signature=").append(sSignature);
 
 					try {
-						_systemLogger.log(Level.FINEST, MODULE, sMethod, "REDIRECT " + sbTemp);
+//						_systemLogger.log(Level.FINEST, MODULE, sMethod, "REDIRECT " + sbTemp);
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "REDIRECT");
 						servletResponse.sendRedirect(sbTemp.toString());
 					}
 					catch (IOException eIO) // could not send redirect
 					{
-						StringBuffer sbError = new StringBuffer("Could not send redirect to: \"");
-						sbError.append(sbTemp.toString()).append("\"");
+						StringBuffer sbError = new StringBuffer("Could not send redirect");
+//						sbError.append(sbTemp.toString()).append("\"");
 						_systemLogger.log(Level.WARNING, MODULE, sMethod, sbError.toString(), eIO);
 					}
 				}

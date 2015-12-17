@@ -53,6 +53,7 @@ import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectAttributesException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 
 /**
@@ -92,7 +93,7 @@ public class OpaqueAttributeRequestor extends GenericAttributeRequestor
 
 		try {
 			String sUID = (String)(_bFromTgt? htTGTContext: hmAttributes).get(_sUseKey);
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "vAttr="+vAttributes+" hmAttr="+hmAttributes+" "+_sUseKey+"="+sUID+" fromTgt="+_bFromTgt);
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "vAttr="+vAttributes+" hmAttr="+hmAttributes+" "+_sUseKey+"="+Auxiliary.obfuscate(sUID)+" fromTgt="+_bFromTgt);
 
 			if (!Utils.hasValue(sUID)) {
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Attribute '"+_sUseKey+"' not found, from_tgt="+_bFromTgt);

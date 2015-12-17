@@ -106,6 +106,7 @@ import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.Tools;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * The Ldap AuthSP Handler. <br>
@@ -527,7 +528,7 @@ public class Ldap extends AbstractAuthSPProtocolHandler implements IAuthSPProtoc
 			if (sResultCode.equalsIgnoreCase(ERROR_LDAP_ACCESS_DENIED)) { // access denied
 				// only log to authentication log
 				_authenticationLogger.log(new Object[] {
-					MODULE, sUserId, htAuthspResponse.get("client_ip"), sOrg,
+					MODULE, Auxiliary.obfuscate(sUserId), htAuthspResponse.get("client_ip"), sOrg,
 					(String) htSessionContext.get("app_id"), "denied", sResultCode
 				});
 				throw new ASelectAuthSPException(Errors.ERROR_ASELECT_AUTHSP_ACCESS_DENIED);
@@ -542,7 +543,7 @@ public class Ldap extends AbstractAuthSPProtocolHandler implements IAuthSPProtoc
 
 			// everything OK -> log to authentication logger
 			_authenticationLogger.log(new Object[] {
-				MODULE, sUserId, htAuthspResponse.get("client_ip"), sOrg,
+				MODULE, Auxiliary.obfuscate(sUserId), htAuthspResponse.get("client_ip"), sOrg,
 				(String) htSessionContext.get("app_id"), "granted"
 			});
 			// set response
@@ -690,7 +691,7 @@ public class Ldap extends AbstractAuthSPProtocolHandler implements IAuthSPProtoc
 	{
 		String sMethod = "handleDirectLogin2";
 
-		_systemLogger.log(Level.FINEST, MODULE, sMethod, "servletResponse="+servletResponse);
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "servletResponse="+Auxiliary.obfuscate(servletResponse));
 		try {
 			String sRid = null;
 			String sUid = null;
@@ -741,7 +742,7 @@ public class Ldap extends AbstractAuthSPProtocolHandler implements IAuthSPProtoc
 				sbReqArgs.append("&user=").append(URLEncoder.encode(sUid, "UTF-8"));
 				sbReqArgs.append("&password=").append(URLEncoder.encode(sPassword, "UTF-8"));
 				String sArgs = sbReqArgs.toString();
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "To AUTHSP: " + sAuthSPUrl+" Args="+sArgs);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "To AUTHSP: " + sAuthSPUrl+" Args="+ "...");
 							
 				if ("true".equals(sPostIt)) {  // use POST, must also be URL encoded!!!
 					
@@ -769,7 +770,7 @@ public class Ldap extends AbstractAuthSPProtocolHandler implements IAuthSPProtoc
 				else {
 					StringBuffer sbRequest = new StringBuffer(sAuthSPUrl);
 					String sRequest = sbRequest.append("?").append(sbReqArgs).toString();
-					_systemLogger.log(Level.FINEST, MODULE, sMethod, "GET request="+ sRequest);
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "GET request="+ "...");
 					URL oServer = new URL(sRequest);
 					URLConnection conn = oServer.openConnection();
 					InputStream iStream = conn.getInputStream();
@@ -799,7 +800,7 @@ public class Ldap extends AbstractAuthSPProtocolHandler implements IAuthSPProtoc
 				// Start sequential authsp's
 				String app_id = (String)htSessionContext.get("app_id");
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "app_id="+app_id+" SessionContext="+htSessionContext);
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "htServiceRequest="+htServiceRequest);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "htServiceRequest="+Auxiliary.obfuscate(htServiceRequest));
 				
 				htSessionContext.put("authsp_level", intAuthSPLevel.toString());
 				htSessionContext.put("sel_level", intAuthSPLevel.toString());  // equal to authsp_level in this case
@@ -875,7 +876,7 @@ public class Ldap extends AbstractAuthSPProtocolHandler implements IAuthSPProtoc
 				// End sequential authsp's
 				
 				_authenticationLogger.log(new Object[] {
-						MODULE, sUid, (String) htSessionContext.get("client_ip"), sOrg, app_id, "granted"
+						MODULE, Auxiliary.obfuscate(sUid), (String) htSessionContext.get("client_ip"), sOrg, app_id, "granted"
 					});
 
 				if (isOutputAvailable()) {	// only redirect of output available // RH, 20130813, n
@@ -898,7 +899,7 @@ public class Ldap extends AbstractAuthSPProtocolHandler implements IAuthSPProtoc
 			}
 			else if (sResponseCode.equals(ERROR_LDAP_ACCESS_DENIED)) {
 				_authenticationLogger.log(new Object[] {
-					MODULE, sUid, (String) htSessionContext.get("client_ip"), sOrg,
+					MODULE, Auxiliary.obfuscate(sUid), (String) htSessionContext.get("client_ip"), sOrg,
 					(String) htSessionContext.get("app_id"), "denied", sResponseCode
 				});
 

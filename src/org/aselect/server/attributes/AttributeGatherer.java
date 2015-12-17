@@ -131,6 +131,7 @@ import org.aselect.system.exception.ASelectAttributesException;
 import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * Gather and filter user attributes. <br>
@@ -433,7 +434,7 @@ public class AttributeGatherer
 			hOrganizations = _organizationResolver.getOrganizations(htTGTContext);
 		}
 		catch (ASelectAttributesException e) {
-			_systemLogger.log(Level.WARNING, _MODULE, sMethod, "Could not gather Organizations for user '"+sUid+"'", e);
+			_systemLogger.log(Level.WARNING, _MODULE, sMethod, "Could not gather Organizations for user '"+Auxiliary.obfuscate(sUid)+"'", e);
 		}
 		_systemLogger.log(Level.INFO, _MODULE, sMethod, "GATHER-ed Organizations=" + hOrganizations);
 		return hOrganizations;
@@ -512,7 +513,7 @@ public class AttributeGatherer
 		String sLocalOrg = (String) htTGTContext.get("local_organization");
 		String sAppID = (String) htTGTContext.get("app_id");
 
-		_systemLogger.log(Level.INFO, _MODULE, sMethod, "GATHER --- sUid=" + sUid + " sLocalOrg=" + sLocalOrg + " user organization="+sOrgId);
+		_systemLogger.log(Level.INFO, _MODULE, sMethod, "GATHER --- sUid=" + Auxiliary.obfuscate(sUid) + " sLocalOrg=" + sLocalOrg + " user organization="+sOrgId);
 		if (sLocalOrg != null) {
 			if (sArpTarget != null) {
 				Enumeration enumPolicies = _vReleasePolicies.elements();
@@ -573,10 +574,10 @@ public class AttributeGatherer
 						htAttrsFromAR = attributeRequestor.getAttributes(htTGTContext, vAttributes, htAttributes);
 					}
 					catch (ASelectAttributesException eA) {
-						StringBuffer sb = new StringBuffer("Could not gather attributes for user \"").append(sUid).append("\"");
+						StringBuffer sb = new StringBuffer("Could not gather attributes for user \"").append(Auxiliary.obfuscate(sUid)).append("\"");
 						_systemLogger.log(Level.WARNING, _MODULE, sMethod, sb.toString(), eA);
 					}
-					_systemLogger.log(Level.FINEST, _MODULE, sMethod, "GATHER >> Requestor=" + sRequestorID + " attrs from this requestor="+htAttrsFromAR);
+					_systemLogger.log(Level.FINEST, _MODULE, sMethod, "GATHER >> Requestor=" + sRequestorID + " attrs from this requestor="+Auxiliary.obfuscate(htAttrsFromAR));
 
 					// Merge the returned attributes with our set
 					if (htAttrsFromAR != null) {
@@ -709,7 +710,7 @@ public class AttributeGatherer
 			htAttributes.put("handler", sAuthsp);
 		}
 
-		_systemLogger.log(Level.FINEST, _MODULE, sMethod, "GATHER END htAttributes=" + htAttributes);
+		_systemLogger.log(Level.FINEST, _MODULE, sMethod, "GATHER END htAttributes=" + Auxiliary.obfuscate(htAttributes));
 		return htAttributes;
 	}
 
@@ -732,7 +733,7 @@ public class AttributeGatherer
 			// Testzorgverlener-14, SERIALNUMBER=000001788, T=Cardioloog
 			htAttributes.put("pki_subject_dn", sSubjectDN);
 			StringTokenizer st = new StringTokenizer(sSubjectDN, ",");
-			_systemLogger.log(Level.INFO, _MODULE, sMethod, "Tokens=" + st.countTokens() + " sSubjectDN=" + sSubjectDN);
+			_systemLogger.log(Level.INFO, _MODULE, sMethod, "Tokens=" + st.countTokens() + " sSubjectDN=" + Auxiliary.obfuscate(sSubjectDN));
 			while (st.hasMoreTokens()) {
 				sToken = st.nextToken(); // C=NL
 				idx = sToken.indexOf('=');
@@ -757,7 +758,7 @@ public class AttributeGatherer
 		if (sSubjectId != null) {
 			htAttributes.put("pki_subject_id", sSubjectId);
 			StringTokenizer st = new StringTokenizer(sSubjectId, "-");
-			_systemLogger.log(Level.INFO, _MODULE, sMethod, "Tokens=" + st.countTokens() + " sSubjectId=" + sSubjectId);
+			_systemLogger.log(Level.INFO, _MODULE, sMethod, "Tokens=" + st.countTokens() + " sSubjectId=" + Auxiliary.obfuscate(sSubjectId));
 			for (int fldnr = 1; st.hasMoreTokens(); fldnr++) {
 				sToken = st.nextToken(); // 01.001
 				String sFld = "pki_subject_id" + Integer.toString(fldnr);
@@ -784,7 +785,7 @@ public class AttributeGatherer
 		String fld = (String) htTGTContext.get("attributes");
 		if (fld != null) {
 			HashMap htTgtAttributes = org.aselect.server.utils.Utils.deserializeAttributes(fld);
-			_systemLogger.log(Level.FINEST, _MODULE, sMethod, "GATHER (remote)TGT \"attributes\"=" + htTgtAttributes);
+			_systemLogger.log(Level.FINEST, _MODULE, sMethod, "GATHER (remote)TGT \"attributes\"=" + Auxiliary.obfuscate(htTgtAttributes));
 			Set keys = htTgtAttributes.keySet();
 			for (Object s : keys) {
 				String sKey = (String) s;

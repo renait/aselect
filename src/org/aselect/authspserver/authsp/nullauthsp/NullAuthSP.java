@@ -106,6 +106,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.aselect.authspserver.authsp.AbstractAuthSP;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * . <br>
@@ -304,7 +305,8 @@ public class NullAuthSP extends AbstractAuthSP
 				_systemLogger.log(Level.FINE, MODULE, sMethod, "Invalid request, at least one mandatory parameter is missing.");
 				throw new ASelectException(Errors.ERROR_NULL_INVALID_REQUEST);
 			}
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "GET begin { "+sMethod+": "+sQueryString);
+//			_systemLogger.log(Level.INFO, MODULE, sMethod, "GET begin { "+sMethod+": "+sQueryString);
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "GET begin { "+sMethod);
 
 			StringBuffer sbSignature = new StringBuffer(sRid).append(sAsUrl).append(sUid).append(sAsId);
 			// optional country and language code
@@ -339,12 +341,12 @@ public class NullAuthSP extends AbstractAuthSP
 			
 			if (_sAuthMode.equals(Errors.ERROR_NULL_SUCCESS)) {
 				_authenticationLogger.log(new Object[] {
-					MODULE, sUid, servletRequest.getRemoteAddr(), sAsId, "granted"
+					MODULE, Auxiliary.obfuscate(sUid), servletRequest.getRemoteAddr(), sAsId, "granted"
 				});
 			}
 			else {
 				_authenticationLogger.log(new Object[] {
-					MODULE, sUid, servletRequest.getRemoteAddr(), sAsId, "denied", _sAuthMode
+					MODULE, Auxiliary.obfuscate(sUid), servletRequest.getRemoteAddr(), sAsId, "denied", _sAuthMode
 				});
 			}
 			handleResult(htServiceRequest, servletResponse, null, _sAuthMode, sLanguage, pwOut);
@@ -448,7 +450,8 @@ public class NullAuthSP extends AbstractAuthSP
 
 		PrintWriter pwOut = Utils.prepareForHtmlOutput(servletRequest, servletResponse);
 
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "POST begin { "+sMethod+", qry=" + servletRequest.getQueryString());		
+//		_systemLogger.log(Level.INFO, MODULE, sMethod, "POST begin { "+sMethod+", qry=" + servletRequest.getQueryString());		
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "POST begin { "+sMethod);		
 		String sRid = (String)servletRequest.getParameter("rid");
 		String sSignature = (String)servletRequest.getParameter("signature");
 
@@ -471,7 +474,7 @@ public class NullAuthSP extends AbstractAuthSP
 						break;
 					hmAttributes.put(sNameValue, sValueValue);
 				}
-				_systemLogger.log(Level.FINE, MODULE, sMethod, "Attributes="+hmAttributes);
+				_systemLogger.log(Level.FINE, MODULE, sMethod, "Attributes="+Auxiliary.obfuscate(hmAttributes));
 				sResult = Errors.ERROR_NULL_SUCCESS;
 			}
 			handleResult(sessionContext, servletResponse, hmAttributes, sResult, sLanguage, pwOut);
@@ -547,7 +550,8 @@ public class NullAuthSP extends AbstractAuthSP
 					sbRedirect.append("&a-select-server=").append(sAsId);
 					sbRedirect.append("&ser_attrs=").append(sSerializedAttrs);
 					sbRedirect.append("&signature=").append(sSignature);
-					_systemLogger.log(Level.INFO, MODULE, sMethod, "REDIR " + sbRedirect);
+//					_systemLogger.log(Level.INFO, MODULE, sMethod, "REDIR " + sbRedirect);
+					_systemLogger.log(Level.INFO, MODULE, sMethod, "REDIR");
 					servletResponse.sendRedirect(sbRedirect.toString());
 					return;
 				}

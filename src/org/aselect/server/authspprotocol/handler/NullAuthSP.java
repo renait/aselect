@@ -87,6 +87,7 @@ import org.aselect.server.log.ASelectSystemLogger;
 import org.aselect.server.session.SessionManager;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectAuthSPException;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * The Null AuthSP handler. <br>
@@ -447,7 +448,7 @@ public class NullAuthSP extends AbstractAuthSPProtocolHandler implements IAuthSP
 			if (!sResultCode.equalsIgnoreCase(ERROR_NO_ERROR)) {
 				if (sResultCode.equalsIgnoreCase(ERROR_ACCESS_DENIED)) {
 					_authenticationLogger.log(new Object[] {
-						MODULE, sUserId, htAuthspResponse.get("client_ip"), sOrganization, sAppID, "denied", sResultCode
+						MODULE, Auxiliary.obfuscate(sUserId), htAuthspResponse.get("client_ip"), sOrganization, sAppID, "denied", sResultCode
 					});
 					throw new ASelectAuthSPException(Errors.ERROR_ASELECT_AUTHSP_ACCESS_DENIED);
 				}
@@ -459,7 +460,7 @@ public class NullAuthSP extends AbstractAuthSPProtocolHandler implements IAuthSP
 			}
 
 			_authenticationLogger.log(new Object[] {
-				MODULE, sUserId, htAuthspResponse.get("client_ip"), sOrganization, sAppID, "granted"
+				MODULE, Auxiliary.obfuscate(sUserId), htAuthspResponse.get("client_ip"), sOrganization, sAppID, "granted"
 			});
 
 			htResponse.put("rid", sRid);

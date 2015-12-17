@@ -13,7 +13,6 @@ package org.aselect.server.request.handler.xsaml20;
 
 import java.io.IOException;
 import java.io.PrintWriter;
-
 import java.net.URLDecoder;
 import java.security.PrivateKey;
 import java.security.PublicKey;
@@ -37,6 +36,7 @@ import org.aselect.server.request.handler.xsaml20.SamlTools;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 import org.joda.time.DateTime;
 import org.opensaml.Configuration;
 import org.opensaml.common.SAMLObject;
@@ -817,7 +817,7 @@ public class SamlTools
 		try {
 			Node node = marshaller.marshall(logoutResponse);
 			String msg = XMLHelper.prettyPrintXML(node);
-			systemLogger.log(Level.INFO, MODULE, sMethod, "Built message:\n" + msg);
+			systemLogger.log(Level.INFO, MODULE, sMethod, "Built message:\n" + Auxiliary.obfuscate(msg, Auxiliary.REGEX_PATTERNS));
 		}
 		catch (MarshallingException e) {
 			systemLogger.log(Level.WARNING, MODULE, sMethod, "Exception marhalling message: " + e.getMessage());
