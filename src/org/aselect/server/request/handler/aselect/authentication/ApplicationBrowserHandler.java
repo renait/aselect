@@ -1842,7 +1842,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 	 * @param pwOut
 	 *            Used to write information back to the user (HTML)
 	 *            
-	 * @return 0 = success, 1=bad user input (back to login1)
+	 * @return 0 = success, 1 = bad user input (back to login1)
 	 * 
 	 * @throws ASelectException
 	 */
@@ -2086,6 +2086,13 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 
 			sSelectForm = Utils.replaceString(sSelectForm, "[cancel]", sb.toString());
 			sSelectForm = _configManager.updateTemplate(sSelectForm, _htSessionContext, _servletRequest);
+			
+			//
+			// 20151222, Bauke: these lines were missing, therefore no conditions (if_cond, if_error)
+			//String sSpecials = Utils.getAselectSpecials(_htSessionContext, true/*decode too*/, _systemLogger);
+			//sSelectForm = Utils.handleAllConditionals(sSelectForm, Utils.hasValue(sErrorMessage), sSpecials, _systemLogger);
+			//
+
 			// _systemLogger.log(Level.FINER, _sModule, sMethod, "Form select=["+sSelectForm+"]");
 			Tools.pauseSensorData(_configManager, _systemLogger, _htSessionContext);  //20111102
 			//_sessionManager.update(sRid, _htSessionContext); // Write session
