@@ -53,6 +53,7 @@ import org.aselect.system.exception.ASelectException;
 import org.aselect.system.exception.ASelectStorageException;
 import org.aselect.system.utils.Tools;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 import org.opensaml.SAMLAssertion;
 import org.opensaml.SAMLException;
 import org.opensaml.SAMLSubject;
@@ -202,16 +203,15 @@ public abstract class ProtoRequestHandler extends AbstractRequestHandler
 
 		String sRid = (String) htTGTContext.get("rid"); // Bauke: added
 		if (sRid == null) {
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "sRid=" + sUserId + " != uid=" + htTGTContext.get("rid"));
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "tgt context sRid==null, returning null");
 			return null;
 		}
-		_systemLogger.log(Level.FINER, MODULE, sMethod, "Attributes for sUserId=" + sUserId + " rid=" + sRid);
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Gathering Attributes for sUserId=" + Auxiliary.obfuscate(sUserId) + " rid=" + sRid);
 
 		// Gather attributes, but also use the attributes from the ticket context
 		HashMap htAllAttributes = getAttributesFromTgtAndGatherer(htTGTContext);
 
 		// And assemble the credentials
-		_systemLogger.log(Level.FINER, MODULE, sMethod, "Credentials for sUserId=" + sUserId + " rid=" + sRid);
 		HashMap htCredentials = new HashMap();
 		htCredentials.put("rid", sRid);
 		htCredentials.put("uid", sUserId);
@@ -915,7 +915,7 @@ public abstract class ProtoRequestHandler extends AbstractRequestHandler
 			// We want at least the "uid" attribute, so other A-Select servers can work with the result
 			htAttributes.put("uid", sUid);
 		}
-		_systemLogger.log(Level.FINEST, MODULE, "extractUidAndAttributes", "htAttributes=" + htAttributes);
+		_systemLogger.log(Level.FINEST, MODULE, "extractUidAndAttributes", "htAttributes=" + Auxiliary.obfuscate(htAttributes));
 		return htAttributes;
 	}
 
@@ -1035,7 +1035,7 @@ public abstract class ProtoRequestHandler extends AbstractRequestHandler
 		if (sSecLevel == null) sSecLevel = (String) htAttributes.get("betrouwbaarheidsniveau");
 		if (sSecLevel == null) sSecLevel = sAuthspLevel;
 		if (sSecLevel == null) sSecLevel = "5";
-		_systemLogger.log(Level.FINER, MODULE, sMethod, "UserId=" + sUserId + ", secLevel=" + sSecLevel);
+		_systemLogger.log(Level.FINER, MODULE, sMethod, "UserId=" + Auxiliary.obfuscate(sUserId) + ", secLevel=" + sSecLevel);
 
 		htAttributes.put("uid", sUserId);
 		htAttributes.put("betrouwbaarheidsniveau", sSecLevel);
@@ -1141,7 +1141,7 @@ public abstract class ProtoRequestHandler extends AbstractRequestHandler
 		String sHost = request.getRemoteHost();
 		if (sSubjConf == null)
 			sSubjConf = SAMLSubject.CONF_BEARER;
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "Uid=" + sUid + " IP=" + sIP + " Host=" + sHost
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "Uid=" + Auxiliary.obfuscate(sUid) + " IP=" + sIP + " Host=" + sHost
 				+ " _saml11Builder=" + _saml11Builder + " SubjConf=" + sSubjConf);
 
 		if (_saml11Builder == null) {

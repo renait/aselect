@@ -61,7 +61,7 @@ public class Auxiliary
 	public static List<Pattern> REGEX_PATTERNS =  new ArrayList<Pattern>();
 
 	private static final String[] DEFAULT_KEYS = { "uid", "Uid", "UID", "uID", "bsn", "Bsn", "BSN", "obouid", "user_id" , "sel_uid", "userId", "user_Id",
-		"password", "pw", "passwd", "shared_secret", "secret"  };
+		"password", "pw", "passwd", "shared_secret", "secret", "cn", "CN" };
 	public static final List<String> BANNED_KEYS = Arrays.asList(DEFAULT_KEYS);
 	private static SecureRandom sr = null;
 	private static  byte bytes[] = new byte[20];
