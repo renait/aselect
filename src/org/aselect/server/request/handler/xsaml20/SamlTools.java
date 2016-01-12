@@ -450,9 +450,10 @@ public class SamlTools
 					conditions.setNotOnOrAfter(refInstant.plus(maxNotOnOrAfter.longValue()));
 				}
 			}
-			if (conditions != null) {
+//			if (conditions != null) {	// RH, 20160108, o
+			if (conditions != null && ((Assertion) obj).getConditions() == null) {		// RH, 20160108, n // add only if not yet present
 				((Assertion) obj).setConditions(conditions);
-				_systemLogger.log(Level.INFO, MODULE, sMethod, "Conditions set on Assertion->" + obj);
+				_systemLogger.log(Level.INFO, MODULE, sMethod, "Conditions added on Assertion->" + obj);
 			}
 		}
 		else // not instanceof Assertion
@@ -472,9 +473,10 @@ public class SamlTools
 					conditions.setNotOnOrAfter(refInstant.plus(maxNotOnOrAfter.longValue()));
 				}
 			}
-			if (conditions != null) {
+//			if (conditions != null) {		// RH, 20160108, o
+			if (conditions != null && ((Assertion) obj).getConditions() == null) {	// RH, 20160108, n	// add only if not yet present
 				((AuthnRequest) obj).setConditions(conditions);
-				_systemLogger.log(Level.INFO, MODULE, sMethod, "Conditions set on AuthnRequest->" + obj);
+				_systemLogger.log(Level.INFO, MODULE, sMethod, "Conditions added on AuthnRequest->" + obj);
 			}
 		}
 		else // not instanceof AuthnRequest

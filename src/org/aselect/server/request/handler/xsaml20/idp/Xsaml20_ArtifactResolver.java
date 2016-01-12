@@ -13,6 +13,7 @@ package org.aselect.server.request.handler.xsaml20.idp;
 
 import java.io.StringReader;
 import java.security.PublicKey;
+import java.util.List;
 import java.util.logging.Level;
 
 import javax.servlet.ServletConfig;
@@ -35,6 +36,7 @@ import org.joda.time.DateTime;
 import org.opensaml.common.SAMLObjectBuilder;
 import org.opensaml.common.SAMLVersion;
 import org.opensaml.common.xml.SAMLConstants;
+import org.opensaml.saml1.core.SubjectConfirmationData;
 import org.opensaml.saml2.core.*;
 import org.opensaml.ws.soap.soap11.Envelope;
 import org.opensaml.xml.Namespace;
@@ -186,6 +188,22 @@ public class Xsaml20_ArtifactResolver extends Saml20_BaseHandler
 			String sDestination = null;
 
 			ArtifactResponse artifactResponse = null;
+			// RH, 20160112, sn
+			String _sAddedPatching = null;
+			if (artifactResolveIssuer != null) {	// application level overrules handler level configuration
+				_sAddedPatching = ApplicationManager.getHandle().getAddedPatching(artifactResolveIssuer);
+			}
+			if (_sAddedPatching == null) {	// backward compatibility, get it from handler configuration
+				_sAddedPatching = _configManager.getAddedPatching();
+			}
+			boolean bSignAssertion = _sAddedPatching.contains("sign_assertion"); 
+			_systemLogger.log(Level.FINER, MODULE, sMethod, "ArtifactResponse >====== SignAssertion="+bSignAssertion);
+			boolean bSignArtifactResponse = _sAddedPatching.contains("sign_artifactresponse"); 
+			_systemLogger.log(Level.FINER, MODULE, sMethod, "ArtifactResponse >====== SignArtifactResponse="+bSignArtifactResponse);
+			boolean bKeepOriginalTimestampAssertion = _sAddedPatching.contains("keeporiginaltimestamp_assertion"); 
+			_systemLogger.log(Level.FINER, MODULE, sMethod, "ArtifactResponse >====== KeepOriginalTimestampAssertion="+bKeepOriginalTimestampAssertion);
+			// RH, 20160112, en
+
 			if (sReceivedArtifact == null || "".equals(sReceivedArtifact)) {
 				String sStatusCode = StatusCode.INVALID_ATTR_NAME_VALUE_URI;
 				String sStatusMessage = "No 'artifact' found in element 'ArtifactResolve' of SAMLMessage.";
@@ -193,14 +211,19 @@ public class Xsaml20_ArtifactResolver extends Saml20_BaseHandler
 				artifactResponse = errorResponse(sInResponseTo, sDestination, sStatusCode, sStatusMessage);
 			}
 			else {
+				
 				Saml20_ArtifactManager artifactManager = Saml20_ArtifactManager.getTheArtifactManager();
 				Response samlResponse = (Response) artifactManager.getArtifactFromStorage(sReceivedArtifact);
 				//_systemLogger.log(Level.INFO, MODULE, sMethod, "samlResponse retrieved from storage:\n"
 				//		+ XMLHelper.nodeToString(samlResponse.getDOM()));
 
+				// RH, 20160112, sn
+				DateTime now = new DateTime();
+				// RH, 20160112, en
+				
 				// We will not allow to use the artifact again
 				artifactManager.remove(sReceivedArtifact); // RH, 20081113, n
-
+				
 				SAMLObjectBuilder<StatusCode> statusCodeBuilder = (SAMLObjectBuilder<StatusCode>) _oBuilderFactory
 						.getBuilder(StatusCode.DEFAULT_ELEMENT_NAME);
 				StatusCode statusCode = statusCodeBuilder.buildObject();
@@ -227,29 +250,67 @@ public class Xsaml20_ArtifactResolver extends Saml20_BaseHandler
 				artifactResponse.setID(SamlTools.generateIdentifier(_systemLogger, MODULE));
 				artifactResponse.setInResponseTo(sInResponseTo);
 				artifactResponse.setVersion(SAMLVersion.VERSION_20);
-				artifactResponse.setIssueInstant(new DateTime());
+//				artifactResponse.setIssueInstant(new DateTime());		// RH, 20160112, o
+				artifactResponse.setIssueInstant(now);	// RH, 20160112, n
 				if (sDestination != null)
 					artifactResponse.setDestination(sDestination);
 				artifactResponse.setStatus(status);
 				artifactResponse.setIssuer(issuer);
+				// RH, 20160108, sn
+				//. We'll have to update the timestamp IssueInstant, NotBefore and NotOnOrAfter of the samlResponse here
+				if ( !bKeepOriginalTimestampAssertion ) {
+					samlResponse.setIssueInstant(now);
+					Assertion a = samlResponse.getAssertions().get(0); // There can be only one
+					if (a != null) {
+						a.setIssueInstant(now);
+						SamlTools.setValidityInterval(a, now, getMaxNotBefore(), getMaxNotOnOrAfter() );	// sets NotBefore and NotOnOrAfter on Conditions
+						if (a.getSubject() != null) {
+							List<SubjectConfirmation> subjconfs = a.getSubject().getSubjectConfirmations() ;
+							if (subjconfs != null) {
+								for (SubjectConfirmation s : subjconfs) {
+									org.opensaml.saml2.core.SubjectConfirmationData sdata = s.getSubjectConfirmationData();
+									if (sdata != null) {
+										SamlTools.setValidityInterval(sdata, now, getMaxNotBefore(), getMaxNotOnOrAfter() );
+									}
+								}
+							}
+						}
+						List<AuthnStatement> authnList = a.getAuthnStatements();
+						if (authnList != null) {
+							for (AuthnStatement as : authnList) {
+								as.setAuthnInstant(now);
+							}
+						}
+						if (a.isSigned() || bSignAssertion) {
+							a = (Assertion)SamlTools.signSamlObject(a, 
+									(_sReqSigning != null) ?_sReqSigning: _sDefaultSigning ,
+											(_sAddKeyName != null) ? "true".equals(_sAddKeyName): "true".equals(_sDefaultAddKeyname),
+													(_sAddCertificate != null) ? "true".equals(_sAddCertificate): "true".equals(_sDefaultAddCertificate));
+							_systemLogger.log(Level.FINER, MODULE, sMethod, "Signed the assertion ======<");
+						}
+					}
+				}
+				// RH, 20160108, en
 				artifactResponse.setMessage(samlResponse);
 			}
 
 			// Also check out Xsaml20_SSO for signing issues
-			String _sAddedPatching = null;
-			if (artifactResolveIssuer != null) {	// application level overrules handler level configuration
-				_sAddedPatching = ApplicationManager.getHandle().getAddedPatching(artifactResolveIssuer);
-			}
-			if (_sAddedPatching == null) {	// backward compatibility, get it from handler configuration
-				_sAddedPatching = _configManager.getAddedPatching();
-			}
-			boolean bSignAssertion = _sAddedPatching.contains("sign_assertion"); 
-			_systemLogger.log(Level.FINER, MODULE, sMethod, "ArtifactResponse >====== SignAssertion="+bSignAssertion);
-			boolean bSignArtifactResponse = _sAddedPatching.contains("sign_artifactresponse"); 
-			_systemLogger.log(Level.FINER, MODULE, sMethod, "ArtifactResponse >====== SignArtifactResponse="+bSignArtifactResponse);
+			// RH, 20160112, so
+//			String _sAddedPatching = null;
+//			if (artifactResolveIssuer != null) {	// application level overrules handler level configuration
+//				_sAddedPatching = ApplicationManager.getHandle().getAddedPatching(artifactResolveIssuer);
+//			}
+//			if (_sAddedPatching == null) {	// backward compatibility, get it from handler configuration
+//				_sAddedPatching = _configManager.getAddedPatching();
+//			}
+//			boolean bSignAssertion = _sAddedPatching.contains("sign_assertion"); 
+//			_systemLogger.log(Level.FINER, MODULE, sMethod, "ArtifactResponse >====== SignAssertion="+bSignAssertion);
+//			boolean bSignArtifactResponse = _sAddedPatching.contains("sign_artifactresponse"); 
+//			_systemLogger.log(Level.FINER, MODULE, sMethod, "ArtifactResponse >====== SignArtifactResponse="+bSignArtifactResponse);
+			// RH, 20160112, eo
 			// IMPROV get the sha1/sha256 from configuration or metadata
 			if (bSignAssertion) {
-				// only the assertion, was signed already in Saml20_SSO
+				// only the assertion, was signed previously and/or already in Saml20_SSO
 				if (bSignArtifactResponse) {	// sign the ArtifactResponse anyway
 					artifactResponse = (ArtifactResponse)SamlTools.signSamlObject(artifactResponse, 
 							(_sReqSigning != null) ?_sReqSigning: _sDefaultSigning ,
