@@ -762,7 +762,8 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 					if (statMsg != null) {
 						sErrorCode = statMsg.getMessage();
 						_systemLogger.log(Level.FINER, MODULE, sMethod, "StatusMessage found: " + sErrorCode);
-					} else {
+					}
+					else {
 						if (sErrorSubCode != null && !"".equals(sErrorSubCode)) {
 							sErrorCode = sErrorSubCode;
 						}

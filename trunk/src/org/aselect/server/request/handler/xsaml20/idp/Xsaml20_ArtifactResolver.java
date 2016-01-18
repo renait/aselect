@@ -258,7 +258,7 @@ public class Xsaml20_ArtifactResolver extends Saml20_BaseHandler
 				artifactResponse.setIssuer(issuer);
 				// RH, 20160108, sn
 				//. We'll have to update the timestamp IssueInstant, NotBefore and NotOnOrAfter of the samlResponse here
-				if ( !bKeepOriginalTimestampAssertion ) {
+				if ( !bKeepOriginalTimestampAssertion && samlResponse.getAssertions()!= null && samlResponse.getAssertions().size()>0) {
 					samlResponse.setIssueInstant(now);
 					Assertion a = samlResponse.getAssertions().get(0); // There can be only one
 					if (a != null) {
