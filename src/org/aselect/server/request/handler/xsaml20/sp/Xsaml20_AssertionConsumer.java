@@ -547,7 +547,7 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 					/// Digid4 still has to decide how to provide a "face2face" declaration 
 					//	String sAuthnContextDeclRefIssueMethod = samlAssertion.getAuthnStatements().get(0).getAuthnContext().
 					/////////////////////////	digid4	///////////////////////////////////////////
-					String sSelectedLevel = SecurityLevel.convertAuthnContextClassRefURIToLevel(sAuthnContextClassRefURI, _systemLogger);
+					String sSelectedLevel = SecurityLevel.convertAuthnContextClassRefURIToLevel(sAuthnContextClassRefURI, false/*useLoa*/, _systemLogger);
 					
 					// Check returned security level
 					Integer intAppLevel = (Integer) _htSessionContext.get("level");
