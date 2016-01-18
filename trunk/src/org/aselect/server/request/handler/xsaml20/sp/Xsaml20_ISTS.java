@@ -309,17 +309,24 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 			_systemLogger.log(Level.FINER, MODULE, sMethod, "Location retrieved=" + sDestination);
 			if ("".equals(sDestination))
 				throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
+			
+			PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sFederationUrl);
+			_systemLogger.log(Level.FINER, MODULE, sMethod, "Partnerdata: "+partnerData);
+			String specialSettings = (partnerData == null)? null: partnerData.getSpecialSettings();
+			
+			// Use Level of Assurance (for ETD) instead of PASSWORDPROTECTEDTRANSPORT_URI and his friends
+			boolean useLoa = (specialSettings != null && specialSettings.contains("use_loa"));
 
 			String sApplicationId = (String)_htSessionContext.get("app_id");
 			String sApplicationLevel = getApplicationLevel(sApplicationId);
-			String sAuthnContextClassRefURI = SecurityLevel.convertLevelToAuthnContextClassRefURI(sApplicationLevel, _systemLogger);
-			// 20100428, Bauke: old: String sAuthnContextClassRefURI = levelMap.get(sApplicationLevel);
-			if (sAuthnContextClassRefURI == null) {
-				// this level was not configured. Log it and inform the user
-				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Application Level " + sApplicationLevel
-						+ " is not configured");
-				throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_APP_LEVEL);
-			}
+			
+			// Throws an exception on invalid levels:
+			String sAuthnContextClassRefURI = SecurityLevel.convertLevelToAuthnContextClassRefURI(sApplicationLevel, useLoa, _systemLogger);
+			//if (sAuthnContextClassRefURI == null) {
+			//	// this level was not configured. Log it and inform the user
+			//	_systemLogger.log(Level.WARNING, MODULE, sMethod, "Application Level "+sApplicationLevel+" has not been configured");
+			//	throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_APP_LEVEL);
+			//}
 			
 			// Send SAML request to the IDP
 			XMLObjectBuilderFactory builderFactory = Configuration.getBuilderFactory();
@@ -336,9 +343,6 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 			requestedAuthnContext.getAuthnContextClassRefs().add(authnContextClassRef);
 			
 			// 20100311, Bauke: added for eHerkenning
-			PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sFederationUrl);
-			_systemLogger.log(Level.FINER, MODULE, sMethod, "Partnerdata: "+partnerData);
-			String specialSettings = (partnerData == null)? null: partnerData.getSpecialSettings();
 			if (specialSettings != null && specialSettings.contains("minimum"))
 				requestedAuthnContext.setComparison(AuthnContextComparisonTypeEnumeration.MINIMUM);
 			else

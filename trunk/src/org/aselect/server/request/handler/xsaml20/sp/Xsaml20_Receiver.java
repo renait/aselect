@@ -182,7 +182,7 @@ public class Xsaml20_Receiver extends Saml20_BrowserHandler
 			AuthnContext oContext = oAuthn.getAuthnContext();
 			AuthnContextClassRef oClassRef = oContext.getAuthnContextClassRef();
 			String sClassRef = oClassRef.getAuthnContextClassRef();
-			String sSecLevel = SecurityLevel.convertAuthnContextClassRefURIToLevel(sClassRef, _systemLogger);
+			String sSecLevel = SecurityLevel.convertAuthnContextClassRefURIToLevel(sClassRef, false/*useLoa*/, _systemLogger);
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "ClassRef="+sClassRef+" level="+sSecLevel);
 			
 			Conditions oCond = assertObj.getConditions();

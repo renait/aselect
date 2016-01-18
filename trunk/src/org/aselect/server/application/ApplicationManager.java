@@ -318,12 +318,12 @@ public class ApplicationManager
 
 				// RH, 20101206, sn
 				HashMap<String, String> _htLevels = new HashMap<String, String>(); // contains level -> urn
-				_htLevels = ASelectConfigManager.getTableFromConfig(oApplication,  _htLevels, "authentication_method", "security", "level",/*->*/"uri",
-						false/* mandatory */, false/* unique values */);
+				_htLevels = ASelectConfigManager.getTableFromConfig(oApplication,  _htLevels, "authentication_method",
+						"security", "level",/*->*/"uri", false/* mandatory */, false/* unique values */);
 				// check if all levels are valid for integer conversion
 				if (_htLevels != null) {
-					Set<String> levelSet = _htLevels.keySet();
-					if ( !SecurityLevel.ALLOWEDLEVELS.containsAll(levelSet) ) {
+					// 20160115, Bauke: Let SecurityLevel handle this
+					if (!SecurityLevel.checkAllValidLevels(_htLevels)) {
 						throw new ASelectConfigException("Level not allowed in 'authentication_method/security' for application: " + sAppId );
 					}
 				}
@@ -350,9 +350,7 @@ public class ApplicationManager
 				// RH, 20141002, sn
 				String sAssertionAuthnStatementAuthenticatingAuthorityValue = ASelectConfigManager.getSimpleParam(oApplication, "authn_auth_authority",  false);
 				String sAssertionSubjectNameIDNameQualifierValue = ASelectConfigManager.getSimpleParam(oApplication, "assert_subject_nameid_qual",  false);
-
-				// RH, 20141002, en
-				
+				// RH, 20141002, en				
 
 				// RH, 20110920, sn
 				String sFirstAuthsp = ASelectConfigManager.getSimpleParam(oApplication, "first_authsp", false);

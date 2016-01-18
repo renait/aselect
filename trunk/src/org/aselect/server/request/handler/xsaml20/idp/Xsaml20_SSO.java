@@ -386,10 +386,10 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 			// The betrouwbaarheidsniveau is stored in the session context
 			RequestedAuthnContext requestedAuthnContext = authnRequest.getRequestedAuthnContext();
 			HashMap<String, String> secLevels =  ApplicationManager.getHandle().getSecLevels(sAppId);
-			String sBetrouwbaarheidsNiveau = SecurityLevel.getSecurityLevel(requestedAuthnContext, _systemLogger, secLevels);
-
-			if (sBetrouwbaarheidsNiveau.equals(SecurityLevel.BN_NOT_FOUND)) {
-				// We've got a security level but is not known
+			
+			String sBetrouwbaarheidsNiveau = SecurityLevel.getComparedSecurityLevelUsingExternal(requestedAuthnContext, secLevels, false/*useLoa*/, _systemLogger);
+			if (sBetrouwbaarheidsNiveau == null) {
+				// We've got a security level but it is not known
 				String sStatusMessage = "The requested AuthnContext isn't present in the configuration";
 				errorResponse = errorResponse(sSPRid, sAssertionConsumerServiceURL, StatusCode.NO_AUTHN_CONTEXT_URI,
 						sStatusMessage);
@@ -405,7 +405,9 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 			// 20110722, Bauke conditional setting, should come from configuration however
 //			if (Integer.parseInt(sBetrouwbaarheidsNiveau) <= 10)	// RH, 20141113, o
 			// Quick fix for PreviousSession. Should somehow be done a different way
-			if (Integer.parseInt(sBetrouwbaarheidsNiveau) != SecurityLevel.LEVEL_PREVIOUS && Integer.parseInt(sBetrouwbaarheidsNiveau) <= 10)	// RH, 20141113, n, not clear why this is here, try to be backwards compatible anyway
+			// 20160115, Bauke: Moved to SecurityLevel:
+			//if (Integer.parseInt(sBetrouwbaarheidsNiveau) != SecurityLevel.LEVEL_PREVIOUS && Integer.parseInt(sBetrouwbaarheidsNiveau) <= 10)	// RH, 20141113, n, not clear why this is here, try to be backwards compatible anyway
+			if (SecurityLevel.isLowLevelButNotPreviousSession(Integer.parseInt(sBetrouwbaarheidsNiveau)))
 				_htSessionContext.put("forced_uid", "saml20_user");
 			_oSessionManager.setUpdateSession(_htSessionContext, _systemLogger);  // 20120403, Bauke: was updateSession
 
@@ -1106,7 +1108,8 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 				sAutnContextClassRefURI = secLevels.get(sSelectedLevel);
 			}
 			if (sAutnContextClassRefURI == null) {	// for backward compatability
-				sAutnContextClassRefURI = SecurityLevel.convertLevelToAuthnContextClassRefURI(sSelectedLevel, _systemLogger);
+				// Throws an exception on invalid levels:
+				sAutnContextClassRefURI = SecurityLevel.convertLevelToAuthnContextClassRefURI(sSelectedLevel, false/*use_loa*/, _systemLogger);
 			}				
 			// RH, 20101214, en
 			authnContextClassRef.setAuthnContextClassRef(sAutnContextClassRefURI);
