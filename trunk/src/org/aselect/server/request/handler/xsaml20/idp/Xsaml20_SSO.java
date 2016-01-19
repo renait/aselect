@@ -95,6 +95,7 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 	private final static String RETURN_SUFFIX = "_return";
 	private final String AUTHNREQUEST = "AuthnRequest";
 	private String _sPostTemplate = null;
+	private String _sSpecialSettings = null;
 
 	// Communication for processReturn()
 	private String _sAppId = null;
@@ -156,6 +157,13 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 		}
 		catch (ASelectConfigException e) {
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config item 'post_template' found", e);
+		}
+
+		try {
+			_sSpecialSettings = _configManager.getParam(oHandlerConfig, "special_settings");
+		}
+		catch (ASelectConfigException e) {
+			;
 		}
 		
 //		// RH, 20140925,sn
@@ -387,7 +395,9 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 			RequestedAuthnContext requestedAuthnContext = authnRequest.getRequestedAuthnContext();
 			HashMap<String, String> secLevels =  ApplicationManager.getHandle().getSecLevels(sAppId);
 			
-			String sBetrouwbaarheidsNiveau = SecurityLevel.getComparedSecurityLevelUsingExternal(requestedAuthnContext, secLevels, false/*useLoa*/, _systemLogger);
+			boolean useLoa = (_sSpecialSettings != null && _sSpecialSettings.contains("use_loa"));
+			_systemLogger.log(Level.FINER, MODULE, sMethod, "useLoa="+useLoa);
+			String sBetrouwbaarheidsNiveau = SecurityLevel.getComparedSecurityLevelUsingExternal(requestedAuthnContext, secLevels, useLoa, _systemLogger);
 			if (sBetrouwbaarheidsNiveau == null) {
 				// We've got a security level but it is not known
 				String sStatusMessage = "The requested AuthnContext isn't present in the configuration";
@@ -1105,11 +1115,14 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 			String sAutnContextClassRefURI = null;
 			HashMap<String, String> secLevels =  ApplicationManager.getHandle().getSecLevels(_sAppId);
 			if (secLevels != null) {
+				_systemLogger.log(Level.FINER, MODULE, sMethod, "secLevels="+secLevels);
 				sAutnContextClassRefURI = secLevels.get(sSelectedLevel);
 			}
 			if (sAutnContextClassRefURI == null) {	// for backward compatability
 				// Throws an exception on invalid levels:
-				sAutnContextClassRefURI = SecurityLevel.convertLevelToAuthnContextClassRefURI(sSelectedLevel, false/*use_loa*/, _systemLogger);
+				boolean useLoa = (_sSpecialSettings != null && _sSpecialSettings.contains("use_loa"));
+				_systemLogger.log(Level.FINER, MODULE, sMethod, "useLoa="+useLoa);
+				sAutnContextClassRefURI = SecurityLevel.convertLevelToAuthnContextClassRefURI(sSelectedLevel, useLoa, _systemLogger);
 			}				
 			// RH, 20101214, en
 			authnContextClassRef.setAuthnContextClassRef(sAutnContextClassRefURI);
@@ -1125,7 +1138,7 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 			// for eHerk authnContext AuthenticatingAuthorities MUST contain EntityID of AD
 			if ( ApplicationManager.getHandle().getAuthenticatingAuthority(_sAppId) != null ) {
 				SAMLObjectBuilder<AuthenticatingAuthority> authenticatingAuthorityBuilder = (SAMLObjectBuilder<AuthenticatingAuthority>) builderFactory
-				.getBuilder(AuthenticatingAuthority.DEFAULT_ELEMENT_NAME);
+																.getBuilder(AuthenticatingAuthority.DEFAULT_ELEMENT_NAME);
 				AuthenticatingAuthority authAuth = authenticatingAuthorityBuilder.buildObject();
 				authAuth.setURI(ApplicationManager.getHandle().getAuthenticatingAuthority(_sAppId));		// get from application section
 				authnContext.getAuthenticatingAuthorities().add(authAuth);
