@@ -1323,8 +1323,21 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 		SAMLObjectBuilder<StatusCode> statusCodeBuilder = (SAMLObjectBuilder<StatusCode>) builderFactory
 				.getBuilder(StatusCode.DEFAULT_ELEMENT_NAME);
 		StatusCode statusCode = statusCodeBuilder.buildObject();
-		statusCode.setValue((htTGTContext == null) ? StatusCode.AUTHN_FAILED_URI : StatusCode.SUCCESS_URI);
-
+//		statusCode.setValue((htTGTContext == null) ? StatusCode.AUTHN_FAILED_URI : StatusCode.SUCCESS_URI);	// RH, 20160125, o
+		// RH, 20160125, sn
+		// StatusCode must be one of top-level values
+		if (htTGTContext != null) {
+			statusCode.setValue(StatusCode.SUCCESS_URI);
+		} else {
+			// set the top-level value
+			statusCode.setValue(StatusCode.RESPONDER_URI);
+			// build the second-level statuscode
+			StatusCode second_level_statusCode = statusCodeBuilder.buildObject();
+			second_level_statusCode.setValue(StatusCode.AUTHN_FAILED_URI);
+			statusCode.setStatusCode(second_level_statusCode);
+		}
+		// RH, 20160125, en
+		
 		SAMLObjectBuilder<Status> statusBuilder = (SAMLObjectBuilder<Status>) builderFactory
 				.getBuilder(Status.DEFAULT_ELEMENT_NAME);
 		Status status = statusBuilder.buildObject();
