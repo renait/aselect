@@ -326,7 +326,7 @@ public class RDAAuthSPHandler extends AbstractAuthSPProtocolHandler implements I
 			_sessionManager.setUpdateSession(htSessionContext, _systemLogger);
 			
 			String querystring2 = querystring1 + "&" + _sRDAQueryParmNonce + "=" + nonce;	// nonce must be last parameter
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "encrypting query string: " + querystring2);
+//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "encrypting query string: " + querystring2);	// RH, 20160127, o
 
 			byte[] baCipher = encryptRSA(querystring2, ENCODING_UTF8);
 			_systemLogger.log(Level.FINEST, MODULE, sMethod, "encrypted query parameter q before UrlTokenEncode as bytes: " + asString(baCipher));
