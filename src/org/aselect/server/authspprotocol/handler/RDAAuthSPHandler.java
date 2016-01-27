@@ -429,7 +429,8 @@ public class RDAAuthSPHandler extends AbstractAuthSPProtocolHandler implements I
 			String sUserId = (String) htSessionContext.get("user_id");
 			if (sUserId == null)
 				sUserId = (String) htSessionContext.get("sel_uid");
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "sUserId="+sUserId);
+//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "sUserId="+sUserId);	// RH, 20160127, o
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "sUserId="+Auxiliary.obfuscate(sUserId));	// RH, 20160127, n
 			
 			String sOrg = (String) htSessionContext.get("organization");
 
