@@ -31,6 +31,8 @@ import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
+import java.security.SignatureException;
+import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
@@ -43,12 +45,23 @@ import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
+import javax.crypto.Mac;
+import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.PBEKeySpec;
+import javax.crypto.spec.SecretKeySpec;
+
 import org.apache.commons.lang.SerializationUtils;
 import org.aselect.system.utils.Base64Codec;
 
 
 public class Auxiliary
 {
+
+	
+	private static final String HMAC_SHA1_ALGORITHM = "HmacSHA1";
+	private static final String HMAC_SHA256_ALGORITHM = "HmacSHA256";
+	private static final int DEFAULT_PBKDF2_KEYLENGTH = 256;	// bits
+
 
 	private static final String DEFAULT_DIGEST_ALG = "SHA-256";
 	private static final String PROPERTY_DEFAULT_DIGEST_ALG = "aselect.default.digest.alg";
@@ -352,6 +365,87 @@ public class Auxiliary
 		}
 		return digested;
 	}
+	
+	
+	
+	public static byte[] calculateRawRFC2104HMAC(byte[] data, byte[] key)
+	throws java.security.SignatureException
+	{
+		return calculateRawRFC2104HMAC(data, key, null);
+	}
+
+	
+	/**
+	* Computes raw (byte[]) RFC 2104-compliant HMAC signature.
+	* * @param data
+	* The raw (byte[]) data to be signed.
+	* @param key
+	* The raw signing key byte[].
+	* @return
+	* The raw (byte[] RFC 2104-compliant HMAC signature.
+	* @throws
+	* java.security.SignatureException when signature generation fails
+	*/
+	public static byte[] calculateRawRFC2104HMAC(byte[] data, byte[] key, String alg)
+	throws java.security.SignatureException
+	{
+	byte[] result;
+	if ( alg == null ) {
+		alg = HMAC_SHA256_ALGORITHM;	// SHA256 used as default
+	}
+	try {
+
+		// get an hmac_sha1/sha256 key from the raw key bytes
+		SecretKeySpec signingKey = new SecretKeySpec(key, alg);	// might not work with this alg, then will throw exception
+	
+		// get an hmac_sha1/sha256 Mac instance and initialize with the signing key
+		Mac mac = Mac.getInstance(alg);
+		mac.init(signingKey);
+	
+		// compute the hmac on input data bytes
+		byte[] rawHmac = mac.doFinal(data);
+	
+		result = rawHmac;
+
+	} catch (Exception e) {
+		throw new SignatureException("Failed to generate HMAC : " + e.getMessage());
+	}
+	return result;
+	}
+
+	
+	public static byte[] PBKDF2(char[] password,
+		    byte[] salt, int noIterations) throws NoSuchAlgorithmException, InvalidKeySpecException {
+		return PBKDF2(password, salt, noIterations, DEFAULT_PBKDF2_KEYLENGTH);
+	}
+
+	/**
+	 * 		Rfc2898DeriveBytes 
+	 * @param data
+	 * @param password
+	 * @param salt
+	 * @param noIterations
+	 * @param keyLength, bits
+	 * @return
+	 * @throws NoSuchAlgorithmException 
+	 * @throws InvalidKeySpecException 
+	 */
+	public static byte[] PBKDF2(char[] password,
+		    byte[] salt, int noIterations, int keyLength) throws NoSuchAlgorithmException, InvalidKeySpecException {
+		  String ALGORITHM = "PBKDF2WithHmacSHA1";
+//		  String ALGORITHM = "PBKDF2WithHmacSHA256";	// unfortunately we need java8 for this
+		  
+		  byte[] hash = null;
+		  
+	      PBEKeySpec spec = new PBEKeySpec(password, salt, noIterations, keyLength);
+	      SecretKeyFactory factory;
+	      factory = SecretKeyFactory.getInstance(ALGORITHM);
+	      hash =  factory.generateSecret(spec).getEncoded();
+	      return hash;
+		}
+
+	
+	
 
 	private static void usage(PrintStream outStream) {
 		outStream.println("Usage: org.aselect.system.utils.crypto.Auxiliary \"<plaintext_1>\" [\"<plaintext_2>\" ... \"<plaintext_n>\"]");
