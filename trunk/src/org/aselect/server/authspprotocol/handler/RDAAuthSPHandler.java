@@ -18,6 +18,7 @@ package org.aselect.server.authspprotocol.handler;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.security.SecureRandom;
 import java.security.SignatureException;
@@ -29,9 +30,12 @@ import java.util.Random;
 import java.util.logging.Level;
 
 import javax.crypto.Cipher;
+import javax.crypto.KeyGenerator;
 import javax.crypto.Mac;
+import javax.crypto.NoSuchPaddingException;
 import javax.crypto.SecretKey;
 import javax.crypto.SecretKeyFactory;
+import javax.crypto.spec.DESedeKeySpec;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.PBEParameterSpec;
 import javax.crypto.spec.SecretKeySpec;
@@ -148,8 +152,8 @@ public class RDAAuthSPHandler extends AbstractAuthSPProtocolHandler implements I
 	private static final String ERROR_RDA_OK = "000";
 	private static final String ERROR_RDA_INVALID_CONTEXT = "500";  // maybe verify some sort of context parameter and redirect in case of veification error
 	private static final String ERROR_RDA_ACCESS_DENIED = "800";
-	private static final String HMAC_SHA1_ALGORITHM = "HmacSHA1";
-	private static final String HMAC_SHA256_ALGORITHM = "HmacSHA256";
+//	private static final String HMAC_SHA1_ALGORITHM = "HmacSHA1";
+//	private static final String HMAC_SHA256_ALGORITHM = "HmacSHA256";
 	private static final String ENCODING_UTF8 = "UTF-8";
 	private static final String ENCODING_ASCII = "ASCII";
 	private static final String DEFAULT_HMAC_INPUT_OK = "ok";
@@ -157,7 +161,7 @@ public class RDAAuthSPHandler extends AbstractAuthSPProtocolHandler implements I
 	private static final String DEFAULT_RDAQUERYPARMNONCE = "nonce";
 	private static final int DEFAULT_PBKDF2_ITERATIONS = 1000;
 	private static final int DEFAULT_PBKDF2_SALTLENGTH = 32;
-	private static final int DEFAULT_PBKDF2_KEYLENGTH = 256;	// bits
+//	private static final int DEFAULT_PBKDF2_KEYLENGTH = 256;	// bits
 	private static final String DEFAULT_LOCALRID = "ctx";	// we use RDA ctx parameter for passing our RID
 	private static final String DEFAULT_SIGNATUREALGORITHM = "SHA1withRSA";	//others would be SHA256withRSA, SHA384withRSA, SHA512withRSA
 	
@@ -319,7 +323,7 @@ public class RDAAuthSPHandler extends AbstractAuthSPProtocolHandler implements I
 			
 			// generate hashkey
 			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Generating hash with saltlength/iterations: " +_iPBKDF2SaltLenght + "/" + _iPBKDF2itert);
-			byte[] hash = PBKDF2(querystring1.toCharArray(), salt, _iPBKDF2itert);
+			byte[] hash = Auxiliary.PBKDF2(querystring1.toCharArray(), salt, _iPBKDF2itert);
 			_systemLogger.log(Level.FINEST, MODULE, sMethod, "hash generated: " + Arrays.toString(hash));
 			
 			htSessionContext.put("rda_hash", hash);	// save the hash for verification of the result from rda controller
@@ -443,7 +447,7 @@ public class RDAAuthSPHandler extends AbstractAuthSPProtocolHandler implements I
 			byte[] hresult = null;
 			try {
 				resultOKBytes = _sHMACInput.getBytes("UTF-8");
-				hresult = calculateRawRFC2104HMAC(resultOKBytes, hash);
+				hresult = Auxiliary.calculateRawRFC2104HMAC(resultOKBytes, hash);
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, " calculated HMAC="+Arrays.toString(hresult));
 			}
 			catch (UnsupportedEncodingException e) {
@@ -533,81 +537,81 @@ public class RDAAuthSPHandler extends AbstractAuthSPProtocolHandler implements I
 	}
 	
 	
-	public static byte[] calculateRawRFC2104HMAC(byte[] data, byte[] key)
-	throws java.security.SignatureException
-	{
-		return calculateRawRFC2104HMAC(data, key, null);
-	}
+//	public static byte[] calculateRawRFC2104HMAC(byte[] data, byte[] key)
+//	throws java.security.SignatureException
+//	{
+//		return calculateRawRFC2104HMAC(data, key, null);
+//	}
+//
+//	
+//	/**
+//	* Computes raw (byte[]) RFC 2104-compliant HMAC signature.
+//	* * @param data
+//	* The raw (byte[]) data to be signed.
+//	* @param key
+//	* The raw signing key byte[].
+//	* @return
+//	* The raw (byte[] RFC 2104-compliant HMAC signature.
+//	* @throws
+//	* java.security.SignatureException when signature generation fails
+//	*/
+//	public static byte[] calculateRawRFC2104HMAC(byte[] data, byte[] key, String alg)
+//	throws java.security.SignatureException
+//	{
+//	byte[] result;
+//	if ( alg == null ) {
+//		alg = HMAC_SHA256_ALGORITHM;	// SHA256 used as default
+//	}
+//	try {
+//
+//		// get an hmac_sha1/sha256 key from the raw key bytes
+//		SecretKeySpec signingKey = new SecretKeySpec(key, alg);	// might not work with this alg, then will throw exception
+//	
+//		// get an hmac_sha1/sha256 Mac instance and initialize with the signing key
+//		Mac mac = Mac.getInstance(alg);
+//		mac.init(signingKey);
+//	
+//		// compute the hmac on input data bytes
+//		byte[] rawHmac = mac.doFinal(data);
+//	
+//		result = rawHmac;
+//
+//	} catch (Exception e) {
+//		throw new SignatureException("Failed to generate HMAC : " + e.getMessage());
+//	}
+//	return result;
+//	}
 
 	
-	/**
-	* Computes raw (byte[]) RFC 2104-compliant HMAC signature.
-	* * @param data
-	* The raw (byte[]) data to be signed.
-	* @param key
-	* The raw signing key byte[].
-	* @return
-	* The raw (byte[] RFC 2104-compliant HMAC signature.
-	* @throws
-	* java.security.SignatureException when signature generation fails
-	*/
-	public static byte[] calculateRawRFC2104HMAC(byte[] data, byte[] key, String alg)
-	throws java.security.SignatureException
-	{
-	byte[] result;
-	if ( alg == null ) {
-		alg = HMAC_SHA256_ALGORITHM;	// SHA256 used as default
-	}
-	try {
-
-		// get an hmac_sha1/sha256 key from the raw key bytes
-		SecretKeySpec signingKey = new SecretKeySpec(key, alg);	// might not work with this alg, then will throw exception
-	
-		// get an hmac_sha1/sha256 Mac instance and initialize with the signing key
-		Mac mac = Mac.getInstance(alg);
-		mac.init(signingKey);
-	
-		// compute the hmac on input data bytes
-		byte[] rawHmac = mac.doFinal(data);
-	
-		result = rawHmac;
-
-	} catch (Exception e) {
-		throw new SignatureException("Failed to generate HMAC : " + e.getMessage());
-	}
-	return result;
-	}
-
-	
-	public static byte[] PBKDF2(char[] password,
-		    byte[] salt, int noIterations) throws NoSuchAlgorithmException, InvalidKeySpecException {
-		return PBKDF2(password, salt, noIterations, DEFAULT_PBKDF2_KEYLENGTH);
-	}
-
-	/**
-	 * 		Rfc2898DeriveBytes 
-	 * @param data
-	 * @param password
-	 * @param salt
-	 * @param noIterations
-	 * @param keyLength, bits
-	 * @return
-	 * @throws NoSuchAlgorithmException 
-	 * @throws InvalidKeySpecException 
-	 */
-	public static byte[] PBKDF2(char[] password,
-		    byte[] salt, int noIterations, int keyLength) throws NoSuchAlgorithmException, InvalidKeySpecException {
-		  String ALGORITHM = "PBKDF2WithHmacSHA1";
-//		  String ALGORITHM = "PBKDF2WithHmacSHA256";	// unfortunately we need java8 for this
-		  
-		  byte[] hash = null;
-		  
-	      PBEKeySpec spec = new PBEKeySpec(password, salt, noIterations, keyLength);
-	      SecretKeyFactory factory;
-	      factory = SecretKeyFactory.getInstance(ALGORITHM);
-	      hash =  factory.generateSecret(spec).getEncoded();
-	      return hash;
-		}
+//	public static byte[] PBKDF2(char[] password,
+//		    byte[] salt, int noIterations) throws NoSuchAlgorithmException, InvalidKeySpecException {
+//		return PBKDF2(password, salt, noIterations, DEFAULT_PBKDF2_KEYLENGTH);
+//	}
+//
+//	/**
+//	 * 		Rfc2898DeriveBytes 
+//	 * @param data
+//	 * @param password
+//	 * @param salt
+//	 * @param noIterations
+//	 * @param keyLength, bits
+//	 * @return
+//	 * @throws NoSuchAlgorithmException 
+//	 * @throws InvalidKeySpecException 
+//	 */
+//	public static byte[] PBKDF2(char[] password,
+//		    byte[] salt, int noIterations, int keyLength) throws NoSuchAlgorithmException, InvalidKeySpecException {
+//		  String ALGORITHM = "PBKDF2WithHmacSHA1";
+////		  String ALGORITHM = "PBKDF2WithHmacSHA256";	// unfortunately we need java8 for this
+//		  
+//		  byte[] hash = null;
+//		  
+//	      PBEKeySpec spec = new PBEKeySpec(password, salt, noIterations, keyLength);
+//	      SecretKeyFactory factory;
+//	      factory = SecretKeyFactory.getInstance(ALGORITHM);
+//	      hash =  factory.generateSecret(spec).getEncoded();
+//	      return hash;
+//		}
 	
 	
 	private static String verifyRDAresult(byte[] baRDAResult, byte[] hresult) {
@@ -791,6 +795,8 @@ public class RDAAuthSPHandler extends AbstractAuthSPProtocolHandler implements I
 		for (byte b : token) {
 			   System.out.format("0x%02X ", b);
 		}
+		System.out.println("\n");
+
 		
 		
 		System.out.format("\n");
@@ -825,7 +831,7 @@ public class RDAAuthSPHandler extends AbstractAuthSPProtocolHandler implements I
 		// generate hashkey
 		byte[] hash = null;
 		try {
-			hash = PBKDF2("bsn=900029389" .toCharArray(), salt, 1000);
+			hash = Auxiliary.PBKDF2("bsn=900029389" .toCharArray(), salt, 1000);
 		}
 		catch (NoSuchAlgorithmException e1) {
 			e1.printStackTrace();
@@ -850,7 +856,7 @@ public class RDAAuthSPHandler extends AbstractAuthSPProtocolHandler implements I
 			for (byte b : data) {
 				   System.out.format("%02X", b);
 			}
-			byte[] rdaresult = calculateRawRFC2104HMAC(data, hash);	// use default sha256
+			byte[] rdaresult = Auxiliary.calculateRawRFC2104HMAC(data, hash);	// use default sha256
 //			byte[] rdaresult = calculateRawRFC2104HMAC(data, hash, HMAC_SHA1_ALGORITHM);	// use sha1
 			
 			System.out.format("\nrdaresult generated: %s ", Arrays.toString(rdaresult));
