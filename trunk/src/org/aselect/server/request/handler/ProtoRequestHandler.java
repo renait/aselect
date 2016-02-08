@@ -891,6 +891,27 @@ public abstract class ProtoRequestHandler extends AbstractRequestHandler
 		return "<input type=\"hidden\" name=\"" + sName + "\" value=\"" + sValue + "\"/>\n";
 	}
 
+	
+	/**
+	 * 
+	 * @param sSrc
+	 * 		must contain or point to a valid img
+	 * @param sAlt
+	 * 		alternate string
+	 * @param sWidth
+	 * 		preferred width of image
+	 * @param sHeight
+	 * 		preferred height of image
+	 * @return
+	 */
+	public String buildHtmlImg(String sSrc, String sAlt, String sWidth, String sHeight)
+	{
+		if (sSrc == null)
+			return "";
+		// We don't use sHeight and sWidth yet, use scale = 0 for now
+		return "<img scale=\"0\"  src=\"" + sSrc + "\" alt=\"" + sAlt + "\"/>\n";
+	}
+
 	// The policy to extract Uid and Attributes from an Assertion
 	//
 	/**
