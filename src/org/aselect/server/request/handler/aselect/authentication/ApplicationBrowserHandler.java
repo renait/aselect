@@ -923,11 +923,13 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 				_htTGTContext.remove("obo_app_url");
 				_tgtManager.updateTGT(sTgt, _htTGTContext);
 				
-				ASelectEntrustmentLogger.getHandle().log((String)_htTGTContext.get("uid"), (String)_htTGTContext.get("client_ip"), (String)_htTGTContext.get("app_id"), sOBOId, status);
+//				ASelectEntrustmentLogger.getHandle().log((String)_htTGTContext.get("uid"), (String)_htTGTContext.get("client_ip"), (String)_htTGTContext.get("app_id"), sOBOId, status);
+				ASelectEntrustmentLogger.getHandle().log(Auxiliary.obfuscate((String)_htTGTContext.get("uid")), (String)_htTGTContext.get("client_ip"), (String)_htTGTContext.get("app_id"), sOBOId, status);
 			}
 			else {	// not a bsn or invalid obo or communication problem
 				_systemLogger.log(Level.INFO, _sModule, sMethod, "Invalid bsn for obo, status: " + status );
-				ASelectEntrustmentLogger.getHandle().log((String)_htTGTContext.get("uid"), (String)_htTGTContext.get("client_ip"), (String)_htTGTContext.get("app_id"), sOBOId, status);
+//				ASelectEntrustmentLogger.getHandle().log((String)_htTGTContext.get("uid"), (String)_htTGTContext.get("client_ip"), (String)_htTGTContext.get("app_id"), sOBOId, status);
+				ASelectEntrustmentLogger.getHandle().log(Auxiliary.obfuscate((String)_htTGTContext.get("uid")), (String)_htTGTContext.get("client_ip"), (String)_htTGTContext.get("app_id"), sOBOId, status);
 				_systemLogger.log(Level.FINEST, _sModule, sMethod, "Retrying, retry number:" +iOboRetries);
 				_htTGTContext.put("obo_retries", iOboRetries);
 				// store oriuid, OBOServiceId, OBOValidFrom in tgt
