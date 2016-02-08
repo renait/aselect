@@ -294,6 +294,7 @@ public class CryptoEngine
 					_secureRandom = SecureRandom.getInstance(_sSecureRandomAlgorithm, _oSecureRandomProvider);
 				else
 					_secureRandom = SecureRandom.getInstance(_sSecureRandomAlgorithm);
+				_secureRandom.nextBytes(new byte[64]);		// RH, 20160105, n, let the PRNG seed itself
 			}
 			catch (Exception e) {
 				StringBuffer sbInfo = new StringBuffer("Unable to create random generator with algorithm: ");
