@@ -370,6 +370,8 @@ public class ApplicationManager
 				
 				String sForcedAttrConsServIndex = ASelectConfigManager.getSimpleParam(oApplication, "forced_attrconsservindex", false); // RH, 20140505, n
 
+				String sForcedAudience = ASelectConfigManager.getSimpleParam(oApplication, "forced_audience", false); // RH, 20160211, n
+
 				// RH, 20150921, sn
 				boolean bPushAttributes = false;
 				String sPushAttributes = ASelectConfigManager.getSimpleParam(oApplication, "push_attributes", false);
@@ -447,6 +449,7 @@ public class ApplicationManager
 				} // RH, 20140707, en
 
 				application.setForcedAttrConsServIndex(sForcedAttrConsServIndex);  // RH, 20140505, n
+				application.setForcedAudience(sForcedAudience);  // RH, 20160211, n
 				application.setPushAttributes(bPushAttributes);	// RH, 20150921, n
 				
 				_htApplications.put(sAppId, application);
@@ -1427,6 +1430,37 @@ public class ApplicationManager
 		return (oApplication==null)? null: oApplication.getForcedAttrConsServIndex();
 	}
 
+	
+	/**
+	 * Returns the Optional Audience to force in the SAML Assertion for an application. <br>
+	 * <br>
+	 * <b>Description:</b> <br>
+	 * Returns the configured ForcedAudience for the application. <br>
+	 * <br>
+	 * <b>Concurrency issues:</b> <br>
+	 * - <br>
+	 * <br>
+	 * <b>Preconditions:</b> <br>
+	 * - <br>
+	 * <br>
+	 * <b>Postconditions:</b> <br>
+	 * - <br>
+	 * 
+	 * @param sAppId
+	 *            <code>String</code> containing an application id.
+	 * @return String containing the Audience. <code>null</code> if no Audience name was found.
+	 * @throws ASelectException
+	 *             the a select exception
+	 */
+	public String getForcedAudience(String sAppId)
+	throws ASelectException
+	{
+		Application oApplication = getApplication(sAppId);
+		return (oApplication==null)? null: oApplication.getForcedAudience();
+	}
+
+	
+	
 	/**
 	 * Returns the Optional PushAttributes to force pushing 'attributes'  parameter back on tgt_upgrade request <br>
 	 * <br>
