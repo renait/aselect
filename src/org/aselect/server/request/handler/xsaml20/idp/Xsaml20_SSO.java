@@ -1203,7 +1203,14 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 			Audience audience = audienceBuilder.buildObject();
 			
 //				audience.setAudienceURI((String) htTGTContext.get("sp_issuer")); // 20081109 added
-			String sAudience = (String) htTGTContext.get("sp_audience");
+			// RH, 20160211, sn
+			// Overrules Audience if set
+			String sAudience = ApplicationManager.getHandle().getForcedAudience(_sAppId);
+			if (sAudience == null) {
+				sAudience = (String) htTGTContext.get("sp_audience");
+			}
+			// RH, 20160211, en
+//			String sAudience = (String) htTGTContext.get("sp_audience");	// 20160211, o
 			audience.setAudienceURI( (sAudience != null) ? sAudience : (String) htTGTContext.get("sp_issuer")); // 20101116, RH,  for backward compatibility
 
 			SAMLObjectBuilder<AudienceRestriction> audienceRestrictionBuilder = (SAMLObjectBuilder<AudienceRestriction>) builderFactory

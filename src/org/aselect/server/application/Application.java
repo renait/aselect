@@ -116,6 +116,9 @@ public class Application
 	// Optional application specific AttributeConsumerServiveIndex for SAML AuthnRequest
 	private String _sForcedAttrConsServIndex = null;	// RH, 20140505, n
 
+	// Optional application specific Audience in AudienceRestriction of Assertion in samlresponse
+	private String _sForcedAudience = null;	// RH, 20160211, n
+
 	// Optional application specific for pushing 'attributes' parameter back on upgrade_tgt request
 	private boolean _bPushAttributes = false;	// backwards compatibility
 
@@ -748,6 +751,16 @@ public class Application
 	public synchronized void setPushAttributes(boolean _bPushAttributes)
 	{
 		this._bPushAttributes = _bPushAttributes;
+	}
+
+	public synchronized String getForcedAudience()
+	{
+		return _sForcedAudience;
+	}
+
+	public synchronized void setForcedAudience(String _sForcedAudience)
+	{
+		this._sForcedAudience = _sForcedAudience;
 	}
 
 }
