@@ -332,9 +332,6 @@ public class SessionManager extends StorageManager
 			}
 			throw e;
 		}
-		catch (ASelectException e) {
-			throw e;
-		}
 		catch (Exception e) {
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not create session", e);
 			sSessionId = null; // reset session id
