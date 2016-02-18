@@ -264,9 +264,6 @@ public class TGTManager extends StorageManager
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not store TGT", e);
 			throw e;
 		}
-		catch (ASelectException e) {
-			throw e;
-		}
 		catch (Exception e) {
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Internal error while creating TGT", e);
 			throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR, e);
