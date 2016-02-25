@@ -17,6 +17,7 @@ package org.aselect.system.utils.crypto;
 
 import java.io.BufferedInputStream;
 import java.io.BufferedOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
@@ -25,6 +26,8 @@ import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.PrintStream;
 import java.io.Serializable;
+import java.io.StringReader;
+import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
 import java.lang.instrument.Instrumentation;
 import java.security.MessageDigest;
@@ -32,11 +35,17 @@ import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
 import java.security.SecureRandom;
 import java.security.SignatureException;
+import java.security.cert.Certificate;
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.CertificateException;
+import java.security.cert.CertificateFactory;
+import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -49,9 +58,18 @@ import javax.crypto.Mac;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
+import javax.servlet.http.HttpServletRequest;
+import javax.xml.bind.DatatypeConverter;
 
+import org.apache.commons.codec.binary.Base64;
 import org.apache.commons.lang.SerializationUtils;
 import org.aselect.system.utils.Base64Codec;
+
+import javax.xml.bind.DatatypeConverter;
+
+import java.security.cert.CertificateEncodingException;
+import java.security.cert.X509Certificate;
+import java.io.StringWriter;
 
 
 public class Auxiliary
@@ -74,6 +92,7 @@ public class Auxiliary
 	public static List<Pattern> REGEX_PATTERNS =  new ArrayList<Pattern>();
 
 	private static final String[] DEFAULT_KEYS = { "uid", "Uid", "UID", "uID", "bsn", "Bsn", "BSN", "obouid", "user_id" , "sel_uid", "userId", "user_Id",
+		"name_id", "Name_ID", "NAME_ID", "Name_id", "authid", "Authid", "AuthId", "AuthID",
 		"password", "pw", "passwd", "shared_secret", "secret", "cn", "CN" };
 	public static final List<String> BANNED_KEYS = Arrays.asList(DEFAULT_KEYS);
 	private static SecureRandom sr = null;
@@ -445,24 +464,150 @@ public class Auxiliary
 		}
 
 	
+	public static String certToString(X509Certificate cert) {
+	    StringWriter sw = new StringWriter();
+	    try {
+	        sw.write("-----BEGIN CERTIFICATE-----\n");
+	        sw.write(DatatypeConverter.printBase64Binary(cert.getEncoded()).replaceAll("(.{64})", "$1\n"));
+	        sw.write("\n-----END CERTIFICATE-----\n");
+	    } catch (CertificateEncodingException e) {
+	        e.printStackTrace();
+	    }
+	    return sw.toString();
+	}
+	
+	public static List<X509Certificate> parseCertificates(String certAsString) throws CertificateException, IOException{
+//		StringReader fis = new StringReader(certAsString);
+//		FileInputStream fis = new FileInputStream(filename);
+		 BufferedInputStream bis = new BufferedInputStream(new ByteArrayInputStream(certAsString.getBytes("UTF-8")));
+
+		 CertificateFactory cf = CertificateFactory.getInstance("X.509");
+		 Collection<? extends Certificate> c = cf.generateCertificates(bis);
+		 Iterator<? extends Certificate> i = c.iterator();
+		 ArrayList<X509Certificate> a = new ArrayList<X509Certificate>();
+		 while (i.hasNext()) {
+			 X509Certificate cert = (X509Certificate)i.next();
+			 a.add(cert);
+//		    Certificate cert = (Certificate)i.next();
+//		    System.out.println( cert.getIssuerDN());
+//		    System.out.println(cert);
+		 }
+		 return a;
+		
+//	    //before decoding we need to get rod off the prefix and suffix
+//	    byte [] decoded = Base64.decode(certStr.replaceAll(X509Factory.BEGIN_CERT, "").replaceAll(X509Factory.END_CERT, ""));
+//
+//	    return (X509Certificate)CertificateFactory.getInstance("X.509").generateCertificate(new ByteArrayInputStream(decoded));
+	}
+	
+	
+	public static X509Certificate parseCertificate(String certAsString) throws CertificateException, IOException{
+//		StringReader fis = new StringReader(certAsString);
+//		FileInputStream fis = new FileInputStream(filename);
+		 BufferedInputStream bis = new BufferedInputStream(new ByteArrayInputStream(certAsString.getBytes("UTF-8")));
+
+		 CertificateFactory cf = CertificateFactory.getInstance("X.509");
+		 Certificate cert = null;
+		 while (bis.available() > 0) {
+		    cert = cf.generateCertificate(bis);
+//		    System.out.println(cert.getPublicKey().getFormat());
+//		    System.out.println(cert.toString());
+		 }
+		 // return last, there should only be zero or one
+		 return (X509Certificate)cert;
+		
+//	    //before decoding we need to get rod off the prefix and suffix
+//	    byte [] decoded = Base64.decode(certStr.replaceAll(X509Factory.BEGIN_CERT, "").replaceAll(X509Factory.END_CERT, ""));
+//
+//	    return (X509Certificate)CertificateFactory.getInstance("X.509").generateCertificate(new ByteArrayInputStream(decoded));
+	}
+
+	
+	
 	
 
 	private static void usage(PrintStream outStream) {
 		outStream.println("Usage: org.aselect.system.utils.crypto.Auxiliary \"<plaintext_1>\" [\"<plaintext_2>\" ... \"<plaintext_n>\"]");
 	}
 	
-	public static void main(String[] args)
+//	public static void main(String[] args)
+//	{
+//		if ( args.length > 0 ) {
+//			for (String s : args) {
+//				System.out.println(base64Digest(s));
+////				System.out.print(s + "\t\t\t");System.out.println("obfuscate:" + obfuscate(s));
+//			}
+//		} else {
+//			usage(System.out);
+//		}
+//	}
+	
+	public static void main(String[] args)	// for testing
 	{
-		if ( args.length > 0 ) {
-			for (String s : args) {
-				System.out.println(base64Digest(s));
-//				System.out.print(s + "\t\t\t");System.out.println("obfuscate:" + obfuscate(s));
-			}
-		} else {
-			usage(System.out);
+		String certificateAsString = "-----BEGIN CERTIFICATE-----\n" + 
+				"MIIHqDCCBZCgAwIBAgIUESCpFlJRCRjMUdKYM98EtPNxt8owDQYJKoZIhvcNAQEL\n" + 
+				"BQAwgYUxCzAJBgNVBAYTAk5MMR4wHAYDVQQKDBVRdW9WYWRpcyBUcnVzdGxpbmsg\n" + 
+				"QlYxKDAmBgNVBAsMH0lzc3VpbmcgQ2VydGlmaWNhdGlvbiBBdXRob3JpdHkxLDAq\n" + 
+				"BgNVBAMMI1F1b1ZhZGlzIENTUCAtIFBLSSBPdmVyaGVpZCBDQSAtIEcyMB4XDTE0\n" + 
+				"MTExODEwNDUzM1oXDTE1MTExODEwNDUzMlowgb8xHTAbBgNVBAUTFDAwMDAwMDAx\n" + 
+				"MDAzMTY2OTQ2MDAwMQswCQYDVQQGEwJOTDEVMBMGA1UECBMMWnVpZC1Ib2xsYW5k\n" + 
+				"MRYwFAYDVQQHEw0ncy1HcmF2ZW5oYWdlMSkwJwYDVQQKEyBNaW5pc3RlcmllIHZh\n" + 
+				"biBFY29ub21pc2NoZSBaYWtlbjEOMAwGA1UECxMFRGljdHUxJzAlBgNVBAMTHnd3\n" + 
+				"dy5taWpub25kZXJuZW1pbmdzZG9zc2llci5ubDCCASIwDQYJKoZIhvcNAQEBBQAD\n" + 
+				"ggEPADCCAQoCggEBANbeYKr6sVzE2PX0kD6mAK89WFTpyvYACUBo12BML/sciT0R\n" + 
+				"gxdEInIAAib3rtLRpfIKrCtgzh9u/SGjlOw95A2jEbIuvQgRJIDnTu4NMcENHlGb\n" + 
+				"Jkbo36TC+O3eVLbUUdR7HE2oLbFzkOBvG/3MuFQPC+h4H5e1tGMNCaP6R6fYwMcs\n" + 
+				"u1l0kSHR0MafZk3X8FUaaHyUyRavobpoSUHQUFPRkKlAXdqTycwVJxjb2harfMys\n" + 
+				"daO3Bqb40wNet9acyRQQPqg9PywZ0jRwj655QqPv1039jIF5Z4oBnfMTT2J/UteZ\n" + 
+				"snFYqybQo8uEilyGb30jImq9Qjck2vcDSxHupT0CAwEAAaOCAtIwggLOMAwGA1Ud\n" + 
+				"EwEB/wQCMAAwggExBgNVHSAEggEoMIIBJDCCASAGCmCEEAGHawECBQYwggEQMIHX\n" + 
+				"BggrBgEFBQcCAjCByhqBx1JlbGlhbmNlIG9uIHRoaXMgY2VydGlmaWNhdGUgYnkg\n" + 
+				"YW55IHBhcnR5IGFzc3VtZXMgYWNjZXB0YW5jZSBvZiB0aGUgcmVsZXZhbnQgUXVv\n" + 
+				"VmFkaXMgQ2VydGlmaWNhdGlvbiBQcmFjdGljZSBTdGF0ZW1lbnQgYW5kIG90aGVy\n" + 
+				"IGRvY3VtZW50cyBpbiB0aGUgUXVvVmFkaXMgcmVwb3NpdG9yeSAgKGh0dHA6Ly93\n" + 
+				"d3cucXVvdmFkaXNnbG9iYWwuY29tKS4wNAYIKwYBBQUHAgEWKGh0dHA6Ly93d3cu\n" + 
+				"cXVvdmFkaXNnbG9iYWwuY29tL3JlcG9zaXRvcnkwaQYDVR0RBGIwYKA+BgorBgEE\n" + 
+				"AYI3FAIDoDAMLjIuMTYuNTI4LjEuMTAwMy4xLjMuNS4yLjEtMDAwMDAwMDEwMDMx\n" + 
+				"NjY5NDYwMDCCHnd3dy5taWpub25kZXJuZW1pbmdzZG9zc2llci5ubDBzBggrBgEF\n" + 
+				"BQcBAQRnMGUwKgYIKwYBBQUHMAGGHmh0dHA6Ly9vY3NwLnF1b3ZhZGlzZ2xvYmFs\n" + 
+				"LmNvbTA3BggrBgEFBQcwAoYraHR0cDovL3RydXN0LnF1b3ZhZGlzZ2xvYmFsLmNv\n" + 
+				"bS9xdm9jYWcyLmNydDAOBgNVHQ8BAf8EBAMCA6gwHQYDVR0lBBYwFAYIKwYBBQUH\n" + 
+				"AwEGCCsGAQUFBwMCMB8GA1UdIwQYMBaAFGnLf1B2AIZTlXkSwVh2HxPv8k2jMDoG\n" + 
+				"A1UdHwQzMDEwL6AtoCuGKWh0dHA6Ly9jcmwucXVvdmFkaXNnbG9iYWwuY29tL3F2\n" + 
+				"b2NhZzIuY3JsMB0GA1UdDgQWBBQDk0P/als3z+/ta/HqxZqSMQv1GTANBgkqhkiG\n" + 
+				"9w0BAQsFAAOCAgEAP6D8v4Em6hLx3FXgd9DOm3ix+j5vMH8uN7E9M1mZoXBwOe3f\n" + 
+				"88Fs4OtdynnN642eqKMKLvJOtp8tUrH3L0z/ncJEHG49SGw201ZHoJNZY5umOzO1\n" + 
+				"1G0QyXC8aqgGbdAvzXe8OrEcOYZ8DSBI/qDegAM2z/byAIK4Nf2IJTRT9ADRMDkA\n" + 
+				"901MKQ3nr7fX4CplfYGbuRNgQm1w5gTepZg82m2mjaHnk3VoGPWWtHv3qW+A867D\n" + 
+				"gZkwk1d2yxS6kM44kmDyjhfS1PLWLNsF7Qs7KKGyRC518Tro+jjg+VTnZn7aGIP6\n" + 
+				"2VEVuHqKhmtCMGKfzz03Mly2FNoLjeaCtZHUu+GzvYRFL6RUB1hR9wuN42+OF1br\n" + 
+				"zM1oSa/rDNRgQgoxGOBa4v1Ahhkmqfc4ezVYGCmGSexgYc6dPuPNJiu7MeC130CV\n" + 
+				"GJYYUMQfnt7fnaxnbxlHDoEm0sceLD8727/Pmth9LdCuiaJ5Zq76h86TQ7rLw9gO\n" + 
+				"i0HI3B+WLS1mfibzalQBs8cKiqvZmuGr+QauL90kfJDIU7SjNucW6kDxwa6s2ot5\n" + 
+				"UaYL4u8Tg+w+mW96A8OOAVUiiKVOeLq0L6v8aIvjDwIFgb3CX1u4zlshqmR1W9kJ\n" + 
+				"utqihtsVcVwQKi03s+WoXX4FYJ0f+J8wroAh0PqzIue/90/iBG/zfe2qwRU=\n" + 
+				"-----END CERTIFICATE-----";
+		try {
+//			parseCertificate(certificateAsString);
+			 List<X509Certificate> l = parseCertificates(certificateAsString);
+			 for (X509Certificate c : l) {
+				 System.out.println(c.getSubjectDN().getName());
+			 }
 		}
+		catch (CertificateException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	
 	}
 
+	
+	
+	
 	/*
 	public static void main(String[] args)	// for testing
 	{

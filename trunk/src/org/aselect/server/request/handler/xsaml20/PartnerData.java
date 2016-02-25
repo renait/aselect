@@ -153,7 +153,7 @@ public class PartnerData
 	{
 		this.addcertificate = addcertificate;
 	}
-
+	
 	public synchronized String getAttributeConsumerServiceindex()
 	{
 		return attributeconsumerserviceindex;
@@ -318,6 +318,10 @@ public class PartnerData
 		// signing information
 		private String addkeyname= null;
 		private String addcertificate = null;
+		private String includesigningcertificate = null;
+		private String includeencryptioncertificate = null;
+		private String includesigningkeyname = null;
+		private String includeencryptionkeyname = null;
 		private String specialsettings = null;
 		private Vector<HandlerInfo> handlers = new Vector<HandlerInfo>();
 			
@@ -505,6 +509,7 @@ public class PartnerData
 			this.addcertificate = addcertificate;
 		}
 
+
 		/**
 		 * @return the specialsettings
 		 */
@@ -565,6 +570,46 @@ public class PartnerData
 		 */
 		public boolean removeNamespaceInfo(HandlerInfo namespaceinfo) {
 			return namespaces.removeElement(namespaceinfo);
+		}
+
+		public synchronized String getIncludesigningcertificate()
+		{
+			return includesigningcertificate;
+		}
+
+		public synchronized void setIncludesigningcertificate(String includesigningcertificate)
+		{
+			this.includesigningcertificate = includesigningcertificate;
+		}
+
+		public synchronized String getIncludeencryptioncertificate()
+		{
+			return includeencryptioncertificate;
+		}
+
+		public synchronized void setIncludeencryptioncertificate(String includeencryptioncertificate)
+		{
+			this.includeencryptioncertificate = includeencryptioncertificate;
+		}
+
+		public synchronized String getIncludesigningkeyname()
+		{
+			return includesigningkeyname;
+		}
+
+		public synchronized void setIncludesigningkeyname(String includesigningkeyname)
+		{
+			this.includesigningkeyname = includesigningkeyname;
+		}
+
+		public synchronized String getIncludeencryptionkeyname()
+		{
+			return includeencryptionkeyname;
+		}
+
+		public synchronized void setIncludeencryptionkeyname(String includeencryptionkeyname)
+		{
+			this.includeencryptionkeyname = includeencryptionkeyname;
 		}
 
 	}
@@ -800,6 +845,7 @@ public class PartnerData
 		}
 		return testdata4partner;
 	}
+
 
 	
 }

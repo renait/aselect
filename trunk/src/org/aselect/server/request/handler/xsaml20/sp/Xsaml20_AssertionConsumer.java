@@ -51,6 +51,7 @@ import org.aselect.system.utils.Utils;
 import org.aselect.system.utils.crypto.Auxiliary;
 import org.joda.time.DateTime;
 import org.opensaml.Configuration;
+import org.opensaml.common.SAMLObject;
 import org.opensaml.common.SAMLObjectBuilder;
 import org.opensaml.common.SAMLVersion;
 import org.opensaml.common.xml.SAMLConstants;
@@ -59,6 +60,7 @@ import org.opensaml.saml2.metadata.ArtifactResolutionService;
 import org.opensaml.ws.soap.soap11.Envelope;
 import org.opensaml.xml.XMLObject;
 import org.opensaml.xml.XMLObjectBuilderFactory;
+import org.opensaml.xml.encryption.EncryptedKey;
 import org.opensaml.xml.io.Unmarshaller;
 import org.opensaml.xml.io.UnmarshallerFactory;
 import org.opensaml.xml.util.XMLHelper;
@@ -331,14 +333,26 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 				UnmarshallerFactory factory = Configuration.getUnmarshallerFactory();
 				Unmarshaller unmarshaller = factory.getUnmarshaller((Element) eltArtifactResponse);
 				ArtifactResponse artifactResponse = (ArtifactResponse) unmarshaller.unmarshall((Element) eltArtifactResponse);
-	
+				
+				//////////////////////////////	RH, 20160216, sn
+				// Get status
+				if ( artifactResponse.getStatus() != null && artifactResponse.getStatus().getStatusCode() != null &&
+						StatusCode.SUCCESS_URI.equals(artifactResponse.getStatus().getStatusCode().getValue()) ) {
+					_systemLogger.log(Level.INFO, MODULE, sMethod, "ArtifactResponse Status="+artifactResponse.getStatus().getStatusCode().getValue());
+				} else {
+					// For now we do a warning
+					_systemLogger.log(Level.WARNING, MODULE, sMethod, "ArtifactResponse Status="+artifactResponse.getStatus().getStatusCode().getValue());
+				}
+				///////////////////////////////	RH, 20160216, en
+				
 				Issuer issuer = artifactResponse.getIssuer();
 				String sIssuer = (issuer == null)? null: issuer.getValue();
 				// If issuer is not present in the response, use sASelectServerUrl value retrieved from metadata
 				// else use value from the response
 				String artifactResponseIssuer = (sIssuer == null || "".equals(sIssuer))? sASelectServerUrl: sIssuer;
 	
-				_systemLogger.log(Level.INFO, MODULE, sMethod, "Do artifactResponse signature verification="+is_bVerifySignature());
+				_systemLogger.log(Level.INFO, MODULE, sMethod, "Do Assertion signature verification="+is_bVerifySignature());
+				_systemLogger.log(Level.INFO, MODULE, sMethod, "Do ArtifactResponse signature verification="+isVerifyArtifactResponseSignature());
 //				if (is_bVerifySignature()) {	// RH, 20121205, o
 				if (is_bVerifySignature() || isVerifyArtifactResponseSignature()) {	// RH, 20121205, n
 					// Check signature of artifactResolve here
@@ -466,12 +480,14 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "RemoteRid="+sRemoteRid +" LocalRid="+sLocalRid + " StatusCode="+sStatusCode);
 				_htSessionContext = _oSessionManager.getSessionContext(sLocalRid);
 				if (_htSessionContext == null) {
-					_systemLogger.log(Level.WARNING, MODULE, sMethod, "Unknown session in response from cross aselect server");
+//					_systemLogger.log(Level.WARNING, MODULE, sMethod, "Unknown session in response from cross aselect server");
+					_systemLogger.log(Level.WARNING, MODULE, sMethod, "Unknown session in response from remote server");
 					throw new ASelectCommunicationException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 				}
 				
 				if (sStatusCode.equals(StatusCode.SUCCESS_URI)) {
-					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Response was successful " + samlResponse.toString());
+//					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Response was successful " + samlResponse.toString());
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Response was successful, Destination: " + samlResponse.getDestination());
 					_systemLogger.log(Level.FINE, MODULE, sMethod, "Number of Assertions found: " +  samlResponse.getAssertions().size());
 					Assertion samlAssertion = samlResponse.getAssertions().get(0);
 					_systemLogger.log(Level.FINE, MODULE, sMethod, "Assertion ID=" +samlAssertion.getID());
@@ -504,10 +520,42 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 					}
 					// 20120308
 					
-					String sNameID = samlAssertion.getSubject().getNameID().getValue();
-					_systemLogger.log(Level.FINE, MODULE, sMethod, "NameID:" + sNameID);
-					String sNameIDQualifier = samlAssertion.getSubject().getNameID().getNameQualifier();
-					_systemLogger.log(Level.FINE, MODULE, sMethod, "NameIDQualifier:" + sNameIDQualifier);
+					//	RH, 20160216, sn
+					// Might be an encrypted NameID 
+					String sNameID = null;
+					String sNameIDQualifier = null;
+					Subject subject = samlAssertion.getSubject();
+
+					NameID nameid = null;
+
+					// Maybe EncryptedID
+					// Do decryption here
+					EncryptedID encryptedid = subject.getEncryptedID();
+					if (encryptedid != null) {
+						String sEncryptedID = XMLHelper.nodeToString(encryptedid.getDOM());
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Found EncryptedID:" + sEncryptedID);
+						// Try to get the NameID
+						SAMLObject decryptedObject = SamlTools.decryptSamlObject(encryptedid);
+						if ( decryptedObject != null ) {
+							String sDecryptedID = Auxiliary.obfuscate(XMLHelper.nodeToString(decryptedObject.getDOM()));
+							_systemLogger.log(Level.FINEST, MODULE, sMethod, "Decrypted ID:" + sDecryptedID);
+						}
+						nameid = (NameID) decryptedObject;	// Should be a NameID Element
+					} else { // should contain nameid
+						nameid = subject.getNameID();
+					}
+					
+//					String sNameID = samlAssertion.getSubject().getNameID().getValue();	// RH, 20160216, o
+					if  ( nameid != null ) {
+						sNameID = nameid.getValue();
+						_systemLogger.log(Level.FINE, MODULE, sMethod, "NameID:" + Auxiliary.obfuscate(sNameID));
+						sNameIDQualifier = nameid.getNameQualifier();
+						_systemLogger.log(Level.FINE, MODULE, sMethod, "NameIDQualifier:" + sNameIDQualifier);
+					} else {
+						_systemLogger.log(Level.WARNING, MODULE, sMethod, "No NameID found:");
+						sNameID = "";
+					}
+					//	RH, 20160216, en
 
 					// Now check for time interval validation
 					// We only check first object from the list
@@ -564,33 +612,81 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 					HashMap hmSamlAttributes = new HashMap();
 					String sEncodedAttributes = null;
 					List<AttributeStatement> lAttrStatList = samlAssertion.getAttributeStatements();
-					Iterator<AttributeStatement> iASList = lAttrStatList.iterator();
-					while (iASList.hasNext()) {
-						AttributeStatement sAttr = iASList.next();
-						List<Attribute> lAttr = sAttr.getAttributes();
-						Iterator<Attribute> iAttr = lAttr.iterator();
-						while (iAttr.hasNext()) {
-							Attribute attr = iAttr.next();
-							String sAttrName = attr.getName();
-							
-							String sAttrValue = null;// RH, 20120124, sn
-							List <XMLObject> aValues = attr.getAttributeValues();
-							if ( aValues != null && aValues.size() == 1 ) {	// For now we only allow single valued simple type xs:string attributes
-	                            XMLObject xmlObj = aValues.get(0);
-//								XSStringImpl xsString = (XSStringImpl) attr.getOrderedChildren().get(0);// RH, 20120124, so
-//								String sAttrValue = xsString.getValue();// RH, 20120124, o
-//								sAttrValue = xsString.getValue();// RH, 20120124, eo
-								sAttrValue = xmlObj.getDOM().getFirstChild().getTextContent();
-//								_systemLogger.log(Level.INFO, MODULE, sMethod, "Name=" + sAttrName + " Value=" + sAttrValue);
-								_systemLogger.log(Level.INFO, MODULE, sMethod, "Name=" + sAttrName + " Value=" + Auxiliary.obfuscate(sAttrValue));
+					if (lAttrStatList != null) {
+						Iterator<AttributeStatement> iASList = lAttrStatList.iterator();
+						while (iASList.hasNext()) {
+							AttributeStatement sAttr = iASList.next();
+	
+							// First decrypt if there are any EncryptedAttributes
+							if (sAttr.getEncryptedAttributes() != null) {
+								_systemLogger.log(Level.FINEST, MODULE, sMethod, "Start decrypting " + sAttr.getEncryptedAttributes().size() + " attributes");
+								Iterator<EncryptedAttribute> encryptAttrIt = sAttr.getEncryptedAttributes().iterator();
+								while (encryptAttrIt.hasNext()) {
+									final EncryptedAttribute encryptedAttribute = encryptAttrIt.next();
+									// For every encrypted attribute
+									final Attribute attribute = (Attribute) SamlTools.decryptSamlObject(encryptedAttribute);
+									if ( attribute != null ) {
+									// (re)Inject the Attribute in the assertion
+										sAttr.getAttributes().add(attribute);
+										_systemLogger.log(Level.FINEST, MODULE, sMethod, "Decrypted attribute "+ attribute.getName());
+									} else {
+										_systemLogger.log(Level.WARNING, MODULE, sMethod, "Failed to decrypted attribute");
+									}
+								}
+							} else {
+								_systemLogger.log(Level.FINEST, MODULE, sMethod, "No fully encrypted attribute(s) found, continuing...");
 							}
-							else {
-								_systemLogger.log(Level.INFO, MODULE, sMethod, "Only single valued attributes allowed, skipped attribute Name=" + sAttrName);
-							}	// RH, 20120124, en
-							if ("attributes".equals(sAttrName))
-								sEncodedAttributes = sAttrValue;
-							else
-								hmSamlAttributes.put(sAttrName, sAttrValue);
+							
+							// Then get all attributes
+							List<Attribute> lAttr = sAttr.getAttributes();
+							Iterator<Attribute> iAttr = lAttr.iterator();
+							while (iAttr.hasNext()) {
+								Attribute attr = iAttr.next();
+								String sAttrName = attr.getName();
+								
+								String sAttrValue = null;// RH, 20120124, sn
+								List <XMLObject> aValues = attr.getAttributeValues();
+								if ( aValues != null && aValues.size() == 1 ) {	// For now we only allow single valued simple type xs:string attributes
+		                            XMLObject xmlObj = aValues.get(0);
+	//								XSStringImpl xsString = (XSStringImpl) attr.getOrderedChildren().get(0);// RH, 20120124, so
+	//								String sAttrValue = xsString.getValue();// RH, 20120124, o
+	//								sAttrValue = xsString.getValue();// RH, 20120124, eo
+	    							String sValue = Auxiliary.obfuscate(XMLHelper.nodeToString(xmlObj.getDOM()));
+	    							_systemLogger.log(Level.FINEST, MODULE, sMethod, "sValue:" + sValue);
+	//    							String sChild = Auxiliary.obfuscate(XMLHelper.nodeToString(xmlObj.getDOM().getFirstChild()));
+	    							EncryptedID eID = null;
+	    							if (xmlObj.getOrderedChildren() != null && !xmlObj.getOrderedChildren().isEmpty()) {
+	//        							String sChild = Auxiliary.obfuscate(XMLHelper.nodeToString(xmlObj.getOrderedChildren().get(0).getDOM()));
+	//        							_systemLogger.log(Level.FINEST, MODULE, sMethod, "sChild:" + sChild);
+	//        							String sLocalName = xmlObj.getDOM().getFirstChild().getLocalName();
+	        							String sLocalName = xmlObj.getOrderedChildren().get(0).getDOM().getLocalName();
+	        							_systemLogger.log(Level.FINEST, MODULE, sMethod, "sLocalName:" + sLocalName);
+	        							if ("EncryptedID".equals(sLocalName)) {
+	        								eID = (EncryptedID)xmlObj.getOrderedChildren().get(0);
+	        	                            if ( eID != null) {
+	        	                            	final SAMLObject attributevalue = SamlTools.decryptSamlObject(eID);
+	//        	    							_systemLogger.log(Level.FINEST, MODULE, sMethod, "attributevalue decrypted");
+	        	    							String sDecryptedValue = Auxiliary.obfuscate(XMLHelper.nodeToString(attributevalue.getDOM()));
+	        	    							_systemLogger.log(Level.FINEST, MODULE, sMethod, "sDecryptedValue:" + sDecryptedValue);
+	        		                            xmlObj = attributevalue;
+	        	                            } else {
+	        									_systemLogger.log(Level.WARNING, MODULE, sMethod, "AtrributeValue not an instance of EncryptedElementType");
+	        	                            }
+	        							}
+	    							}
+	    							
+									sAttrValue = xmlObj.getDOM().getFirstChild().getTextContent();
+	//								_systemLogger.log(Level.INFO, MODULE, sMethod, "Name=" + sAttrName + " Value=" + sAttrValue);
+									_systemLogger.log(Level.INFO, MODULE, sMethod, "Name=" + sAttrName + " Value=" + Auxiliary.obfuscate(sAttrValue));
+								}
+								else {
+									_systemLogger.log(Level.INFO, MODULE, sMethod, "Only single valued attributes allowed, skipped attribute Name=" + sAttrName);
+								}	// RH, 20120124, en
+								if ("attributes".equals(sAttrName))
+									sEncodedAttributes = sAttrValue;
+								else
+									hmSamlAttributes.put(sAttrName, sAttrValue);
+							}
 						}
 					}
 					
@@ -715,7 +811,7 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 					String sUid = (String)hmSamlAttributes.get("uid");
 					if (sUid == null || sUid.equals(""))
 						hmSamlAttributes.put("uid", sNameID);
-					_systemLogger.log(Level.INFO, MODULE, sMethod, "NameID=" + sNameID + " remote_rid=" + sRemoteRid
+					_systemLogger.log(Level.INFO, MODULE, sMethod, "NameID=" + Auxiliary.obfuscate(sNameID) + " remote_rid=" + sRemoteRid
 							+ " local_rid=" + sLocalRid + " sel_level=" + sSelectedLevel + " organization/authsp="
 							+ sAssertIssuer);
 

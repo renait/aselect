@@ -19,6 +19,8 @@ import java.security.PublicKey;
 import java.security.cert.CertificateEncodingException;
 import java.security.cert.CertificateException;
 import java.security.interfaces.RSAPublicKey;
+import java.util.ArrayList;
+import java.util.Collections;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
@@ -49,6 +51,8 @@ import org.opensaml.saml2.core.AudienceRestriction;
 import org.opensaml.saml2.core.AuthnRequest;
 import org.opensaml.saml2.core.AuthnStatement;
 import org.opensaml.saml2.core.Conditions;
+import org.opensaml.saml2.core.EncryptedElementType;
+import org.opensaml.saml2.core.EncryptedID;
 import org.opensaml.saml2.core.Issuer;
 import org.opensaml.saml2.core.LogoutRequest;
 import org.opensaml.saml2.core.LogoutResponse;
@@ -58,20 +62,33 @@ import org.opensaml.saml2.core.SessionIndex;
 import org.opensaml.saml2.core.Status;
 import org.opensaml.saml2.core.StatusCode;
 import org.opensaml.saml2.core.SubjectConfirmationData;
+import org.opensaml.saml2.encryption.Decrypter;
+import org.opensaml.saml2.encryption.EncryptedElementTypeEncryptedKeyResolver;
 import org.opensaml.security.SAMLSignatureProfileValidator;
 import org.opensaml.ws.message.decoder.MessageDecodingException;
 import org.opensaml.ws.message.encoder.MessageEncodingException;
 import org.opensaml.ws.transport.http.HttpServletResponseAdapter;
 import org.opensaml.xml.XMLObject;
 import org.opensaml.xml.XMLObjectBuilderFactory;
+import org.opensaml.xml.encryption.ChainingEncryptedKeyResolver;
+import org.opensaml.xml.encryption.DecryptionException;
 import org.opensaml.xml.encryption.EncryptionConstants;
+import org.opensaml.xml.encryption.InlineEncryptedKeyResolver;
+import org.opensaml.xml.encryption.SimpleRetrievalMethodEncryptedKeyResolver;
 import org.opensaml.xml.io.Marshaller;
 import org.opensaml.xml.io.MarshallerFactory;
 import org.opensaml.xml.io.MarshallingException;
 import org.opensaml.xml.io.Unmarshaller;
 import org.opensaml.xml.io.UnmarshallingException;
 import org.opensaml.xml.security.credential.BasicCredential;
+import org.opensaml.xml.security.credential.CollectionCredentialResolver;
+import org.opensaml.xml.security.credential.Credential;
+import org.opensaml.xml.security.keyinfo.KeyInfoCredentialResolver;
 import org.opensaml.xml.security.keyinfo.KeyInfoHelper;
+import org.opensaml.xml.security.keyinfo.KeyInfoProvider;
+import org.opensaml.xml.security.keyinfo.LocalKeyInfoCredentialResolver;
+import org.opensaml.xml.security.keyinfo.provider.InlineX509DataProvider;
+import org.opensaml.xml.security.keyinfo.provider.RSAKeyValueProvider;
 import org.opensaml.xml.signature.KeyInfo;
 import org.opensaml.xml.signature.Signature;
 import org.opensaml.xml.signature.SignatureConstants;
@@ -663,6 +680,103 @@ public class SamlTools
 
 		return obj;
 	}
+	
+	
+//	public static SAMLObject decryptSamlObject(EncryptedID obj)
+	public static SAMLObject decryptSamlObject(EncryptedElementType obj)
+	 
+	{
+		String sMethod = "decryptSamlObject";
+		//
+		// One-time init code here
+		//
+		ASelectSystemLogger _systemLogger = ASelectSystemLogger.getHandle();
+
+		ASelectConfigManager _oASelectConfigManager = ASelectConfigManager.getHandle();
+
+		PrivateKey privKey = _oASelectConfigManager.getDefaultPrivateKey();
+
+		BasicCredential credential = new BasicCredential();
+		credential.setPrivateKey(privKey);
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Found private key with format:" + privKey.getFormat());
+
+		// Collection of local credentials, where each contains
+		// a private key that corresponds to a public key that may
+		// have been used by other parties for encryption
+//		List<Credential> localCredentials = getLocalCredentials();
+		// if we're gono take the init code out of the method we'll have better use the synchronized version
+//		List<Credential> localCredentials = new getLocalCredentials();
+		List<Credential> localCredentials = Collections.synchronizedList(new ArrayList<Credential>());
+		synchronized (localCredentials) {
+			localCredentials.add(credential);
+		}
+
+		CollectionCredentialResolver localCredResolver = new CollectionCredentialResolver(localCredentials);
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created CollectionCredentialResolver");
+		         
+		// Support EncryptedKey/KeyInfo containing decryption key hints via
+		// KeyValue/RSAKeyValue and X509Data/X509Certificate
+		List<KeyInfoProvider> kiProviders = new ArrayList<KeyInfoProvider>();
+		kiProviders.add( new RSAKeyValueProvider() );
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Added RSAKeyValueProvider to KeyInfoProvider List");
+		kiProviders.add( new InlineX509DataProvider() );
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Added InlineX509DataProvider to KeyInfoProvider List");
+		         
+		// Resolves local credentials by using information in the EncryptedKey/KeyInfo to query the supplied
+		// local credential resolver.
+		KeyInfoCredentialResolver kekResolver = new LocalKeyInfoCredentialResolver(kiProviders, localCredResolver);
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created KeyInfoCredentialResolver");
+		         
+		// Supports resolution of EncryptedKeys by 3 common placement mechanisms
+		ChainingEncryptedKeyResolver encryptedKeyResolver = new ChainingEncryptedKeyResolver();
+		encryptedKeyResolver.getResolverChain().add( new InlineEncryptedKeyResolver() );
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Added InlineEncryptedKeyResolver to ChainingEncryptedKeyResolver");
+		encryptedKeyResolver.getResolverChain().add( new EncryptedElementTypeEncryptedKeyResolver() );
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Added EncryptedElementTypeEncryptedKeyResolver to ChainingEncryptedKeyResolver");
+		encryptedKeyResolver.getResolverChain().add( new SimpleRetrievalMethodEncryptedKeyResolver() );
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Added SimpleRetrievalMethodEncryptedKeyResolver to ChainingEncryptedKeyResolver");
+		 
+		Decrypter samlDecrypter =
+		    new Decrypter(null, kekResolver, encryptedKeyResolver);
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created Decrypter with providername: " + samlDecrypter.getJCAProviderName());
+	
+		// We'll store the decryptor later, for now we just use it
+//		storeDecrypter(samlDecrypter);
+		         
+		// End init code
+		         
+		/* ........................... */
+		    
+		// Begin message processing code
+		        
+		// for now we use the decryptor just created;
+//		Decrypter decrypter = getDecrypter();
+		Decrypter decrypter = samlDecrypter;
+//		EncryptedAssertion encryptedAssertion = getEncryptedAssertion();
+//		try {
+//		    Assertion assertion = decrypter.decrypt(encryptedAssertion);
+//		} catch (DecryptionException e) {
+//		    e.printStackTrace();
+//		}
+		
+//		EncryptedID encryptedEntityID = obj;
+//		SAMLObject samlObject = null;
+		XMLObject samlObject = null;
+		try {
+//		     samlObject = decrypter.decrypt(encryptedEntityID);
+		     samlObject = decrypter.decryptData(obj.getEncryptedData());
+//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "SamlObject decrypted");
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "XMLObject decrypted");
+			 if (! (samlObject instanceof SAMLObject)) {
+				 samlObject = null;
+				 throw new DecryptionException("Decrypted XMLObject was not an instance of SAMLObject");
+		        }
+			 } catch (DecryptionException e) {
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Faled to decrypted SamlObject: " + e.getMessage());
+		}
+		return (SAMLObject) samlObject;
+	}
+	
 	
 
 	/**
