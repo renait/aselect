@@ -169,6 +169,10 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 		boolean addcertificate = false;
 		boolean usesha256 = false;
 		// RH, 20110113, en
+		boolean includesigningcertificate = true;	// RH, 20160225, n, defaults to true for backwards compatibility
+		boolean includesigningkeyname = false;	// RH, 20160225, n, defaults to false for backwards compatibility
+		boolean includeencryptioncertificate = false;	// RH, 20160225, n, defaults to false for backwards compatibility
+		boolean includeencryptionkeyname = false;	// RH, 20160225, n, defaults to false for backwards compatibility
 		
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "Starting to build metadata");
 //		 RH, 20110111, sn
@@ -187,8 +191,25 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 		if (partnerData != null) {
 			addkeyname = Boolean.parseBoolean(partnerData.getMetadata4partner().getAddkeyname());
 			addcertificate = Boolean.parseBoolean(partnerData.getMetadata4partner().getAddcertificate());
+			
+			// RH, 20160225, sn
+			String _includesigningcertificate = partnerData.getMetadata4partner().getIncludesigningcertificate();
+			if (_includesigningcertificate != null)
+				includesigningcertificate = Boolean.parseBoolean(_includesigningcertificate);
+			String _includeencryptioncertificate = partnerData.getMetadata4partner().getIncludeencryptioncertificate();
+			if (_includeencryptioncertificate != null)
+				includeencryptioncertificate = Boolean.parseBoolean(_includeencryptioncertificate);
+			String _includesigningkeyname = partnerData.getMetadata4partner().getIncludesigningkeyname();
+			if (_includesigningkeyname != null)
+				includesigningkeyname = Boolean.parseBoolean(_includesigningkeyname);
+			String _includeencryptionkeyname = partnerData.getMetadata4partner().getIncludeencryptionkeyname();
+			if (_includeencryptionkeyname != null)
+				includeencryptionkeyname = Boolean.parseBoolean(_includeencryptionkeyname);
+			// RH, 20160225, en
+
 			String specialsettings = partnerData.getMetadata4partner().getSpecialsettings();
 			usesha256 = specialsettings != null && specialsettings.toLowerCase().contains("sha256");
+			
 		}
 		
 		// Create the EntityDescriptor
@@ -221,7 +242,9 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 		}
 		//	RH, 20140320, en
 		
-		// Create the KeyDescriptor
+		
+		
+		// Create the KeyDescriptor for signing certificate
 		SAMLObjectBuilder<KeyDescriptor> keyDescriptorBuilder = (SAMLObjectBuilder<KeyDescriptor>) _oBuilderFactory
 				.getBuilder(KeyDescriptor.DEFAULT_ELEMENT_NAME);
 		KeyDescriptor keyDescriptor = keyDescriptorBuilder.buildObject();
@@ -239,10 +262,13 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 		X509DataBuilder x509DataBuilder = (X509DataBuilder) _oBuilderFactory.getBuilder(X509Data.DEFAULT_ELEMENT_NAME);
 		X509Data x509Data = x509DataBuilder.buildObject();
 		x509Data.getX509Certificates().add(x509Certificate);
-		keyInfo.getX509Datas().add(x509Data);
+		if (includesigningcertificate)	// RH, 20160225, n
+			keyInfo.getX509Datas().add(x509Data);
 		
-		if ( addkeyname ) {
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "Add keyname to keyinfo");
+//		if ( addkeyname ) {	// RH, 20160225, o
+		if ( includesigningkeyname || addkeyname /* backwards compatibility */  ) {	// RH, 20160225, n
+//			_systemLogger.log(Level.INFO, MODULE, sMethod, "Add keyname to keyinfo");	// RH, 20160223, o
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "Add keyname to Signing keyinfo");	// RH, 20160223, n
 
 			XMLSignatureBuilder<KeyName> keyNameBuilder = (XMLSignatureBuilder<KeyName>) _oBuilderFactory
 			.getBuilder(KeyName.DEFAULT_ELEMENT_NAME);
@@ -253,6 +279,36 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 
 		keyDescriptor.setKeyInfo(keyInfo);
 
+		// RH, 20160223, sn
+		// Create the KeyDescriptor for encryption certificate
+		KeyDescriptor keyDescriptorEncryption = keyDescriptorBuilder.buildObject();
+		keyDescriptorEncryption.setUse(org.opensaml.xml.security.credential.UsageType.ENCRYPTION);
+
+		KeyInfo keyInfoEncryption = keyInfoBuilder.buildObject();
+
+		X509Certificate x509CertificateEncryption = x509CertificateBuilder.buildObject();
+		x509CertificateEncryption.setValue(getSigningCertificate());	// For now we use the same for signing and encryption
+
+		X509Data x509DataEncryption = x509DataBuilder.buildObject();
+		x509DataEncryption.getX509Certificates().add(x509CertificateEncryption);
+		if (includeencryptioncertificate)	// RH, 20160225, n
+			keyInfoEncryption.getX509Datas().add(x509DataEncryption);
+		
+		if ( includeencryptionkeyname ) {
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "Add keyname to Encryption keyinfo");
+
+			XMLSignatureBuilder<KeyName> keyNameBuilder = (XMLSignatureBuilder<KeyName>) _oBuilderFactory
+			.getBuilder(KeyName.DEFAULT_ELEMENT_NAME);
+			KeyName keyNameEncryption = keyNameBuilder.buildObject();
+			keyNameEncryption.setValue( _configManager.getDefaultCertId());	// For now we use the same for signing and encryption
+			keyInfoEncryption.getKeyNames().add(keyNameEncryption);
+		}
+
+		keyDescriptorEncryption.setKeyInfo(keyInfoEncryption);
+		// RH, 20160223, en
+		
+		
+		
 		// Create the SPSSODescriptor
 		SAMLObjectBuilder<SPSSODescriptor> ssoDescriptorBuilder = (SAMLObjectBuilder<SPSSODescriptor>) _oBuilderFactory
 				.getBuilder(SPSSODescriptor.DEFAULT_ELEMENT_NAME);
@@ -473,7 +529,11 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 		ssoDescriptor.setWantAssertionsSigned(true);
 		ssoDescriptor.setAuthnRequestsSigned(true);	// RH, 20120727, n. Actually we always sign the request. Just never told so
 		
-		ssoDescriptor.getKeyDescriptors().add(keyDescriptor);
+		if ( includesigningcertificate || includesigningkeyname || addkeyname /* backwards compatibility */ )
+			ssoDescriptor.getKeyDescriptors().add(keyDescriptor);
+		if ( includeencryptioncertificate || includeencryptionkeyname )
+			ssoDescriptor.getKeyDescriptors().add(keyDescriptorEncryption);	// RH, 20160223, n
+		
 		ssoDescriptor.addSupportedProtocol(SAMLConstants.SAML20P_NS);
 		entityDescriptor.getRoleDescriptors().add(ssoDescriptor);
 

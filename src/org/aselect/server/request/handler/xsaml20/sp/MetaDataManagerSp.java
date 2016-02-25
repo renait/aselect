@@ -236,6 +236,33 @@ public class MetaDataManagerSp extends AbstractMetaDataManager
 				String metaaddcertificate = Utils.getSimpleParam(_configManager, _systemLogger, metadataSection, "addcertificate", false);
 				if (metaaddcertificate != null)
 					idpData.getMetadata4partner().setAddcertificate(metaaddcertificate);
+				// RH, 20160225, sn
+				Object keyDescriptorSection = Utils.getSimpleSection(_configManager, _systemLogger, metadataSection, "keydescriptor", false);
+				if (keyDescriptorSection == null) {
+					_systemLogger.log(Level.WARNING, MODULE, sMethod, "No keydescriptorsection element found in metadata section for: "+ sId + ", using defaults");
+				}
+				while (keyDescriptorSection != null) {
+					String usage = Utils.getSimpleParam(_configManager, _systemLogger, keyDescriptorSection, "usage", false);
+					if ("signing".equalsIgnoreCase(usage) ) {
+						String includesigningcertificate = Utils.getParamFromSection(_configManager, _systemLogger, keyDescriptorSection, "keyinfo", "includecertificate", false);
+						if (includesigningcertificate != null)
+							idpData.getMetadata4partner().setIncludesigningcertificate(includesigningcertificate);
+						String includesigningkeyname = Utils.getParamFromSection(_configManager, _systemLogger, keyDescriptorSection, "keyinfo", "includekeyname", false);
+						if (includesigningkeyname != null)
+							idpData.getMetadata4partner().setIncludesigningkeyname(includesigningkeyname);
+					}
+					if ("encryption".equalsIgnoreCase(usage) ) {
+						String includeencryptioncertificate = Utils.getParamFromSection(_configManager, _systemLogger, keyDescriptorSection, "keyinfo", "includecertificate", false);
+						if (includeencryptioncertificate != null)
+							idpData.getMetadata4partner().setIncludeencryptioncertificate(includeencryptioncertificate);
+						String includeencryptionkeyname = Utils.getParamFromSection(_configManager, _systemLogger, keyDescriptorSection, "keyinfo", "includekeyname", false);
+						if (includeencryptionkeyname != null)
+							idpData.getMetadata4partner().setIncludeencryptionkeyname(includeencryptionkeyname);
+					}
+					keyDescriptorSection = _configManager.getNextSection(keyDescriptorSection);
+				}
+				// RH, 20160225, en
+
 				String metaspecialSettings = Utils.getSimpleParam(_configManager, _systemLogger, metadataSection, "special_settings", false);
 				if (metaspecialSettings != null)
 					idpData.getMetadata4partner().setSpecialsettings(specialSettings);
