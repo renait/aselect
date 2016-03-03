@@ -17,7 +17,9 @@ import java.security.PublicKey;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
 import java.util.logging.Level;
@@ -34,6 +36,7 @@ import org.aselect.server.application.ApplicationManager;
 import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.server.log.ASelectAuthProofLogger;
 import org.aselect.server.log.ASelectAuthenticationLogger;
+import org.aselect.server.log.ASelectSystemLogger;
 import org.aselect.server.request.HandlerTools;
 import org.aselect.server.request.RequestState;
 import org.aselect.server.request.handler.xsaml20.PartnerData;
@@ -43,6 +46,7 @@ import org.aselect.server.request.handler.xsaml20.SecurityLevel;
 import org.aselect.server.request.handler.xsaml20.SoapManager;
 import org.aselect.server.tgt.TGTManager;
 import org.aselect.server.tgt.TGTIssuer;
+import org.aselect.server.utils.AttributeSetter;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectCommunicationException;
 import org.aselect.system.exception.ASelectException;
@@ -774,6 +778,16 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 						hmSamlAttributes.put("auth_proof", auth_proof); // original response, still base64 encoded
 //						_systemLogger.log(Level.FINEST, MODULE, sMethod, "auth_proof=" + auth_proof);
 					}
+
+					//	RH, 20160301, sn
+					// Do attribute processing
+					if (attributeSetters != null && attributeSetters.size() > 0) {
+						Map newAttr = AttributeSetter.attributeProcessing(new HashMap(), hmSamlAttributes, attributeSetters, _systemLogger);
+						hmSamlAttributes.putAll(newAttr);
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "htRemoteAttributes after attributesetting=" + Auxiliary.obfuscate(hmSamlAttributes));
+					}
+					//	RH, 20160301, en
+					
 					// And serialize them back to where they came from
 					sEncodedAttributes = org.aselect.server.utils.Utils.serializeAttributes(hmSamlAttributes);
 					hmSamlAttributes.put("attributes", sEncodedAttributes);
@@ -845,6 +859,7 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 					// End of IdP token
 
 					_systemLogger.log(Level.FINER, MODULE, sMethod, "htRemoteAttributes=" + Auxiliary.obfuscate(hmSamlAttributes));
+
 					handleSSOResponse(_htSessionContext, hmSamlAttributes, servletRequest, servletResponse);
 				}
 				else {

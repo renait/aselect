@@ -26,6 +26,7 @@ import java.security.PublicKey;
 import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Set;
 import java.util.Vector;
 import java.util.logging.Level;
@@ -45,6 +46,7 @@ import org.aselect.server.request.handler.xsaml20.idp.MetaDataManagerIdp;
 import org.aselect.server.session.SessionManager;
 import org.aselect.server.tgt.TGTIssuer;
 import org.aselect.server.tgt.TGTManager;
+import org.aselect.server.utils.AttributeSetter;
 import org.aselect.system.communication.client.IClientCommunicator;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectCommunicationException;
@@ -92,6 +94,9 @@ public abstract class ProtoRequestHandler extends AbstractRequestHandler
 	protected String _sUserLanguage = "";
 	protected String _sUserCountry = "";
 
+	protected LinkedList<AttributeSetter> attributeSetters = new LinkedList<AttributeSetter>();	// RH, 20160301, n
+
+	
 	/* (non-Javadoc)
 	 * @see org.aselect.server.request.handler.AbstractRequestHandler#init(javax.servlet.ServletConfig, java.lang.Object)
 	 */
@@ -120,6 +125,12 @@ public abstract class ProtoRequestHandler extends AbstractRequestHandler
 			_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Could not initialize", e);
 			throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR, e);
 		}
+		
+		// RH, 20160301, sn
+		AttributeSetter.initAttributesConfig(_configManager, oConfig, attributeSetters, _systemLogger);
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "attributeSetters size="+attributeSetters.size());
+		// RH, 20160301, en
+
 	}
 
 	// To be overridden
