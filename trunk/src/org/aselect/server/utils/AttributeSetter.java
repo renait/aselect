@@ -3,6 +3,8 @@ package org.aselect.server.utils;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.logging.Level;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.server.log.ASelectSystemLogger;
@@ -28,7 +30,10 @@ public class AttributeSetter
 	int iIndex = -1;
 	boolean bDestTgt = false;
 	boolean bSrcTgt = false;
-	
+
+	Pattern pMatchingPattern = null;
+	String sReplacementString = null;
+
 	public String getDest() { return sDest; }
 	public String getSrc() { return sSrc; }
 	public String getSep() { return sSep; }
@@ -37,8 +42,17 @@ public class AttributeSetter
 	public boolean isDestTgt() { return bDestTgt; }
 	public boolean isSrcTgt() { return bSrcTgt; }
 
+	public Pattern getMatchinePattern() { return pMatchingPattern; }
+	public String getReplacementString() { return sReplacementString; }
+
+
 	// Creator
 	public AttributeSetter(String sDest, String sSrc, String sSep, String sName, int iIndex, boolean bDestTgt, boolean bSrcTgt)
+	{
+		this(sDest, sSrc, sSep, sName, iIndex, bDestTgt, bSrcTgt, null, null);
+	}
+	// Creator
+	public AttributeSetter(String sDest, String sSrc, String sSep, String sName, int iIndex, boolean bDestTgt, boolean bSrcTgt, Pattern pMatchingPattern, String sReplacementString )
 	{
 		this.sDest = sDest;
 		this.sSrc = sSrc;
@@ -47,6 +61,9 @@ public class AttributeSetter
 		this.iIndex = iIndex;
 		this.bDestTgt = bDestTgt;
 		this.bSrcTgt = bSrcTgt;
+
+		this.pMatchingPattern = pMatchingPattern;
+		this.sReplacementString = sReplacementString;
 	}
 
 	/**
@@ -90,12 +107,33 @@ public class AttributeSetter
 			String sSep = ASelectConfigManager.getSimpleParam(oSetAttr, "sep", false);
 			String sName = ASelectConfigManager.getSimpleParam(oSetAttr, "name", false);
 			String sIndex = ASelectConfigManager.getSimpleParam(oSetAttr, "index", false);
+			
+			// RH, 20160229, sn
+			Pattern pMatchingPattern = null;
+			String sReplacementString = null;
+			String  sMatchingPattern = ASelectConfigManager.getSimpleParam(oSetAttr, "matchingpattern", false);
+			if ( sMatchingPattern != null ) {
+				try {
+					pMatchingPattern = Pattern.compile(sMatchingPattern);
+					sReplacementString = ASelectConfigManager.getSimpleParam(oSetAttr, "replacementstring", false);
+					sysLogger.log(Level.FINEST, MODULE, sMethod, "Compiled matchingpattern: " + pMatchingPattern.pattern());
+					sysLogger.log(Level.FINEST, MODULE, sMethod, "Found replacementstring: " + sReplacementString);
+				} catch ( PatternSyntaxException pex) {
+					sysLogger.log(Level.SEVERE, MODULE, sMethod, "Error in pattern: " + sMatchingPattern);
+					throw new ASelectConfigException(pex.getMessage(), pex);
+				}
+			} else {
+				sysLogger.log(Level.FINEST, MODULE, sMethod, "No matchingpattern found, skipping replacementstring");
+			}
+			// RH, 20160229, en
+
 			int iIndex = -1;
 			try {
 				iIndex = Integer.valueOf(sIndex);
 			} catch (Exception e) { }
 			sysLogger.log(Level.INFO, MODULE, sMethod, (bDestTgt?"tgt_":"")+"dest="+sDest+" "+(bSrcTgt?"tgt_":"")+"src="+sSrc+" name="+sName+" sep="+sSep+" index="+sIndex);
-			attributeSetters.add(new AttributeSetter(sDest, sSrc, sSep, sName, iIndex, bDestTgt, bSrcTgt));
+//			attributeSetters.add(new AttributeSetter(sDest, sSrc, sSep, sName, iIndex, bDestTgt, bSrcTgt));
+			attributeSetters.add(new AttributeSetter(sDest, sSrc, sSep, sName, iIndex, bDestTgt, bSrcTgt, pMatchingPattern, sReplacementString));
 			
 			// Obtain handle to the next requestor
 			try {
@@ -179,6 +217,13 @@ public class AttributeSetter
 					if (Utils.hasValue(sNewValue))
 						sValue = sNewValue;
 				}
+				
+				// RH, 20160229, sn
+				if (setter.getMatchinePattern() != null) {
+					sValue = setter.getMatchinePattern() .matcher(sValue).replaceAll(setter.getReplacementString());
+				}
+				// RH, 20160229, en
+				
 				if (setter.isDestTgt()) {
 					sysLog.log(Level.FINEST, MODULE, sMethod, "Tgt: "+sDest+"="+sValue);
 					htTGTContext.put(sDest, sValue);
