@@ -491,7 +491,8 @@ public class SamlTools
 				}
 			}
 //			if (conditions != null) {		// RH, 20160108, o
-			if (conditions != null && ((Assertion) obj).getConditions() == null) {	// RH, 20160108, n	// add only if not yet present
+//			if (conditions != null && ((Assertion) obj).getConditions() == null) {	// RH, 20160108, n	// add only if not yet present, RH, 20160310, o
+			if (conditions != null && ((AuthnRequest) obj).getConditions() == null) {	// RH, 20160108, n	// add only if not yet present, RH, 20160310, n
 				((AuthnRequest) obj).setConditions(conditions);
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "Conditions added on AuthnRequest->" + obj);
 			}
