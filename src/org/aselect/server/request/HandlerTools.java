@@ -741,7 +741,7 @@ public class HandlerTools
  * @return the updated assertion
  * @throws ASelectException
  */
-	public static Assertion updateAssertionIssueInstant(Assertion ass)
+	public static Assertion updateAssertionIssueInstant(Assertion ass, DateTime refInstant, Long maxNotBefore, Long maxNotOnOrAfter)
 	throws ASelectException
 	{
 		String sMethod = "updateAssertionIssueInstant";
@@ -794,7 +794,11 @@ public class HandlerTools
 			systemLogger.log(Level.FINER, MODULE, sMethod, "Assertion was not signed");
 		}
 		refreshedAss = (Assertion) rebuildAssertion(ass);
-		refreshedAss.setIssueInstant(new DateTime());
+//		refreshedAss.setIssueInstant(new DateTime());	// RH, 20160310, o
+		if (refInstant == null) refInstant = new DateTime();	// RH, 20160310, sn
+		refreshedAss.setIssueInstant(refInstant);
+		refreshedAss = (Assertion)SamlTools.setValidityInterval(refreshedAss, refInstant, maxNotBefore, maxNotOnOrAfter);	// RH, 20160310, en
+
 		refreshedAss = (Assertion) rebuildAssertion(refreshedAss);
 		if (sign) {
 			systemLogger.log(Level.FINER, MODULE, sMethod, "ReSigning the Assertion");

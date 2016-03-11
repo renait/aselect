@@ -220,6 +220,7 @@ import org.aselect.system.exception.ASelectException;
 import org.aselect.system.exception.ASelectStorageException;
 import org.aselect.system.utils.Tools;
 import org.aselect.system.utils.Utils;
+import org.joda.time.DateTime;
 import org.opensaml.saml2.core.Assertion;
 
 /**
@@ -251,6 +252,9 @@ public class ApplicationAPIHandler extends AbstractAPIRequestHandler
 	private MetaDataManagerSp _metadataManager;
 	protected String _sServerUrl;
 	protected boolean bUpdateTokenIssueinstant = false;
+	protected Long updateTokenNotBefore = null;
+	protected Long updateTokenNotOnOrAfter = null;
+	
 
 	/**
 	 * Create a new instance. <br>
@@ -300,9 +304,23 @@ public class ApplicationAPIHandler extends AbstractAPIRequestHandler
 		try {
 			String _sUpdateTokenIssueinstant = ASelectConfigManager.getParamFromSection(null, "aselect", "updatetokenissueinstant", false);
 			bUpdateTokenIssueinstant = Boolean.parseBoolean(_sUpdateTokenIssueinstant);
+			Object _oUpdateTokenSection = ASelectConfigManager.getSimpleSection(null, "aselect", false);
+			if (_oUpdateTokenSection != null) {
+				String sNotBefore = ASelectConfigManager.getParamFromSection(_oUpdateTokenSection, "updatetokenissueinstant", "NotBefore", false);
+				if (sNotBefore != null) {
+					updateTokenNotBefore = new Long(Long.parseLong(sNotBefore) * 1000);
+				}
+				String sNotOnOrAfter = ASelectConfigManager.getParamFromSection(_oUpdateTokenSection, "updatetokenissueinstant", "NotOnOrAfter", false);
+				if (sNotOnOrAfter != null) {
+					updateTokenNotOnOrAfter = new Long(Long.parseLong(sNotOnOrAfter) * 1000);
+				}
+			}
 		}
 		catch (ASelectConfigException e1) {
 			throw new ASelectCommunicationException(Errors.ERROR_ASELECT_CONFIG_ERROR, e1);
+		}
+		catch (ASelectException e) {
+			throw new ASelectCommunicationException(Errors.ERROR_ASELECT_CONFIG_ERROR, e);
 		}
 
 		try {
@@ -759,7 +777,9 @@ public class ApplicationAPIHandler extends AbstractAPIRequestHandler
 				String sSaml2token = (String) htTGTContext.get("saml_attribute_token");	// still base64 encoded
 				if (bUpdateTokenIssueinstant && sSaml2token != null) {
 					Assertion saml2token = (Assertion)HandlerTools.base64DecodeAssertion(sSaml2token);
-					saml2token = HandlerTools.updateAssertionIssueInstant(saml2token);
+					////////////////////	RH, 20160310, sn
+					saml2token = HandlerTools.updateAssertionIssueInstant(saml2token, null, updateTokenNotBefore, updateTokenNotOnOrAfter);
+					////////////////////////////	RH, 20160310, en
 					String sToken = HandlerTools.base64EncodeAssertion(saml2token);
 					
 					// RH, 20150921, sn
@@ -995,6 +1015,11 @@ public class ApplicationAPIHandler extends AbstractAPIRequestHandler
 			// Because this is relatively expensive we might consider making this application dependent
 			
 			if ( bUpdateTokenIssueinstant ) {
+				///////	RH, 20160310, sn
+				Assertion saml2token = (Assertion)HandlerTools.base64DecodeAssertion(sToken);
+				saml2token = HandlerTools.updateAssertionIssueInstant(saml2token, null, updateTokenNotBefore, updateTokenNotOnOrAfter);
+				sToken = HandlerTools.base64EncodeAssertion(saml2token);
+				///////	RH, 20160310, en
 				htTGTContext.put("saml_attribute_token", sToken);	// store the token for use with handleUpgradeTGTRequest
 				_oTGTManager.updateTGT(sTGT, htTGTContext);
 			}
