@@ -157,8 +157,8 @@ public class AttributeSetter
 	 * @return the resulting hash map
 	 * @throws ASelectAttributesException
 	 */
-	public static HashMap attributeProcessing(HashMap htTGTContext, HashMap hmAttributes, LinkedList<AttributeSetter> attributeSetters,
-			ASelectSystemLogger sysLog)
+	public static HashMap attributeProcessing(HashMap htTGTContext, HashMap hmAttributes,
+			LinkedList<AttributeSetter> attributeSetters, ASelectSystemLogger sysLog)
 	throws ASelectAttributesException
 	{
 		final String sMethod = "attributeProcessing";
@@ -220,7 +220,7 @@ public class AttributeSetter
 				
 				// RH, 20160229, sn
 				if (setter.getMatchinePattern() != null) {
-					sValue = setter.getMatchinePattern() .matcher(sValue).replaceAll(setter.getReplacementString());
+					sValue = setter.getMatchinePattern().matcher(sValue).replaceAll(setter.getReplacementString());
 				}
 				// RH, 20160229, en
 				
