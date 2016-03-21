@@ -668,20 +668,20 @@ public class JNDIAttributeRequestor extends GenericAttributeRequestor
 								}
 								// RH, 20150922, sn
 								if (bAllowresultsetaccumulation && hAttrResponse.containsKey(sAttributeName)) {
-										Object v = hAttrResponse.get(sAttributeName);
-										if ( v instanceof Vector) {	// there were already multiple values
-											// we don't want duplicates
-											// Test how and if this works when vMultiValues contains different types
-											Set<Object> set = new HashSet<Object>();
-											set.addAll((Vector)v);
-											set.addAll((Vector)vMultiValues);
-											_systemLogger.log(Level.FINEST, MODULE, sMethod, "Added multiple attributes to multivalued attribute. Set is now:  "+set.toArray());
-											vMultiValues.clear();
-											vMultiValues.addAll(set);
-										} else {
-											vMultiValues.add(v);	// add the old attribute
-											_systemLogger.log(Level.FINEST, MODULE, sMethod, "Added multiple attributes to single value attribute. Set is now:  "+vMultiValues.toArray());
-										}
+									Object v = hAttrResponse.get(sAttributeName);
+									if (v instanceof Vector) {	// there were already multiple values
+										// we don't want duplicates
+										// Test how and if this works when vMultiValues contains different types
+										Set<Object> set = new HashSet<Object>();
+										set.addAll((Vector)v);
+										set.addAll((Vector)vMultiValues);
+										_systemLogger.log(Level.FINEST, MODULE, sMethod, "Added multiple attributes to multivalued attribute. Set is now:  "+set.toArray());
+										vMultiValues.clear();
+										vMultiValues.addAll(set);
+									} else {
+										vMultiValues.add(v);	// add the old attribute
+										_systemLogger.log(Level.FINEST, MODULE, sMethod, "Added multiple attributes to single value attribute. Set is now:  "+vMultiValues.toArray());
+									}
 								}
 								// RH, 20150922, en
 								hAttrResponse.put(sAttributeName, vMultiValues);
@@ -698,8 +698,8 @@ public class JNDIAttributeRequestor extends GenericAttributeRequestor
 									Object v = hAttrResponse.get(sAttributeName);
 									Vector<Object> vMultiValues = new Vector<Object>();
 									Set<Object> set = new HashSet<Object>();
-									if ( v instanceof Vector) {	// there were already multiple values
-										// we don't want duplicates
+									if ( v instanceof Vector) {
+										// there were already multiple values, we don't want duplicates
 										// Test how and if this works when vMultiValues contains different types
 										set.addAll((Vector)v);
 									} else {

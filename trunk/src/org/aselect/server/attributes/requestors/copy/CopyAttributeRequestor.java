@@ -40,7 +40,7 @@ public class CopyAttributeRequestor extends GenericAttributeRequestor
 	 * <br>
 	 * 
 	 * @param oConfig
-	 *            the o config
+	 *            the config object
 	 * @throws ASelectException
 	 *             the a select exception
 	 * @see org.aselect.server.attributes.requestors.IAttributeRequestor#init(java.lang.Object)
@@ -49,7 +49,6 @@ public class CopyAttributeRequestor extends GenericAttributeRequestor
 	throws ASelectException
 	{
 		String sMethod = "init";
-		Object oAttributes, oSetAttr;
 		
 		super.init(oConfig);
 

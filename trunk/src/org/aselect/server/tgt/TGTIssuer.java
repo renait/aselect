@@ -938,6 +938,16 @@ public class TGTIssuer
 			else 
 				_systemLogger.log(Level.FINER, MODULE, sMethod, "No aselect_specials");
 			
+			if (sLanguage != null) {  // We will add language below
+				// 20160320: prevent duplicate language parameters by removing the original version
+				String sUrlLang = Utils.getParameterValueFromUrl(sAppUrl, "language");
+				if (Utils.hasValue(sUrlLang)) {
+					sAppUrl = sAppUrl.replace("language="+sUrlLang, "");
+					sAppUrl = sAppUrl.replace("&&", "&");
+					if (sAppUrl.endsWith("&"))
+						sAppUrl = sAppUrl.substring(0, sAppUrl.length()-1);
+				}
+			}
 			// Check whether the application url contains cgi parameters
 			if (sAppUrl.indexOf("?") > 0)
 				sAppUrl += "&";
@@ -951,8 +961,10 @@ public class TGTIssuer
 			if (sRid !=null)
 				sbRedirect.append("&rid=").append(sRid);
 			sbRedirect.append("&a-select-server=").append(_sServerId);
-			if (sLanguage != null)
+			
+			if (sLanguage != null) {
 				sbRedirect.append("&language=").append(sLanguage);
+			}
 
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "REDIRECT to: " + sbRedirect);
 			servletResponse.sendRedirect(sbRedirect.toString());  // xyzzy

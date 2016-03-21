@@ -135,7 +135,8 @@ public class BasicSensorHandler implements ISensorHandler
 			this._oLbSensorLogger = _oLbSensorLogger;
 		};
 		
-		public void run() {
+		public void run()
+		{
 			String sMethod = "BasicSensorSocketRunner.run:" + Thread.currentThread().getName();
 
 			long now = System.currentTimeMillis();
@@ -151,54 +152,52 @@ public class BasicSensorHandler implements ISensorHandler
 			try {
 //				oSocket.setSoTimeout(40);
 				oSocket.setSoTimeout(0);	// disable
-			InputStream isInput = oSocket.getInputStream();
-			OutputStream osOutput = oSocket.getOutputStream();
-			oInReader = new BufferedReader(new InputStreamReader(isInput, "UTF-8"));
-			oOutWriter = new BufferedWriter(new OutputStreamWriter(osOutput, "UTF-8"));
-
-			processStart(oOutWriter, _sMyId);
-			
-			do {	// This is an http like socket so we can use readline 
-				_oLbSensorLogger.log(Level.INFO, MODULE, sMethod, "Trying to read stream T=" + System.currentTimeMillis() +
-						" t="+Thread.currentThread().getId() + ", from remote =" + oSocket.toString());
-				s = oInReader.readLine();
-				echoLineToStream(oOutWriter, s + "\r\n");
-				_oLbSensorLogger.log(Level.INFO, MODULE, sMethod, "Accepted in first loop T=" + System.currentTimeMillis() +
-						" t="+Thread.currentThread().getId() + ", lineLength (without eol) =" + s.length() + ", line  read =" + s);
-				if (isPOST == null ) {	// only true for fist line
-					if ( s != null && s.toUpperCase().startsWith("POST")) { // first line should not be null, but in case of
-						isPOST = true;
-						_oLbSensorLogger.log(Level.INFO, MODULE, sMethod, "Accepted in first loop T=" + System.currentTimeMillis() +
-								" t="+Thread.currentThread().getId() + ", it's a POST");
-					} else {
-						isPOST = false;
+				InputStream isInput = oSocket.getInputStream();
+				OutputStream osOutput = oSocket.getOutputStream();
+				oInReader = new BufferedReader(new InputStreamReader(isInput, "UTF-8"));
+				oOutWriter = new BufferedWriter(new OutputStreamWriter(osOutput, "UTF-8"));
+	
+				processStart(oOutWriter, _sMyId);
+				
+				do {	// This is an http like socket so we can use readline 
+					_oLbSensorLogger.log(Level.INFO, MODULE, sMethod, "Trying to read stream T=" + System.currentTimeMillis() +
+							" t="+Thread.currentThread().getId() + ", from remote =" + oSocket.toString());
+					s = oInReader.readLine();
+					echoLineToStream(oOutWriter, s + "\r\n");
+					_oLbSensorLogger.log(Level.INFO, MODULE, sMethod, "Accepted in first loop T=" + System.currentTimeMillis() +
+							" t="+Thread.currentThread().getId() + ", lineLength (without eol) =" + s.length() + ", line  read =" + s);
+					if (isPOST == null ) {	// only true for fist line
+						if ( s != null && s.toUpperCase().startsWith("POST")) { // first line should not be null, but in case of
+							isPOST = true;
+							_oLbSensorLogger.log(Level.INFO, MODULE, sMethod, "Accepted in first loop T=" + System.currentTimeMillis() +
+									" t="+Thread.currentThread().getId() + ", it's a POST");
+						} else {
+							isPOST = false;
+						}
 					}
-				}
 					try {
 						processLine(oOutWriter, s, _sMyId);
 					}
 					catch (Exception e) { // continue anyway
 						_oLbSensorLogger.log(Level.WARNING, MODULE, sMethod, "exception occurred in processLine()", e);
 					}
-			}while (s != null && !"".equals(s) && oInReader.ready()) ;
-			if ( isPOST.booleanValue() == true) {	// read the POST data
-				do {	// we assume there is a eol after the post data. this is trictly not true, we should read content-length
-					s = oInReader.readLine();
-					echoLineToStream(oOutWriter, s + "\r\n");
-					_oLbSensorLogger.log(Level.INFO, MODULE, sMethod, "Accepted in second loop T=" + System.currentTimeMillis() +
-							" t="+Thread.currentThread().getId() + ", lineLength (without eol) =" + s.length() + ", line  read =" + s);
-				
-				try {
-					processLine(oOutWriter, s, _sMyId);
-				}
-				catch (Exception e) { // continue anyway
-					_oLbSensorLogger.log(Level.WARNING, MODULE, sMethod, "exception occurred in processLine()", e);
-				}
-				}while (s != null && !"".equals(s) && oInReader.ready()) ;	// POST data processed
-				
-			} // else it's a GET and we're done
-			
-			
+				} while (s != null && !"".equals(s) && oInReader.ready()) ;
+				if (isPOST.booleanValue() == true) {	// read the POST data
+					do {  // we assume there is a eol after the post data. this is strictly not true, we should read content-length
+						s = oInReader.readLine();
+						echoLineToStream(oOutWriter, s + "\r\n");
+						_oLbSensorLogger.log(Level.INFO, MODULE, sMethod, "Accepted in second loop T=" + System.currentTimeMillis() +
+								" t="+Thread.currentThread().getId() + ", lineLength (without eol) =" + s.length() + ", line  read =" + s);
+					
+						try {
+							processLine(oOutWriter, s, _sMyId);
+						}
+						catch (Exception e) { // continue anyway
+							_oLbSensorLogger.log(Level.WARNING, MODULE, sMethod, "exception occurred in processLine()", e);
+						}
+					} while (s != null && !"".equals(s) && oInReader.ready()) ;	// POST data processed
+					
+				} // else it's a GET and we're done			
 			}
 			catch (SocketTimeoutException e0) {
 				// see if there were some characters left over 
@@ -206,15 +205,14 @@ public class BasicSensorHandler implements ISensorHandler
 				_oLbSensorLogger.log(Level.INFO, MODULE, sMethod, "Accepted T=" + System.currentTimeMillis() +
 						" t="+Thread.currentThread().getId() + " last s) read =" + s);
 				if (s != null && s.length() > 0) {
-				try {
-					_oLbSensorLogger.log(Level.FINEST, MODULE, sMethod, "Handling left-over line(s)");
-					processLine(oOutWriter, s, _sMyId);
+					try {
+						_oLbSensorLogger.log(Level.FINEST, MODULE, sMethod, "Handling left-over line(s)");
+						processLine(oOutWriter, s, _sMyId);
+					}
+					catch (IOException e1) {
+						_oLbSensorLogger.log(Level.WARNING, MODULE, sMethod, "IOException occurred in left-over processLine()", e1);
+					}
 				}
-				catch (IOException e1) {
-					_oLbSensorLogger.log(Level.WARNING, MODULE, sMethod, "IOException occurred in left-over processLine()", e1);
-				}
-				}
-
 			}
 			catch (SocketException e) {
 				_oLbSensorLogger.log(Level.WARNING, MODULE, sMethod, "SocketException occurred: "+ e.getMessage());
@@ -235,9 +233,7 @@ public class BasicSensorHandler implements ISensorHandler
 				}
 			}
 			_oLbSensorLogger.log(Level.INFO, MODULE, sMethod, " t="+Thread.currentThread().getId() +", Ready");
-			
 		}
-
 	}
 
 	
