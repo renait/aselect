@@ -453,64 +453,99 @@ char *aselect_filter_send_request(server_rec *pServer, pool *pPool, char *pcASAI
     return pcResponse;
 }
 
-char *aselect_filter_get_param(pool *pPool, char *pcArgs, char *pcParam, char *pcDelimiter, int bUrlDecode)
+//
+// Extract a parameter value from a list of <key>=<value> pairs seperated by a <delimiter>
+// The <delimiter> can be followed by a space.
+//
+char *aselect_filter_get_param(pool *pPool, char *pcArgs, char *pcKey, char *pcDelimiter, int bUrlDecode)
 {
-    char *pcTemp;
-    char *pcTemp2;
-    char *pcValue = NULL;
-    int ccValue = 0;
-    char *p;
+	return aselect_filter_get_param_multi(pPool, pcArgs, pcKey, pcDelimiter, bUrlDecode, NULL);
+}
 
-    //TRACE2("aselect_filter_get_param: %s args=%s", pcParam, pcArgs);
-    if (pcArgs) {
-		// Bauke: example args: my_uid=9876&uid2=0000&uid=1234&...
-		//        get parameter "uid=" must result in: 1234
-		// NOTE: Delimiter is a single character, but in pcArgs it can be followed by a space!
-		// pcParam has a '=' at the end
-		for (p = pcArgs; p != NULL; p = pcTemp+1) {
-			pcTemp = strstr(p, pcParam);
-			if (!pcTemp)
-				break;
-			//TRACE2("aselect_filter_get_param: 1.TEMP=%s '%c'", pcTemp, (pcTemp==pcArgs)? '#': *(pcTemp-1));
-			//TRACE3("%d %d %d", (pcTemp==pcArgs), *(pcTemp-1) == *pcDelimiter, *(pcTemp-1) == ' ');
-			if (pcTemp==pcArgs || *(pcTemp-1) == *pcDelimiter || *(pcTemp-1) == ' ') {
-				break;
-			}
+char *aselect_filter_get_param_multi(pool *pPool, char *pcArgs, char *pcKey, char *pcDelimiter, int bUrlDecode, int *pSearchPos)
+{
+    char *pcTemp, *pcTemp2, *pcValue = NULL;
+    int lenValue = 0;
+	int first = 1;
+	int multiValued = 0;
+	int searchPos = (pSearchPos)? *pSearchPos: 0;
+    char *p, *pcSearch;
+
+    //TRACE2("aselect_filter_get_param: %s args=%.60s", pcKey, pcArgs);
+    if (!pcArgs) {
+		TRACE1("get_param: %s - No arguments given", pcKey);
+		return NULL;
+	}
+
+	// Bauke: example args: my_uid=9876&uid2=0000&uid=1234&...
+	//        get parameter "uid=" must result in: 1234
+	// NOTE: Delimiter is a single character, but in pcArgs it can be followed by a space!
+	pcSearch = (char*)ap_palloc(pPool, strlen(pcKey)+10);
+	sprintf(pcSearch, "%s=", pcKey);
+
+	for (p = pcArgs+searchPos; p != NULL; p = pcTemp+1) {
+		pcTemp = strstr(p, pcSearch);
+		if (!pcTemp && first) {  // try multi-valued as well
+			sprintf(pcSearch, (bUrlDecode)? "%s%5B%5D=": "%s[]", pcKey);
+			pcTemp = strstr(p, pcSearch);  // and search again
+			if (pcTemp)  // found multi-valued
+				multiValued = 1;
+			first = 0; // switch only once to multi-value search
+		}
+		if (!pcTemp)
+			break;
+		//TRACE3("get_param: search=%s pcTemp=%s prev_char=%c", pcSearch, pcTemp, (pcTemp==pcArgs)? '#': *(pcTemp-1));
+		//TRACE3("get_param: %d %d %d", (pcTemp==pcArgs), *(pcTemp-1) == *pcDelimiter, *(pcTemp-1) == ' ');
+		if (pcTemp==pcArgs || *(pcTemp-1) == *pcDelimiter || *(pcTemp-1) == ' ') {
+			// would be even better if we test delimiter presence before space
+			break;
+		}
+	}
+
+	if (pcTemp) {  // found <key>=
+		// Update pointer to point to parameter data 
+		pcTemp = pcTemp + strlen(pcSearch);
+		//TRACE1("get_param: value=%.60s", pcTemp);
+
+		// Found the query parameter attribute
+		searchPos = pcTemp-pcArgs;
+		pcTemp2 = strstr(pcTemp, pcDelimiter);
+		if (pcTemp2) {
+			lenValue = pcTemp2 - pcTemp;
+			searchPos += (lenValue+1);
+		}
+		else {
+			lenValue = strlen(pcTemp);
+			searchPos += lenValue;
 		}
 
-		if (pcTemp) {
-			// Update pointer to point to parameter data 
-			pcTemp = pcTemp + strlen(pcParam);
+		// Stop iterating for single-valued attributes
+		if (pSearchPos)
+			*pSearchPos = (multiValued==0)? -1: searchPos;
 
-			// Found the query parameter attribute
-			if ((pcTemp2 = strstr(pcTemp, pcDelimiter))) {
-				ccValue = pcTemp2 - pcTemp;
+		//TRACE3("get_param: value=%.*s len=%d", lenValue, pcTemp, lenValue);
+		if (lenValue >= 0) {
+			pcValue = ap_pstrndup(pPool, pcTemp, lenValue+1);
+			if (pcValue) {
+				*(pcValue + lenValue) = '\0';
+				if (bUrlDecode)
+					aselect_filter_url_decode(pcValue);
 			}
-			else {
-				ccValue = strlen(pcTemp);
-			}
-
-			//TRACE3("Value=%.*s %d", ccValue, pcTemp, ccValue);
-			if (ccValue >= 0) {
-				pcValue = ap_pstrndup(pPool, pcTemp, ccValue+1);
-				if (pcValue) {
-					*(pcValue + ccValue) = '\0';
-					if (bUrlDecode)
-						aselect_filter_url_decode(pcValue);
-				}
-				else { // Not enough memory, Set error
-					pcValue = NULL;
-				}
-			}
-			else { // parameter value is empty
+			else { // Not enough memory, Set error
+				pcValue = NULL;
 			}
 		}
-		else { // Arguments do not contain parameters
+		else { // Parameter value is empty
 		}
-    }
-    else { // No arguments to read, return error
-    }
-    //TRACE2("aselect_filter_get_param: %s %.80s", pcParam, pcValue?pcValue:"NULL");
+	}
+	// else not found at all
+
+	if (pcValue == NULL) {
+		TRACE2("get_param: %s=NULL multi=%d", pcKey, multiValued);
+	}
+	else {
+		TRACE4("get_param: %s=%.60s%s multi=%d", pcKey, pcValue, (strlen(pcValue)>60)? "...": "", multiValued);
+	}
     return pcValue;
 }
 
@@ -939,7 +974,7 @@ char *aselect_filter_get_cookie(pool *pPool, table *headers_in, char *pcAttribut
 		//TRACE1("GET-Cookie: CookieValues=%s", pcValues);
         pcValue = aselect_filter_get_param(pPool, pcValues, pcAttribute, ";", FALSE);
         if (pcValue) {
-            TRACE3("Get-Cookie: %s%.30s%s", pcAttribute, pcValue, (strlen(pcValue)>30)? "...": "");
+            TRACE3("Get-Cookie: %s=%.30s%s", pcAttribute, pcValue, (strlen(pcValue)>30)? "...": "");
         }
         else {
 			TRACE1("Get-Cookie: %s not found", pcAttribute);

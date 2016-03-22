@@ -938,7 +938,7 @@ public class TGTIssuer
 			else 
 				_systemLogger.log(Level.FINER, MODULE, sMethod, "No aselect_specials");
 			
-			if (sLanguage != null) {  // We will add language below
+			if (sLanguage != null) {  // If we will add language=.. below
 				// 20160320: prevent duplicate language parameters by removing the original version
 				String sUrlLang = Utils.getParameterValueFromUrl(sAppUrl, "language");
 				if (Utils.hasValue(sUrlLang)) {
