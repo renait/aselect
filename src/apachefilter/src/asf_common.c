@@ -486,7 +486,7 @@ char *aselect_filter_get_param_multi(pool *pPool, char *pcArgs, char *pcKey, cha
 	for (p = pcArgs+searchPos; p != NULL; p = pcTemp+1) {
 		pcTemp = strstr(p, pcSearch);
 		if (!pcTemp && first) {  // try multi-valued as well
-			sprintf(pcSearch, (bUrlDecode)? "%s%5B%5D=": "%s[]", pcKey);
+			sprintf(pcSearch, (bUrlDecode)? "%s%%5B%%5D=": "%s[]", pcKey);
 			pcTemp = strstr(p, pcSearch);  // and search again
 			if (pcTemp)  // found multi-valued
 				multiValued = 1;
@@ -494,7 +494,7 @@ char *aselect_filter_get_param_multi(pool *pPool, char *pcArgs, char *pcKey, cha
 		}
 		if (!pcTemp)
 			break;
-		//TRACE3("get_param: search=%s pcTemp=%s prev_char=%c", pcSearch, pcTemp, (pcTemp==pcArgs)? '#': *(pcTemp-1));
+		TRACE3("get_param: search=%s pcTemp=%s prev_char=%c", pcSearch, pcTemp, (pcTemp==pcArgs)? '#': *(pcTemp-1));
 		//TRACE3("get_param: %d %d %d", (pcTemp==pcArgs), *(pcTemp-1) == *pcDelimiter, *(pcTemp-1) == ' ');
 		if (pcTemp==pcArgs || *(pcTemp-1) == *pcDelimiter || *(pcTemp-1) == ' ') {
 			// would be even better if we test delimiter presence before space
