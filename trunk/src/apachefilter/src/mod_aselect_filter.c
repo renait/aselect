@@ -1439,7 +1439,7 @@ static int aselect_filter_passAttributesInUrl(int iError, char *pcAttributes, ch
 		for (i = 0; i < pConfig->iAttrCount; i++) {
 			char *p, *q;
 			int urlEncodeHdr = (strchr(pConfig->pcPassAttributes,'h')!=0);  // 'H' does not encode
-			char condName[1200], attrValue[400], applAttrName[200], buf[450]/*larger than attrValue*/;
+			char condName[1200], attrValue[400], applAttrName[200];
 			int constant = 0, override = 0;
 			int searchPos = 0;  // start searching in pcAttributes
 
