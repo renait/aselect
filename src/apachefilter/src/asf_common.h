@@ -285,6 +285,7 @@ char *aselect_filter_receive_msg(pool *pPool, int sd);  //, char *pcReceiveMsg, 
 char *aselect_filter_send_request(server_rec *pServer, pool *pPool, char *pcASAIP, int iASAPort, char *pcSendMessage, int ccSendMessage,
 		    TIMER_DATA *pt, int toAgent);
 char *      aselect_filter_get_param(pool *pPool, char *pcArgs, char *pcParam, char * pcDelimiter, int bUrlDecode);
+char *      aselect_filter_get_param_multi(pool *pPool, char *pcArgs, char *pcParam, char * pcDelimiter, int bUrlDecode, int *pSearchPos);
 char *      aselect_filter_url_encode(pool *pPool, const char *pszValue);
 int         aselect_filter_url_decode(char *pszValue);
 void        aselect_filter_add_nocache_headers(table *headers_out);
