@@ -521,4 +521,23 @@ public class SecurityLevel
 		// we return the lowest known level here. (no restriction on the level is required)
 		return LEVEL_LOWEST_SERIOUS; // BN_EMPTY;
 	}
+	
+	static public Integer loa2stork(String loaLevel) {
+		Integer storkLevel = null;
+		String[] levels = { LOA1, LOA2, LOA3, LOA4 };	// no stork mapping for loa2plus
+		for (int  i=0; i < levels.length; i++) {
+			if ( levels[i].equalsIgnoreCase(loaLevel)) return i+1;
+		}
+		return storkLevel;
+	}
+
+	static public String stork2loa(Integer storkLevel) {
+		String loaLevel = null;
+		String[] levels = { LOA1, LOA2, LOA3, LOA4 };	// no stork mapping for loa2plus
+		if ( storkLevel > 0 && storkLevel <= levels.length ) {
+			return levels[storkLevel - 1];
+		}
+		return loaLevel;
+	}
+
 }

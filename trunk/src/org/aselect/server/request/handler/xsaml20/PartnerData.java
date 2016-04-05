@@ -12,6 +12,8 @@
 package org.aselect.server.request.handler.xsaml20;
 
 import java.util.Hashtable;
+import java.util.List;
+import java.util.Map;
 import java.util.Vector;
 
 /**
@@ -40,6 +42,7 @@ public class PartnerData
 	private String federationurl = null;
 	private Metadata4Partner metadata4partner = null;
 	private Testdata4Partner testdata4partner = null;
+	private Extensionsdata4Partner extensionsdata4partner = null;
 		
 	public PartnerData(String sId)
 	{
@@ -614,6 +617,143 @@ public class PartnerData
 
 	}
 
+	// SImple wrapper class for Extensions data 
+	public class Extensionsdata4Partner {
+		 
+		private Integer QualityAuthenticationAssuranceLevel= null;	// will be set based on application requirement
+		private String spSector= null;
+		private String spInstitution = null;
+		private String spApplication = null;
+		private String spCountry= null;
+		private Boolean eIDSectorShare = null;
+		private Boolean eIDCrossSectorShare = null;
+		private Boolean eIDCrossBorderShare = null;
+		private List<Map<String, Object>> requestedAttributes = null;	// probably use ArrayList implementation
+
+		@Override
+		public String toString()
+		{
+			return "QualityAuthenticationAssuranceLevel=" + QualityAuthenticationAssuranceLevel
+				+ ", spSector=" + spSector
+				+ ", spInstitution=" + spInstitution
+				+ ", spApplication=" + spApplication
+				+ ", pCountry=" + spCountry
+				+ ", eIDSectorShare=" + eIDSectorShare
+				+ ", eIDCrossSectorShare=" + eIDCrossSectorShare
+				+ ", eIDCrossBorderShare=" + eIDCrossBorderShare
+				+ ", requestedAttributes=" + requestedAttributes
+			;			
+		}
+
+		public synchronized Integer getQualityAuthenticationAssuranceLevel()
+		{
+			return QualityAuthenticationAssuranceLevel;
+		}
+
+		public synchronized void setQualityAuthenticationAssuranceLevel(Integer qualityAuthenticationAssuranceLevel)
+		{
+			QualityAuthenticationAssuranceLevel = qualityAuthenticationAssuranceLevel;
+		}
+
+		public synchronized String getSpSector()
+		{
+			return spSector;
+		}
+
+		public synchronized void setSpSector(String spSector)
+		{
+			this.spSector = spSector;
+		}
+
+		public synchronized String getSpInstitution()
+		{
+			return spInstitution;
+		}
+
+		public synchronized void setSpInstitution(String spInstitution)
+		{
+			this.spInstitution = spInstitution;
+		}
+
+		public synchronized String getSpApplication()
+		{
+			return spApplication;
+		}
+
+		public synchronized void setSpApplication(String spApplication)
+		{
+			this.spApplication = spApplication;
+		}
+
+		public synchronized String getSpCountry()
+		{
+			return spCountry;
+		}
+
+		public synchronized void setSpCountry(String spCountry)
+		{
+			this.spCountry = spCountry;
+		}
+
+
+		public synchronized List<Map<String, Object>> getRequestedAttributes()
+		{
+			return requestedAttributes;
+		}
+
+		public synchronized void setRequestedAttributes(List<Map<String, Object>> requestedAttributes)
+		{
+			this.requestedAttributes = requestedAttributes;
+		}
+
+		public synchronized Boolean geteIDSectorShare()
+		{
+			return eIDSectorShare;
+		}
+
+		public synchronized void seteIDSectorShare(Boolean eIDSectorShare)
+		{
+			this.eIDSectorShare = eIDSectorShare;
+		}
+
+		public synchronized Boolean geteIDCrossSectorShare()
+		{
+			return eIDCrossSectorShare;
+		}
+
+		public synchronized void seteIDCrossSectorShare(Boolean eIDCrossSectorShare)
+		{
+			this.eIDCrossSectorShare = eIDCrossSectorShare;
+		}
+
+		public synchronized Boolean geteIDCrossBorderShare()
+		{
+			return eIDCrossBorderShare;
+		}
+
+		public synchronized void seteIDCrossBorderShare(Boolean eIDCrossBorderShare)
+		{
+			this.eIDCrossBorderShare = eIDCrossBorderShare;
+		}
+		
+		
+	}
+	// End SImple wrapper class for Extensions data 
+	
+	/**
+	 * @return the extensionsdata4partner
+	 */
+	public synchronized Extensionsdata4Partner getExtensionsdata4partner()
+	{
+		if (extensionsdata4partner == null) {
+			extensionsdata4partner = new Extensionsdata4Partner();
+		}
+		return extensionsdata4partner;
+	}
+
+
+	
+	
 	// SImple wrapper class for test data 
 	public class Testdata4Partner {
 
@@ -836,7 +976,7 @@ public class PartnerData
 	
 	
 	/**
-	 * @return the metadata4partner
+	 * @return the testdata4partner
 	 */
 	public synchronized Testdata4Partner getTestdata4partner()
 	{

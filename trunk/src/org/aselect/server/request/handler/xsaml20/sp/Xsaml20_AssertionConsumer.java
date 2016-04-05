@@ -17,7 +17,6 @@ import java.security.PublicKey;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -36,7 +35,6 @@ import org.aselect.server.application.ApplicationManager;
 import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.server.log.ASelectAuthProofLogger;
 import org.aselect.server.log.ASelectAuthenticationLogger;
-import org.aselect.server.log.ASelectSystemLogger;
 import org.aselect.server.request.HandlerTools;
 import org.aselect.server.request.RequestState;
 import org.aselect.server.request.handler.xsaml20.PartnerData;
@@ -44,8 +42,8 @@ import org.aselect.server.request.handler.xsaml20.Saml20_BaseHandler;
 import org.aselect.server.request.handler.xsaml20.SamlTools;
 import org.aselect.server.request.handler.xsaml20.SecurityLevel;
 import org.aselect.server.request.handler.xsaml20.SoapManager;
-import org.aselect.server.tgt.TGTManager;
 import org.aselect.server.tgt.TGTIssuer;
+import org.aselect.server.tgt.TGTManager;
 import org.aselect.server.utils.AttributeSetter;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectCommunicationException;
@@ -59,16 +57,33 @@ import org.opensaml.common.SAMLObject;
 import org.opensaml.common.SAMLObjectBuilder;
 import org.opensaml.common.SAMLVersion;
 import org.opensaml.common.xml.SAMLConstants;
-import org.opensaml.saml2.core.*;
+import org.opensaml.saml2.core.Artifact;
+import org.opensaml.saml2.core.ArtifactResolve;
+import org.opensaml.saml2.core.ArtifactResponse;
+import org.opensaml.saml2.core.Assertion;
+import org.opensaml.saml2.core.Attribute;
+import org.opensaml.saml2.core.AttributeStatement;
+import org.opensaml.saml2.core.AuthenticatingAuthority;
+import org.opensaml.saml2.core.AuthnContext;
+import org.opensaml.saml2.core.AuthnContextClassRef;
+import org.opensaml.saml2.core.EncryptedAttribute;
+import org.opensaml.saml2.core.EncryptedID;
+import org.opensaml.saml2.core.Issuer;
+import org.opensaml.saml2.core.NameID;
+import org.opensaml.saml2.core.Response;
+import org.opensaml.saml2.core.StatusCode;
+import org.opensaml.saml2.core.StatusMessage;
+import org.opensaml.saml2.core.Subject;
 import org.opensaml.saml2.metadata.ArtifactResolutionService;
 import org.opensaml.ws.soap.soap11.Envelope;
 import org.opensaml.xml.XMLObject;
 import org.opensaml.xml.XMLObjectBuilderFactory;
-import org.opensaml.xml.encryption.EncryptedKey;
 import org.opensaml.xml.io.Unmarshaller;
 import org.opensaml.xml.io.UnmarshallerFactory;
 import org.opensaml.xml.util.XMLHelper;
-import org.w3c.dom.*;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.Node;
 import org.xml.sax.InputSource;
 
 /**
@@ -590,7 +605,26 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 					String sAuthnAuthority = null;
 					if (authAuthorities != null && authAuthorities.size() > 0)
 						sAuthnAuthority = (String)authAuthorities.get(0).getURI();
-					String sAuthnContextClassRefURI = oAuthnContext.getAuthnContextClassRef().getAuthnContextClassRef();
+					
+//					String sAuthnContextClassRefURI = oAuthnContext.getAuthnContextClassRef().getAuthnContextClassRef();	// RH, 20160405, o
+					// RH, 20160405, sn
+					PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sFederationUrl);
+					String sAuthnContextClassRefURI = null;
+					AuthnContextClassRef accr = oAuthnContext.getAuthnContextClassRef();
+					if (accr != null) {
+						 sAuthnContextClassRefURI =accr.getAuthnContextClassRef();
+					} else {
+						if ( partnerData != null && partnerData.getExtensionsdata4partner() != null && partnerData.getExtensionsdata4partner() .getQualityAuthenticationAssuranceLevel() != null) {
+							String loaLevel = SecurityLevel.stork2loa(partnerData.getExtensionsdata4partner() .getQualityAuthenticationAssuranceLevel());	// use level from config
+							String sLevel = SecurityLevel.convertAuthnContextClassRefURIToLevel(loaLevel, true, _systemLogger);
+							sAuthnContextClassRefURI = SecurityLevel.convertLevelToAuthnContextClassRefURI(sLevel, false, _systemLogger);
+							_systemLogger.log(Level.FINE, MODULE, sMethod, "No AuthnContextClassRef found, using from config :" + sAuthnContextClassRefURI);
+						} else {
+							_systemLogger.log(Level.WARNING, MODULE, sMethod, "No AuthnContextClassRef found and no default specified");
+						}
+					}
+					// RH, 20160405, en
+					
 					_systemLogger.log(Level.FINE, MODULE, sMethod, "AuthnContextClassRefURI=" +sAuthnContextClassRefURI);
 					
 					/////////////////////////	digid4	///////////////////////////////////////////
@@ -598,7 +632,7 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 					//	String sAuthnContextDeclRefIssueMethod = samlAssertion.getAuthnStatements().get(0).getAuthnContext().
 					/////////////////////////	digid4	///////////////////////////////////////////
 					
-					PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sFederationUrl);
+//					PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sFederationUrl);	// RH, 20160405, o
 					String specialSettings = (partnerData == null)? null: partnerData.getSpecialSettings();
 					boolean useLoa = (specialSettings != null && specialSettings.contains("use_loa"));
 					_systemLogger.log(Level.FINER, MODULE, sMethod, "useLoa="+useLoa);
