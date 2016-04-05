@@ -14,11 +14,20 @@ package org.aselect.server.request.handler.xsaml20.sp;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.security.PrivateKey;
+import java.util.ArrayList;
+import java.util.Map;
 import java.util.logging.Level;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.xml.bind.JAXBContext;
+import javax.xml.bind.JAXBElement;
+import javax.xml.bind.JAXBException;
+import javax.xml.bind.PropertyException;
+import javax.xml.namespace.QName;
+import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.dom.DOMResult;
 
 import org.aselect.server.application.ApplicationManager;
 import org.aselect.server.config.ASelectConfigManager;
@@ -49,6 +58,8 @@ import org.opensaml.common.SAMLVersion;
 import org.opensaml.common.binding.BasicSAMLMessageContext;
 import org.opensaml.common.xml.SAMLConstants;
 import org.opensaml.saml2.binding.encoding.HTTPRedirectDeflateEncoder;
+import org.opensaml.saml2.common.Extensions;
+import org.opensaml.saml2.common.impl.ExtensionsBuilder;
 import org.opensaml.saml2.core.AuthnContextClassRef;
 import org.opensaml.saml2.core.AuthnContextComparisonTypeEnumeration;
 import org.opensaml.saml2.core.AuthnRequest;
@@ -59,12 +70,22 @@ import org.opensaml.saml2.metadata.Endpoint;
 import org.opensaml.saml2.metadata.SingleSignOnService;
 import org.opensaml.ws.transport.http.HttpServletResponseAdapter;
 import org.opensaml.xml.Configuration;
+import org.opensaml.xml.XMLObject;
 import org.opensaml.xml.XMLObjectBuilderFactory;
 import org.opensaml.xml.io.Marshaller;
 import org.opensaml.xml.io.MarshallerFactory;
+import org.opensaml.xml.io.Unmarshaller;
+import org.opensaml.xml.io.UnmarshallerFactory;
+import org.opensaml.xml.io.UnmarshallingException;
+import org.opensaml.xml.schema.XSAny;
 import org.opensaml.xml.security.x509.BasicX509Credential;
 import org.opensaml.xml.util.XMLHelper;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
 import org.w3c.dom.Node;
+
+import com.sun.xml.bind.marshaller.NamespacePrefixMapper;
+
 
 public class Xsaml20_ISTS extends Saml20_BaseHandler
 {
@@ -371,6 +392,15 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 					.getBuilder(AuthnRequest.DEFAULT_ELEMENT_NAME);
 			AuthnRequest authnRequest = authnRequestbuilder.buildObject();
 
+			if (partnerData != null && partnerData.getExtensionsdata4partner().getRequestedAttributes() != null ) {	// maybe define some other condition
+				
+				// Add the stork extensions
+				Extensions extensions = createSTORKExtensions(sApplicationLevel, sApplicationId, partnerData);
+				authnRequest.setExtensions(extensions);
+				authnRequest = (AuthnRequest) HandlerTools.rebuildAssertion(authnRequest);
+			}
+
+			 
 			// We should be able to set AssertionConsumerServiceIndex. This is according to saml specs mutually exclusive with
 			// ProtocolBinding and AssertionConsumerServiceURL
 			
@@ -632,6 +662,301 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 	}
 
 	/**
+	 * @param sMethod
+	 * @return
+	 * @throws JAXBException
+	 * @throws PropertyException
+	 * @throws ParserConfigurationException
+	 * @throws UnmarshallingException
+	 * @throws ASelectException 
+	 */
+	public Extensions createSTORKExtensions(String sApplicationLevel, String sApplicationId, PartnerData partnerData)
+		throws JAXBException, PropertyException, ParserConfigurationException, UnmarshallingException, ASelectException
+	{
+		
+		String sMethod = "createSTORKExtensions";
+		ArrayList<XMLObject> extObjects = new ArrayList<XMLObject>();
+		Integer assLevel = partnerData.getExtensionsdata4partner().getQualityAuthenticationAssuranceLevel();
+		if (assLevel == null) {
+			String s_loaLevel = SecurityLevel.convertLevelToAuthnContextClassRefURI(sApplicationLevel, true, _systemLogger);
+			assLevel = SecurityLevel.loa2stork(s_loaLevel);
+		}
+		
+		String spSect = partnerData.getExtensionsdata4partner().getSpSector();
+		
+		String spInstitution = partnerData.getExtensionsdata4partner().getSpInstitution();	// SpInstitution must be done via "any" element, not part of STORK extensions
+		String spApplication = partnerData.getExtensionsdata4partner().getSpApplication();
+		if (spApplication == null) spApplication = sApplicationId;
+		String spCountry = partnerData.getExtensionsdata4partner().getSpCountry();;
+		
+		Boolean eIDSectorShare = partnerData.getExtensionsdata4partner().geteIDSectorShare();
+		Boolean eIDCrossSectorShare = partnerData.getExtensionsdata4partner().geteIDCrossSectorShare();
+		Boolean eIDCrossBorderShare = partnerData.getExtensionsdata4partner().geteIDCrossBorderShare();
+		
+		Extensions extensions = new ExtensionsBuilder().buildObject(new QName(SAMLConstants.SAML20P_NS,
+		        Extensions.LOCAL_NAME, SAMLConstants.SAML20P_PREFIX));
+		
+		 eu.stork.extension.assertion.ObjectFactory extFact = new  eu.stork.extension.assertion.ObjectFactory();
+		 JAXBContext context = JAXBContext.newInstance(extFact.getClass());
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created context:" + context.toString());
+		 javax.xml.bind.Marshaller m = context.createMarshaller();
+		 m.setProperty(javax.xml.bind.Marshaller.JAXB_FRAGMENT, Boolean.TRUE);
+        try {
+        	// com.sun.xml.internal.bind.marshaller.NamespacePrefixMapper; gone from jdk6u18 onwards, so we implement our own
+            m.setProperty("com.sun.xml.bind.namespacePrefixMapper",new NamespacePrefixMapperImpl());
+        } catch( PropertyException e ) {
+            // if the JAXB provider doesn't recognize the prefix mapper,
+            // it will throw this exception. Since being unable to specify
+            // a human friendly prefix is not really a fatal problem,
+            // you can just continue marshalling without failing
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not set marshaller property namespacePrefixMapper, trying to continue");
+        }
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created Marshaller:" + m.toString());
+		 JAXBElement<Integer> oqal = extFact.createQualityAuthenticationAssuranceLevel(assLevel);
+		 if (oqal != null) {
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created QualityAuthenticationAssuranceLevel:" + oqal.getName().getLocalPart());
+				       DOMResult result = new DOMResult();
+				       m.marshal( oqal, result ); 
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created result so far:" +result);
+				       Document doc = (Document) result.getNode();
+				       Element element = doc.getDocumentElement();
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created element so far:" +XMLHelper.prettyPrintXML(element));
+						UnmarshallerFactory factory = org.opensaml.xml.Configuration.getUnmarshallerFactory();
+						Unmarshaller unmarshaller = factory.getUnmarshaller( XSAny.TYPE_NAME );
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created Unmarshaller:" + unmarshaller.toString());
+
+						XMLObject xmlobject = (XMLObject) unmarshaller.unmarshall(element);
+						if (xmlobject != null) {
+							extObjects.add(xmlobject);
+						} else {
+							_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not create xmlobject !" );
+						}
+		 } else {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not create QualityAuthenticationAssuranceLevel !" );
+		 }
+		 JAXBElement<String> ospSect = extFact.createSpSector(spSect);
+		 if (ospSect != null) {
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created spSector:" + ospSect.getName().getLocalPart());
+				       DOMResult result = new DOMResult();
+				       m.marshal( ospSect, result ); 
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created result so far:" +result);
+				       Document doc = (Document) result.getNode();
+				       Element element = doc.getDocumentElement();
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created element so far:" +XMLHelper.prettyPrintXML(element));
+						UnmarshallerFactory factory = org.opensaml.xml.Configuration.getUnmarshallerFactory();
+						Unmarshaller unmarshaller = factory.getUnmarshaller( XSAny.TYPE_NAME );
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created Unmarshaller:" + unmarshaller.toString());
+
+						XMLObject xmlobject = (XMLObject) unmarshaller.unmarshall(element);
+						if (xmlobject != null) {
+							extObjects.add(xmlobject);
+						} else {
+							_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not create xmlobject !" );
+						}
+		 } else {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not create spSector !" );
+		 }
+		 
+		 JAXBElement<String> ospInstitution = extFact.createSpInstitution(spInstitution);	// this is a custom defined element, not part of stork
+		 if (ospInstitution != null) {
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created spInstitution:" + ospInstitution.getName().getLocalPart());
+				       DOMResult result = new DOMResult();
+				       m.marshal( ospInstitution, result ); 
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created result so far:" +result);
+				       Document doc = (Document) result.getNode();
+				       Element element = doc.getDocumentElement();
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created element so far:" +XMLHelper.prettyPrintXML(element));
+						UnmarshallerFactory factory = org.opensaml.xml.Configuration.getUnmarshallerFactory();
+						Unmarshaller unmarshaller = factory.getUnmarshaller( XSAny.TYPE_NAME );
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created Unmarshaller:" + unmarshaller.toString());
+
+						XMLObject xmlobject = (XMLObject) unmarshaller.unmarshall(element);
+						if (xmlobject != null) {
+							extObjects.add(xmlobject);
+						} else {
+							_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not create xmlobject !" );
+						}
+		 } else {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not create spInstitution !" );
+		 }
+		  //
+		 
+		 JAXBElement<String> ospApplication = extFact.createSpApplication(spApplication);
+		 if (ospApplication != null) {
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created spApplication:" + ospApplication.getName().getLocalPart());
+				       DOMResult result = new DOMResult();
+				       m.marshal( ospApplication, result ); 
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created result so far:" +result);
+				       Document doc = (Document) result.getNode();
+				       Element element = doc.getDocumentElement();
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created element so far:" +XMLHelper.prettyPrintXML(element));
+						UnmarshallerFactory factory = org.opensaml.xml.Configuration.getUnmarshallerFactory();
+						Unmarshaller unmarshaller = factory.getUnmarshaller( XSAny.TYPE_NAME );
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created Unmarshaller:" + unmarshaller.toString());
+
+						XMLObject xmlobject = (XMLObject) unmarshaller.unmarshall(element);
+						if (xmlobject != null) {
+							extObjects.add(xmlobject);
+						} else {
+							_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not create xmlobject !" );
+						}
+		 } else {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not create spSector !" );
+		 }
+		 
+		 JAXBElement<String> ospCountry = extFact.createSpCountry(spCountry);
+		 if (ospCountry != null) {
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created spCountry:" + ospCountry.getName().getLocalPart());
+				       DOMResult result = new DOMResult();
+				       m.marshal( ospCountry, result ); 
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created result so far:" +result);
+				       Document doc = (Document) result.getNode();
+				       Element element = doc.getDocumentElement();
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created element so far:" +XMLHelper.prettyPrintXML(element));
+						UnmarshallerFactory factory = org.opensaml.xml.Configuration.getUnmarshallerFactory();
+						Unmarshaller unmarshaller = factory.getUnmarshaller( XSAny.TYPE_NAME );
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created Unmarshaller:" + unmarshaller.toString());
+
+						XMLObject xmlobject = (XMLObject) unmarshaller.unmarshall(element);
+						if (xmlobject != null) {
+							extObjects.add(xmlobject);
+						} else {
+							_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not create xmlobject !" );
+						}
+		 } else {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not create spCountry !" );
+		 }
+		 
+		 
+		 eu.stork.extension.protocol.ObjectFactory pextFact = new  eu.stork.extension.protocol.ObjectFactory();
+		 JAXBContext context2 = JAXBContext.newInstance(pextFact.getClass());
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created context:" + context2.toString());
+		 javax.xml.bind.Marshaller m2 = context2.createMarshaller();
+		 m2.setProperty(javax.xml.bind.Marshaller.JAXB_FRAGMENT, Boolean.TRUE);
+        try {
+        	// com.sun.xml.internal.bind.marshaller.NamespacePrefixMapper; gone from jdk6u18 onwards
+        	m2.setProperty("com.sun.xml.bind.namespacePrefixMapper",new NamespacePrefixMapperImpl());
+        } catch( PropertyException e ) {
+            // if the JAXB provider doesn't recognize the prefix mapper,
+            // it will throw this exception. Since being unable to specify
+            // a human friendly prefix is not really a fatal problem,
+            // you can just continue marshalling without failing
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not set marshaller property namespacePrefixMapper, trying to continue");
+        }
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created Marshaller:" + m.toString());
+		
+		 JAXBElement<Boolean> oeIDSectorShare = pextFact.createEIDSectorShare(eIDSectorShare);
+		 if (oeIDSectorShare != null) {
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created oeIDSectorShare:" + oeIDSectorShare.getName().getLocalPart());
+				       DOMResult result = new DOMResult();
+				       m2.marshal( oeIDSectorShare, result ); 
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created result so far:" +result);
+				       Document doc = (Document) result.getNode();
+				       Element element = doc.getDocumentElement();
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created element so far:" +XMLHelper.prettyPrintXML(element));
+						UnmarshallerFactory factory = org.opensaml.xml.Configuration.getUnmarshallerFactory();
+						Unmarshaller unmarshaller = factory.getUnmarshaller( XSAny.TYPE_NAME );
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created Unmarshaller:" + unmarshaller.toString());
+
+						XMLObject xmlobject = (XMLObject) unmarshaller.unmarshall(element);
+						if (xmlobject != null) {
+							extObjects.add(xmlobject);
+						} else {
+							_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not create xmlobject !" );
+						}
+		 } else {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not create oeIDSectorShare !" );
+		 }
+
+		 JAXBElement<Boolean> oeIDCrossSectorShare = pextFact.createEIDCrossSectorShare(eIDCrossSectorShare);
+		 if (oeIDCrossSectorShare != null) {
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created eIDCrossSectorShare:" + oeIDCrossSectorShare.getName().getLocalPart());
+				       DOMResult result = new DOMResult();
+				       m2.marshal( oeIDCrossSectorShare, result ); 
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created result so far:" +result);
+				       Document doc = (Document) result.getNode();
+				       Element element = doc.getDocumentElement();
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created element so far:" +XMLHelper.prettyPrintXML(element));
+						UnmarshallerFactory factory = org.opensaml.xml.Configuration.getUnmarshallerFactory();
+						Unmarshaller unmarshaller = factory.getUnmarshaller( XSAny.TYPE_NAME );
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created Unmarshaller:" + unmarshaller.toString());
+
+						XMLObject xmlobject = (XMLObject) unmarshaller.unmarshall(element);
+						if (xmlobject != null) {
+							extObjects.add(xmlobject);
+						} else {
+							_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not create xmlobject !" );
+						}
+		 } else {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not create oeIDCrossSectorShare !" );
+		 }
+		
+		 
+		 JAXBElement<Boolean> oeIDCrossBorderShare = pextFact.createEIDCrossBorderShare(eIDCrossBorderShare);
+		 if (oeIDCrossBorderShare != null) {
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created eIDCrossBorderShare:" + oeIDCrossBorderShare.getName().getLocalPart());
+				       DOMResult result = new DOMResult();
+				       m2.marshal( oeIDCrossBorderShare, result ); 
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created result so far:" +result);
+				       Document doc = (Document) result.getNode();
+				       Element element = doc.getDocumentElement();
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created element so far:" +XMLHelper.prettyPrintXML(element));
+						UnmarshallerFactory factory = org.opensaml.xml.Configuration.getUnmarshallerFactory();
+						Unmarshaller unmarshaller = factory.getUnmarshaller( XSAny.TYPE_NAME );
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created Unmarshaller:" + unmarshaller.toString());
+
+						XMLObject xmlobject = (XMLObject) unmarshaller.unmarshall(element);
+						if (xmlobject != null) {
+							extObjects.add(xmlobject);
+						} else {
+							_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not create xmlobject !" );
+						}
+		 } else {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not create eIDCrossBorderShare !" );
+		 }
+		 
+		 for ( Map<String, Object> reqAttribs :  partnerData.getExtensionsdata4partner().getRequestedAttributes() ) {
+		 
+			 eu.stork.extension.protocol.RequestedAttributeType rat = pextFact.createRequestedAttributeType();
+			 if (reqAttribs.get("isrequired") != null) rat.setIsRequired((Boolean) reqAttribs.get("isrequired"));
+			 rat.setNameFormat((String) reqAttribs.get("nameformat"));
+			 rat.setName((String) reqAttribs.get("name"));
+			 eu.stork.extension.protocol.RequestedAttributesType rats = pextFact.createRequestedAttributesType();
+			 rats.getRequestedAttribute().add(rat);
+			 
+			 JAXBElement<eu.stork.extension.protocol.RequestedAttributesType> oreqattributes = pextFact.createRequestedAttributes(rats);
+			 if (oreqattributes != null) {
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created RequestedAttributes:" + oreqattributes.getName().getLocalPart());
+					       DOMResult result = new DOMResult();
+					       m2.marshal( oreqattributes, result ); 
+							_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created result so far:" +result);
+					       Document doc = (Document) result.getNode();
+					       Element element = doc.getDocumentElement();
+							_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created element so far:" +XMLHelper.prettyPrintXML(element));
+							UnmarshallerFactory factory = org.opensaml.xml.Configuration.getUnmarshallerFactory();
+							Unmarshaller unmarshaller = factory.getUnmarshaller( XSAny.TYPE_NAME );
+							_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created Unmarshaller:" + unmarshaller.toString());
+	
+							XMLObject xmlobject = (XMLObject) unmarshaller.unmarshall(element);
+							if (xmlobject != null) {
+								extObjects.add(xmlobject);
+							} else {
+								_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not create xmlobject !" );
+							}
+			 } else {
+					_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not create RequestedAttributes !" );
+			 }
+
+		 }
+		 
+		extensions.getUnknownXMLObjects().addAll(extObjects);
+		
+		return extensions;
+	}
+
+	
+	
+	/**
 	 * Gets the application level.
 	 * 
 	 * @param sApplicationId
@@ -677,4 +1002,109 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 		}
 		return null;
 	}
+	
+    
+    class NamespacePrefixMapperImpl extends NamespacePrefixMapper {
+
+        /**
+         * Returns a preferred prefix for the given namespace URI.
+         * 
+         * This method is intended to be overrided by a derived class.
+         * 
+         * @param namespaceUri
+         *      The namespace URI for which the prefix needs to be found.
+         *      Never be null. "" is used to denote the default namespace.
+         * @param suggestion
+         *      When the content tree has a suggestion for the prefix
+         *      to the given namespaceUri, that suggestion is passed as a
+         *      parameter. Typicall this value comes from the QName.getPrefix
+         *      to show the preference of the content tree. This parameter
+         *      may be null, and this parameter may represent an already
+         *      occupied prefix. 
+         * @param requirePrefix
+         *      If this method is expected to return non-empty prefix.
+         *      When this flag is true, it means that the given namespace URI
+         *      cannot be set as the default namespace.
+         * 
+         * @return
+         *      null if there's no prefered prefix for the namespace URI.
+         *      In this case, the system will generate a prefix for you.
+         * 
+         *      Otherwise the system will try to use the returned prefix,
+         *      but generally there's no guarantee if the prefix will be
+         *      actually used or not.
+         * 
+         *      return "" to map this namespace URI to the default namespace.
+         *      Again, there's no guarantee that this preference will be
+         *      honored.
+         * 
+         *      If this method returns "" when requirePrefix=true, the return
+         *      value will be ignored and the system will generate one.
+         */
+        public String getPreferredPrefix(String namespaceUri, String suggestion, boolean requirePrefix) {
+            // I want this namespace to be mapped to "stork"
+            if( "urn:eu:stork:names:tc:STORK:1.0:assertion".equals(namespaceUri) )
+                return "stork";
+             
+            // and the other will use "storkp".
+            if( "urn:eu:stork:names:tc:STORK:1.0:protocol".equals(namespaceUri) )
+                return "storkp";
+             
+            // otherwise I don't care. Just use the default suggestion, whatever it may be.
+            return suggestion;
+        }
+        
+        
+        
+        /**
+         * Returns a list of namespace URIs that should be declared
+         * at the root element.
+         * <p>
+         * By default, the JAXB RI produces namespace declarations only when
+         * they are necessary, only at where they are used. Because of this
+         * lack of look-ahead, sometimes the marshaller produces a lot of
+         * namespace declarations that look redundant to human eyes. For example,
+         * <pre><xmp>
+         * <?xml version="1.0"?>
+         * <root>
+         *   <ns1:child xmlns:ns1="urn:foo"> ... </ns1:child>
+         *   <ns2:child xmlns:ns2="urn:foo"> ... </ns2:child>
+         *   <ns3:child xmlns:ns3="urn:foo"> ... </ns3:child>
+         *   ...
+         * </root>
+         * <xmp></pre>
+         * <p>
+         * If you know in advance that you are going to use a certain set of
+         * namespace URIs, you can override this method and have the marshaller
+         * declare those namespace URIs at the root element. 
+         * <p>
+         * For example, by returning <code>new String[]{"urn:foo"}</code>,
+         * the marshaller will produce:
+         * <pre><xmp>
+         * <?xml version="1.0"?>
+         * <root xmlns:ns1="urn:foo">
+         *   <ns1:child> ... </ns1:child>
+         *   <ns1:child> ... </ns1:child>
+         *   <ns1:child> ... </ns1:child>
+         *   ...
+         * </root>
+         * <xmp></pre>
+         * <p>
+         * To control prefixes assigned to those namespace URIs, use the
+         * {@link #getPreferredPrefix} method. 
+         * 
+         * @return
+         *      A list of namespace URIs as an array of {@link String}s.
+         *      This method can return a length-zero array but not null.
+         *      None of the array component can be null. To represent
+         *      the empty namespace, use the empty string <code>""</code>.
+         * 
+         * @since
+         *      JAXB RI 1.0.2 
+         */
+        public String[] getPreDeclaredNamespaceUris() {
+            return new String[] { "urn:eu:stork:names:tc:STORK:1.0:assertion" , "urn:eu:stork:names:tc:STORK:1.0:protocol"};
+        }
+    }
+
 }

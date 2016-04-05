@@ -11,12 +11,15 @@
  */
 package org.aselect.server.request.handler.xsaml20.sp;
 
+import java.util.ArrayList;
 import java.util.Hashtable;
+import java.util.Map;
 import java.util.logging.Level;
 
 import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.server.request.handler.xsaml20.AbstractMetaDataManager;
 import org.aselect.server.request.handler.xsaml20.PartnerData;
+import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.Utils;
@@ -301,6 +304,98 @@ public class MetaDataManagerSp extends AbstractMetaDataManager
 			}
 			// End Set specific metadata for this partner
 
+			//  Start Set PEPS/STORK extensions data for this partner
+			Object extensionsdataSection = Utils.getSimpleSection(_configManager, _systemLogger, idpSection, "storkextensions", false);
+			if (extensionsdataSection != null) {
+				_systemLogger.log(Level.CONFIG, MODULE, sMethod, "storkextensionsdataSection section found for: "+ sId);
+
+				String extensions_qualityauthenticationassurancelevel = Utils.getSimpleParam(_configManager, _systemLogger, extensionsdataSection, "qualityauthenticationassurancelevel", false);
+				if (extensions_qualityauthenticationassurancelevel != null) { // if not null, value will be used, otherwise requested auth level will be used
+					try {	// if not null, must be number, should be between 1 and 4 inclusive
+							idpData.getExtensionsdata4partner().setQualityAuthenticationAssuranceLevel(Integer.parseInt(extensions_qualityauthenticationassurancelevel));
+					} catch (NumberFormatException nfe) {
+						_systemLogger.log(Level.SEVERE, MODULE, sMethod, "if provided, qualityauthenticationassurancelevel must be a number for resource: "+ sId);
+						throw new ASelectConfigException(Errors.ERROR_ASELECT_CONFIG_ERROR, nfe);
+					}
+				}
+
+				String extensions_spsector = Utils.getSimpleParam(_configManager, _systemLogger, extensionsdataSection, "spsector", false);
+				if (extensions_spsector != null) {	// length should be between 1 and 20 inclusive
+					idpData.getExtensionsdata4partner().setSpSector(extensions_spsector);
+				}				
+				String extensions_spinstitution = Utils.getSimpleParam(_configManager, _systemLogger, extensionsdataSection, "spinstitution", false);
+				if (extensions_spinstitution != null) {	// not in STORK specs
+					idpData.getExtensionsdata4partner().setSpInstitution(extensions_spinstitution);
+				}				
+				String extensions_spapplication = Utils.getSimpleParam(_configManager, _systemLogger, extensionsdataSection, "spapplication", false);
+				if (extensions_spapplication != null) {	// length should be between 1 and 100 inclusive
+					idpData.getExtensionsdata4partner().setSpApplication(extensions_spapplication);
+				}				
+				String extensions_spcountry = Utils.getSimpleParam(_configManager, _systemLogger, extensionsdataSection, "spcountry", false);
+				if (extensions_spcountry != null) {	// should be xs:token "[A-Z{2}"
+					idpData.getExtensionsdata4partner().setSpCountry(extensions_spcountry);
+				}				
+				
+				String extensions_eidsectorshare = Utils.getSimpleParam(_configManager, _systemLogger, extensionsdataSection, "eidsectorshare", false);
+				if (extensions_eidsectorshare != null) {	// should be true or false
+					idpData.getExtensionsdata4partner().seteIDSectorShare(Boolean.parseBoolean(extensions_eidsectorshare));
+				}				
+				
+				String extensions_eidcrosssectorshare = Utils.getSimpleParam(_configManager, _systemLogger, extensionsdataSection, "eidcrosssectorshare", false);
+				if (extensions_eidcrosssectorshare != null) {	// should be true or false
+					idpData.getExtensionsdata4partner().seteIDCrossSectorShare(Boolean.parseBoolean(extensions_eidcrosssectorshare));
+				}				
+				
+				String extensions_eidcrossbordershare = Utils.getSimpleParam(_configManager, _systemLogger, extensionsdataSection, "eidcrossbordershare", false);
+				if (extensions_eidcrossbordershare != null) {	// should be true or false
+					idpData.getExtensionsdata4partner().seteIDCrossBorderShare(Boolean.parseBoolean(extensions_eidcrossbordershare));
+				}				
+				
+				Object extensions_requestedattributes = Utils.getSimpleSection(_configManager, _systemLogger, extensionsdataSection, "requestedattributes", false);
+				if (extensions_requestedattributes != null) {
+					Object extensions_requestedattribute = Utils.getSimpleSection(_configManager, _systemLogger, extensions_requestedattributes, "requestedattribute", false);
+					if (extensions_requestedattribute != null) {
+						ArrayList <Map<String, Object>> reqAttributes = new  ArrayList <Map<String, Object>>();
+						while (extensions_requestedattribute != null) {
+							Map<String, Object> reqAttr = new Hashtable<String, Object>();
+							String  extensions_requestedattribute_name = Utils.getSimpleParam(_configManager, _systemLogger, extensions_requestedattribute, "name", true);
+							reqAttr.put("name", extensions_requestedattribute_name);
+							String extensions_requestedattribute_nameformat = Utils.getSimpleParam(_configManager, _systemLogger, extensions_requestedattribute, "nameformat", false);
+							if ( extensions_requestedattribute_nameformat == null ) {
+								_systemLogger.log(Level.CONFIG, MODULE, sMethod, "nameformat not provided, using default" );
+								extensions_requestedattribute_nameformat = "urn:oasis:names:tc:SAML:2.0:attrname-format:uri";	// set a reasonable default
+							}
+							reqAttr.put("nameformat", extensions_requestedattribute_nameformat);
+							String extensions_requestedattribute_isrequired = Utils.getSimpleParam(_configManager, _systemLogger, extensions_requestedattribute, "isrequired", false);
+							Boolean bextensions_requestedattribute_isrequired = null;
+							if (extensions_requestedattribute_isrequired != null) {
+								bextensions_requestedattribute_isrequired = Boolean.parseBoolean(extensions_requestedattribute_isrequired);
+							}
+							reqAttr.put("isrequired", bextensions_requestedattribute_isrequired);
+							// attributevalues not implemented (yet)
+							
+							reqAttributes.add(reqAttr);
+							extensions_requestedattribute = _configManager.getNextSection(extensions_requestedattribute);
+
+						}
+						idpData.getExtensionsdata4partner().setRequestedAttributes(reqAttributes);
+					} else {
+						_systemLogger.log(Level.SEVERE, MODULE, sMethod, "At least one requested attribute needed for resource: "+ sId);
+						throw new ASelectConfigException(Errors.ERROR_ASELECT_CONFIG_ERROR);
+					}
+				
+				} else {
+					_systemLogger.log(Level.SEVERE, MODULE, sMethod, "requestedattributes section missing for resource: "+ sId);
+					throw new ASelectConfigException(Errors.ERROR_ASELECT_CONFIG_ERROR);
+				}
+				_systemLogger.log(Level.CONFIG, MODULE, sMethod, "Using extensionsdataSection : "+ idpData.getExtensionsdata4partner().toString());
+
+			} else {
+				_systemLogger.log(Level.CONFIG, MODULE, sMethod, "No extensionsdataSection section found for: "+ sId);
+			}
+			
+			//  End Set PEPS/STORK extension data for this partner
+			
 			// Set specific testdata for this partner
 			Object testdataSection = Utils.getSimpleSection(_configManager, _systemLogger, idpSection, "testdata", false);
 			if (testdataSection != null) {
