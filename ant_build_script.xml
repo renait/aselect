@@ -110,13 +110,29 @@
     <mkdir dir="target/classes" />
 
 	<echo message="${full.build.version}${line.separator}" file="target/classes/${svnversion_file}" />
-    <!--	
-
-	    <javac destdir="target/classes" optimize="true" debug="true" debuglevel="vars,source,lines" srcdir="src/org" sourcepath="">
+    <!-- STORK EXTENSIONS	-->
+  	<!--
+	    <javac destdir="target/classes" optimize="true" debug="true" debuglevel="vars,source,lines" srcdir="src/eu" sourcepath="">
 	  -->
-  	<!--		-->
+  	<!-- -->	
+        <javac destdir="target/classes" optimize="true" srcdir="src/eu" sourcepath="">
+        	<!--    -->
+      <classpath>
+        <fileset dir="lib">
+          <include name="*.jar" />
+        </fileset>
+        <fileset dir="lib-compile">
+          <include name="*.jar" />
+        </fileset>
+      </classpath>
+    </javac>
+  	
+    <!-- A-SELECT	-->
+	    <javac destdir="target/classes" optimize="true" debug="true" debuglevel="vars,source,lines" srcdir="src/org" sourcepath="">
+	  <!--	-->
+  	<!--	
         <javac destdir="target/classes" optimize="true" srcdir="src/org" sourcepath="">
-          	<!--		-->
+        -->
       <classpath>
         <fileset dir="lib">
           <include name="*.jar" />
@@ -133,6 +149,22 @@
     <format property="touch.time" pattern="d-MMMM-yyyy HH:mm" />
    	</tstamp>
 
+	<echo message="Full build version: ${touch.time}"/>
+
+    <build-jar jar-name="eu.stork"
+               include-pattern="eu/stork/**/*.class" >
+		<manifest-tag>
+			<manifest>
+				<attribute name="SIAM-Revision" value="${full.build.version}"/>
+				<attribute name="SIAM-BuiltStamp" value="${touch.time}" />
+				<attribute name="Specification-Vendor" value="${vendor}"/>
+				<attribute name="Specification-Version" value="${full.build.version} ${touch.time}"/>
+				<attribute name="Implementation-Title" value="SIAM Server Stork Extensions"/>
+				<attribute name="Implementation-Vendor" value="${vendor}"/>
+				<attribute name="Implementation-Version" value="${full.build.version} ${touch.time}"/>
+			</manifest>
+		</manifest-tag>
+    </build-jar>
 
     <build-jar jar-name="agent" include-pattern="org/aselect/agent/**/*.class" >
     	<manifest-tag>
