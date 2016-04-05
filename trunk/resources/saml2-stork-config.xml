@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<XMLTooling xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance"
+ xsi:schemaLocation="http://www.opensaml.org/xmltooling-config ../../src/schema/xmltooling-config.xsd"
+ xmlns:saml2p="urn:oasis:names:tc:SAML:2.0:protocol"
+ xmlns:saml2="urn:oasis:names:tc:SAML:2.0:assertion"
+ xmlns:stork="urn:eu:stork:names:tc:STORK:1.0:assertion"
+ xmlns:storkp="urn:eu:stork:names:tc:STORK:1.0:protocol"
+ xmlns:ds="http://www.w3.org/2000/09/xmldsig#"
+ xmlns:pr="http://reference.e-government.gv.at/namespace/persondata/20020228#"
+ xmlns:saml="urn:oasis:names:tc:SAML:1.0:assertion"
+ xmlns="http://www.opensaml.org/xmltooling-config">
+ 
+    <!-- SAML 2.0 Protocol Object providers -->
+    <ObjectProviders>
+
+
+        <!-- AuthnRequest provider -->
+        <ObjectProvider qualifiedName="saml2p:AuthnRequest">
+            <BuilderClass className="eu.stork.vidp.messages.saml.impl.STORKAuthnRequestBuilder" />
+            <MarshallingClass className="eu.stork.vidp.messages.saml.impl.STORKAuthnRequestMarshaller" />
+            <UnmarshallingClass className="eu.stork.vidp.messages.saml.impl.STORKAuthnRequestUnmarshaller" />
+        </ObjectProvider>
+                                        
+        <!-- Response provider -->
+        <ObjectProvider qualifiedName="saml2p:Response">
+            <BuilderClass className="eu.stork.vidp.messages.saml.impl.STORKResponseBuilder" />
+            <MarshallingClass className="eu.stork.vidp.messages.saml.impl.STORKResponseMarshaller" />
+            <UnmarshallingClass className="eu.stork.vidp.messages.saml.impl.STORKResponseUnmarshaller" />
+        </ObjectProvider>
+        
+        <ObjectProvider qualifiedName="saml2p:Extensions">
+            <BuilderClass className="eu.stork.vidp.messages.saml.impl.STORKExtensionsBuilder" />
+            <MarshallingClass className="eu.stork.vidp.messages.saml.impl.STORKExtensionsMarshaller" />
+            <UnmarshallingClass className="eu.stork.vidp.messages.saml.impl.STORKExtensionsUnmarshaller" />
+        </ObjectProvider> 
+        
+        <ObjectProvider qualifiedName="storkp:AuthenticationAttributes">
+            <BuilderClass className="eu.stork.vidp.messages.stork.impl.AuthenticationAttributesBuilder" />
+            <MarshallingClass className="eu.stork.vidp.messages.stork.impl.AuthenticationAttributesMarshaller" />
+            <UnmarshallingClass className="eu.stork.vidp.messages.stork.impl.AuthenticationAttributesUnmarshaller" />
+        </ObjectProvider>
+        
+        <ObjectProvider qualifiedName="storkp:CitizenCountryCode">
+            <BuilderClass className="eu.stork.vidp.messages.stork.impl.CitizenCountryCodeBuilder" />
+            <MarshallingClass className="eu.stork.vidp.messages.stork.impl.CitizenCountryCodeMarshaller" />
+            <UnmarshallingClass className="eu.stork.vidp.messages.stork.impl.CitizenCountryCodeUnmarshaller" />
+        </ObjectProvider>                
+        
+        <ObjectProvider qualifiedName="storkp:SPAuthRequest">
+            <BuilderClass className="eu.stork.vidp.messages.stork.impl.SPAuthRequestBuilder" />
+            <MarshallingClass className="eu.stork.vidp.messages.stork.impl.SPAuthRequestMarshaller" />
+            <UnmarshallingClass className="eu.stork.vidp.messages.stork.impl.SPAuthRequestUnmarshaller" />
+        </ObjectProvider>
+        
+        <ObjectProvider qualifiedName="storkp:SPCertEnc">
+            <BuilderClass className="eu.stork.vidp.messages.stork.impl.SPCertEncBuilder" />
+            <MarshallingClass className="eu.stork.vidp.messages.stork.impl.SPCertEncMarshaller" />
+            <UnmarshallingClass className="eu.stork.vidp.messages.stork.impl.SPCertEncUnmarshaller" />
+        </ObjectProvider>
+        
+        <ObjectProvider qualifiedName="storkp:SPCertSig">
+            <BuilderClass className="eu.stork.vidp.messages.stork.impl.SPCertSigBuilder" />
+            <MarshallingClass className="eu.stork.vidp.messages.stork.impl.SPCertSigMarshaller" />
+            <UnmarshallingClass className="eu.stork.vidp.messages.stork.impl.SPCertSigUnmarshaller" />
+        </ObjectProvider>
+        
+        <ObjectProvider qualifiedName="storkp:SPID">
+            <BuilderClass className="eu.stork.vidp.messages.stork.impl.SPIDBuilder" />
+            <MarshallingClass className="eu.stork.vidp.messages.stork.impl.SPIDMarshaller" />
+            <UnmarshallingClass className="eu.stork.vidp.messages.stork.impl.SPIDUnmarshaller" />
+        </ObjectProvider>
+        
+        <ObjectProvider qualifiedName="storkp:SPInformation">
+            <BuilderClass className="eu.stork.vidp.messages.stork.impl.SPInformationBuilder" />
+            <MarshallingClass className="eu.stork.vidp.messages.stork.impl.SPInformationMarshaller" />
+            <UnmarshallingClass className="eu.stork.vidp.messages.stork.impl.SPInformationUnmarshaller" />
+        </ObjectProvider>
+        
+        <ObjectProvider qualifiedName="storkp:VIDPAuthenticationAttributes">
+            <BuilderClass className="eu.stork.vidp.messages.stork.impl.VIDPAuthenticationAttributesBuilder" />
+            <MarshallingClass className="eu.stork.vidp.messages.stork.impl.VIDPAuthenticationAttributesMarshaller" />
+            <UnmarshallingClass className="eu.stork.vidp.messages.stork.impl.VIDPAuthenticationAttributesUnmarshaller" />
+        </ObjectProvider>
+        
+        <ObjectProvider qualifiedName="stork:QualityAuthenticationAssuranceLevel">
+            <BuilderClass className="eu.stork.vidp.messages.stork.impl.QualityAuthenticationAssuranceLevelBuilder" />
+            <MarshallingClass className="eu.stork.vidp.messages.stork.impl.QualityAuthenticationAssuranceLevelMarshaller" />
+            <UnmarshallingClass className="eu.stork.vidp.messages.stork.impl.QualityAuthenticationAssuranceLevelUnmarshaller" />
+        </ObjectProvider>
+        
+        <ObjectProvider qualifiedName="storkp:RequestedAttributes">
+            <BuilderClass className="eu.stork.vidp.messages.stork.impl.RequestedAttributesBuilder" />
+            <MarshallingClass className="eu.stork.vidp.messages.stork.impl.RequestedAttributesMarshaller" />
+            <UnmarshallingClass className="eu.stork.vidp.messages.stork.impl.RequestedAttributesUnmarshaller" />
+        </ObjectProvider>
+        
+        <ObjectProvider qualifiedName="stork:RequestedAttribute">
+            <BuilderClass className="eu.stork.vidp.messages.saml.impl.STORKRequestedAttributeBuilder" />
+            <MarshallingClass className="org.opensaml.saml2.metadata.impl.RequestedAttributeMarshaller" />
+            <UnmarshallingClass className="eu.stork.vidp.messages.saml.impl.STORKRequestedAttributeUnmarshaller" />
+        </ObjectProvider>
+        
+        <ObjectProvider qualifiedName="storkp:eIDSectorShare">
+            <BuilderClass className="eu.stork.vidp.messages.stork.impl.EIDSectorShareBuilder" />
+            <MarshallingClass className="eu.stork.vidp.messages.stork.impl.EIDSectorShareMarshaller" />
+            <UnmarshallingClass className="eu.stork.vidp.messages.stork.impl.EIDSectorShareUnmarshaller" />
+        </ObjectProvider>
+        
+        <ObjectProvider qualifiedName="storkp:eIDCrossSectorShare">
+            <BuilderClass className="eu.stork.vidp.messages.stork.impl.EIDCrossSectorShareBuilder" />
+            <MarshallingClass className="eu.stork.vidp.messages.stork.impl.EIDCrossSectorShareMarshaller" />
+            <UnmarshallingClass className="eu.stork.vidp.messages.stork.impl.EIDCrossSectorShareUnmarshaller" />
+        </ObjectProvider>
+        
+        <ObjectProvider qualifiedName="storkp:eIDCrossBorderShare">
+            <BuilderClass className="eu.stork.vidp.messages.stork.impl.EIDCrossBorderShareBuilder" />
+            <MarshallingClass className="eu.stork.vidp.messages.stork.impl.EIDCrossBorderShareMarshaller" />
+            <UnmarshallingClass className="eu.stork.vidp.messages.stork.impl.EIDCrossBorderShareUnmarshaller" />
+        </ObjectProvider>
+        
+        <ObjectProvider qualifiedName="stork:spSector">
+            <BuilderClass className="eu.stork.vidp.messages.stork.impl.SpSectorBuilder" />
+            <MarshallingClass className="eu.stork.vidp.messages.stork.impl.SpSectorMarshaller" />
+            <UnmarshallingClass className="eu.stork.vidp.messages.stork.impl.SpSectorUnmarshaller" />
+        </ObjectProvider>
+                        
+        <ObjectProvider qualifiedName="stork:spApplication">
+            <BuilderClass className="eu.stork.vidp.messages.stork.impl.SpApplicationBuilder" />
+            <MarshallingClass className="eu.stork.vidp.messages.stork.impl.SpApplicationMarshaller" />
+            <UnmarshallingClass className="eu.stork.vidp.messages.stork.impl.SpApplicationUnmarshaller" />
+        </ObjectProvider>
+        
+        <ObjectProvider qualifiedName="stork:spCountry">
+            <BuilderClass className="eu.stork.vidp.messages.stork.impl.SpCountryBuilder" />
+            <MarshallingClass className="eu.stork.vidp.messages.stork.impl.SpCountryMarshaller" />
+            <UnmarshallingClass className="eu.stork.vidp.messages.stork.impl.SpCountryUnmarshaller" />
+        </ObjectProvider>
+        
+        <ObjectProvider qualifiedName="stork:spInstitution">
+            <BuilderClass className="eu.stork.vidp.messages.stork.impl.SpInstitutionBuilder" />
+            <MarshallingClass className="eu.stork.vidp.messages.stork.impl.SpInstitutionMarshaller" />
+            <UnmarshallingClass className="eu.stork.vidp.messages.stork.impl.SpInstitutionUnmarshaller" />
+        </ObjectProvider>
+
+    </ObjectProviders>
+    
+     <!-- Validation rules for SAML 2.0 SAMLObjects -->
+    <ValidatorSuites>
+    
+        <!--  SAML 2.0 Schema Validation Rules -->
+        <ValidatorSuite id="saml2-core-schema-and-stork-validator">
+            <Validator qualifiedName="saml2:Action" className="org.opensaml.saml2.core.validator.ActionSchemaValidator" />
+            <Validator qualifiedName="saml2p:Artifact" className="org.opensaml.saml2.core.validator.ArtifactSchemaValidator" />
+            <Validator qualifiedName="saml2p:ArtifactResolve" className="org.opensaml.saml2.core.validator.ArtifactResolveSchemaValidator" />
+            <Validator qualifiedName="saml2p:ArtifactResponse" className="org.opensaml.saml2.core.validator.ArtifactResponseSchemaValidator" />
+            <!-- Validator qualifiedName="saml2:Assertion" className="org.opensaml.saml2.core.validator.AssertionSchemaValidator" /-->
+            <Validator qualifiedName="saml2:AssertionIDRef" className="org.opensaml.saml2.core.validator.AssertionIDRefSchemaValidator" />
+            <Validator qualifiedName="saml2:AssertionIDRequest" className="org.opensaml.saml2.core.validator.AssertionIDRequestSchemaValidator" />
+            <Validator qualifiedName="saml2:AssertionURIRef" className="org.opensaml.saml2.core.validator.AssertionURIRefSchemaValidator" />
+            <!-- Validator qualifiedName="saml2:Attribute" className="org.opensaml.saml2.core.validator.AttributeSchemaValidator" /-->
+            <Validator qualifiedName="saml2p:AttributeQuery" className="org.opensaml.saml2.core.validator.AttributeQuerySchemaValidator" />
+            <Validator qualifiedName="saml2:AttributeStatement" className="org.opensaml.saml2.core.validator.AttributeStatementSchemaValidator" />
+            <Validator qualifiedName="saml2:Audience" className="org.opensaml.saml2.core.validator.AudienceSchemaValidator" />
+            <!-- Validator qualifiedName="saml2:AudienceRestriction" className="org.opensaml.saml2.core.validator.AudienceRestrictionSchemaValidator" /-->
+            <Validator qualifiedName="saml2:AuthenticatingAuthority" className="org.opensaml.saml2.core.validator.AuthenticatingAuthoritySchemaValidator" />
+            <Validator qualifiedName="saml2:AuthnContextClassRef" className="org.opensaml.saml2.core.validator.AuthnContextClassRefSchemaValidator" />
+            <Validator qualifiedName="saml2:AuthnContextDeclRef" className="org.opensaml.saml2.core.validator.AuthnContextDeclRefSchemaValidator" />
+            <Validator qualifiedName="saml2:AuthnContextDecl" className="org.opensaml.saml2.core.validator.AuthnContextDeclSchemaValidator" />
+            <Validator qualifiedName="saml2p:AuthnQuery" className="org.opensaml.saml2.core.validator.AuthnQuerySchemaValidator" />
+            <!-- Validator qualifiedName="saml2p:AuthnRequest" className="org.opensaml.saml2.core.validator.AuthnRequestSchemaValidator" /-->
+            <!-- Validator qualifiedName="saml2:AuthnStatement" className="org.opensaml.saml2.core.validator.AuthnStatementSchemaValidator" /-->
+            <Validator qualifiedName="saml2p:AuthzDecisionQuery" className="org.opensaml.saml2.core.validator.AuthzDecisionQuerySchemaValidator" />
+            <Validator qualifiedName="saml2:AuthzDecisionStatement" className="org.opensaml.saml2.core.validator.AuthzDecisionStatementSchemaValidator" />
+            <Validator qualifiedName="saml2:AuthnContextClassRef" className="org.opensaml.saml2.core.validator.AuthnContextClassRefSchemaValidator" />
+            <Validator qualifiedName="saml2:Evidence" className="org.opensaml.saml2.core.validator.EvidenceSchemaValidator" />
+            <Validator qualifiedName="saml2p:GetComplete" className="org.opensaml.saml2.core.validator.GetCompleteSchemaValidator" />
+            <Validator qualifiedName="saml2p:IDPEntry" className="org.opensaml.saml2.core.validator.IDPEntrySchemaValidator" />
+            <Validator qualifiedName="saml2p:IDPList" className="org.opensaml.saml2.core.validator.IDPListSchemaValidator" />
+            <!-- Validator qualifiedName="saml2:Issuer" className="org.opensaml.saml2.core.validator.IssuerSchemaValidator" /-->
+            <Validator qualifiedName="saml2p:LogoutRequest" className="org.opensaml.saml2.core.validator.LogoutRequestSchemaValidator" />
+            <Validator qualifiedName="saml2p:LogoutResponse" className="org.opensaml.saml2.core.validator.LogoutResponseSchemaValidator" />
+            <Validator qualifiedName="saml2p:ManageNameIDRequest" className="org.opensaml.saml2.core.validator.ManageNameIDRequestSchemaValidator" />
+            <Validator qualifiedName="saml2p:ManageNameIDResponse" className="org.opensaml.saml2.core.validator.ManageNameIDResponseSchemaValidator" />
+            <!-- Validator qualifiedName="saml2:NameID" className="org.opensaml.saml2.core.validator.NameIDSchemaValidator" /-->
+            <Validator qualifiedName="saml2p:NameIDMappingRequest" className="org.opensaml.saml2.core.validator.NameIDMappingRequestSchemaValidator" />
+            <Validator qualifiedName="saml2p:NameIDMappingResponse" className="org.opensaml.saml2.core.validator.NameIDMappingResponseSchemaValidator" />
+            <Validator qualifiedName="saml2p:NewID" className="org.opensaml.saml2.core.validator.NewIDSchemaValidator" />
+            <Validator qualifiedName="saml2p:RequestedAuthnContext" className="org.opensaml.saml2.core.validator.RequestedAuthnContextSchemaValidator" />
+            <Validator qualifiedName="saml2p:RequesterID" className="org.opensaml.saml2.core.validator.RequesterIDSchemaValidator" />
+            <!-- Validator qualifiedName="saml2p:Response" className="org.opensaml.saml2.core.validator.ResponseSchemaValidator" /-->
+            <Validator qualifiedName="saml2:SessionIndex" className="org.opensaml.saml2.core.validator.SessionIndexSchemaValidator" />
+            <!-- Validator qualifiedName="saml2p:Status" className="org.opensaml.saml2.core.validator.StatusSchemaValidator" /-->
+            <!-- Validator qualifiedName="saml2p:StatusCode" className="org.opensaml.saml2.core.validator.StatusCodeSchemaValidator" /-->
+            <Validator qualifiedName="saml2p:StatusMessage" className="org.opensaml.saml2.core.validator.StatusMessageSchemaValidator" />
+            <!-- Validator qualifiedName="saml2:Subject" className="org.opensaml.saml2.core.validator.SubjectSchemaValidator" /-->
+            <!-- Validator qualifiedName="saml2:SubjectConfirmation" className="org.opensaml.saml2.core.validator.SubjectConfirmationSchemaValidator" /-->
+            <Validator qualifiedName="saml2p:Response" className="eu.stork.vidp.messages.validation.StorkResponseValidator" />     
+            <Validator qualifiedName="saml2:Issuer" className="eu.stork.vidp.messages.validation.StorkIssuerValidator" />
+			<Validator qualifiedName="saml2p:Status" className="eu.stork.vidp.messages.validation.StorkStatusValidator" />
+			<Validator qualifiedName="saml2p:StatusCode" className="eu.stork.vidp.messages.validation.StorkStatusCodeValidator" />       
+			<Validator qualifiedName="saml2:Assertion" className="eu.stork.vidp.messages.validation.StorkAssertionValidator" />
+            <Validator qualifiedName="saml2:Subject" className="eu.stork.vidp.messages.validation.StorkSubjectValidator" />
+            <Validator qualifiedName="saml2:NameID" className="eu.stork.vidp.messages.validation.StorkNameIDValidator" />
+            <Validator qualifiedName="saml2:EncryptedID" className="eu.stork.vidp.messages.validation.StorkEncryptedIdValidator" />
+            <Validator qualifiedName="saml2:SubjectConfirmation" className="eu.stork.vidp.messages.validation.StorkSubjectConfirmationValidator" />
+            <Validator qualifiedName="saml2:AudienceRestriction" className="eu.stork.vidp.messages.validation.StorkAudienceRestrictionValidator" />
+            <Validator qualifiedName="saml2:Conditions" className="eu.stork.vidp.messages.validation.StorkConditionsValidator" />
+            <Validator qualifiedName="saml2:AuthnStatement" className="eu.stork.vidp.messages.validation.StorkAuthnStatementValidator" />
+            <Validator qualifiedName="saml2:SubjectLocality" className="eu.stork.vidp.messages.validation.StorkSubjectLocalityValidator" />
+            <Validator qualifiedName="saml2:Attribute" className="eu.stork.vidp.messages.validation.StorkAttributeValidator" />
+            <Validator qualifiedName="saml2:EncryptedAttribute" className="eu.stork.vidp.messages.validation.StorkEncryptedAttributeValidator" />
+            <Validator qualifiedName="saml2p:AuthnRequest" className="eu.stork.vidp.messages.validation.StorkAuthnRequestValidator" />
+            <Validator qualifiedName="storkp:AuthenticationAttributes" className="eu.stork.vidp.messages.validation.StorkAuthenticationAttributesValidator" />
+            <Validator qualifiedName="storkp:SPID" className="eu.stork.vidp.messages.validation.StorkSPIDValidator" />
+			<Validator qualifiedName="storkp:SPInformation" className="eu.stork.vidp.messages.validation.StorkSPInformationValidator" />
+            <!-- Validator qualifiedName="stork:FinalRedirectURL" className="eu.stork.vidp.messages.validation.StorkFinalRedirectURLValidator" /-->
+            <Validator qualifiedName="storkp:CitizenCountryCode" className="eu.stork.vidp.messages.validation.StorkCitizenCountryCodeValidator" />
+            <Validator qualifiedName="storkp:VIDPAuthenticationAttributes" className="eu.stork.vidp.messages.validation.StorkVIDPAuthenticationAttributesValidator" />
+            <Validator qualifiedName="stork:RequestedAttribute" className="eu.stork.vidp.messages.validation.StorkRequestedAttributeValidator" />
+            <Validator qualifiedName="storkp:RequestedAttributes" className="eu.stork.vidp.messages.validation.StorkRequestedAttributesValidator" />
+            <Validator qualifiedName="stork:QualityAuthenticationAssuranceLevel" className="eu.stork.vidp.messages.validation.StorkQualityAuthenticationAssuranceLevelValidator" />
+            <Validator qualifiedName="saml2p:Extensions" className="eu.stork.vidp.messages.validation.StorkExtensionsValidator" />
+            <Validator qualifiedName="saml2:NameIdPolicy" className="eu.stork.vidp.messages.validation.StorkNameIdPolicyValidator" />
+            <Validator qualifiedName="ds:Signature" className="org.opensaml.xml.signature.validator.SignatureSchemaValidator" />
+	    <Validator qualifiedName="stork:spSector" className="eu.stork.vidp.messages.validation.StorkSpSectorValidator" />
+            <Validator qualifiedName="stork:spApplication" className="eu.stork.vidp.messages.validation.StorkSpApplicationValidator" />
+            <Validator qualifiedName="stork:spCountry" className="eu.stork.vidp.messages.validation.StorkSpCountryValidator" />            
+            <Validator qualifiedName="stork:Institution" className="eu.stork.vidp.messages.validation.StorkSpInstitutionValidator" />
+                        
+                        
+        </ValidatorSuite>               
+    
+        <!-- SAML 2.0 Specification Validation Rules -->
+        <ValidatorSuite id="saml2-core-spec-validator">
+            <Validator qualifiedName="saml2:Assertion" className="org.opensaml.saml2.core.validator.AssertionSpecValidator" />
+            <Validator qualifiedName="saml2:Conditions" className="org.opensaml.saml2.core.validator.ConditionsSpecValidator" />
+        </ValidatorSuite>
+        
+    </ValidatorSuites>
+    
+    
+ </XMLTooling>
