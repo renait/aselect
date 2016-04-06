@@ -915,38 +915,42 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not create eIDCrossBorderShare !" );
 		 }
 		 
-		 for ( Map<String, Object> reqAttribs :  partnerData.getExtensionsdata4partner().getRequestedAttributes() ) {
-		 
-			 eu.stork.extension.protocol.RequestedAttributeType rat = pextFact.createRequestedAttributeType();
-			 if (reqAttribs.get("isrequired") != null) rat.setIsRequired((Boolean) reqAttribs.get("isrequired"));
-			 rat.setNameFormat((String) reqAttribs.get("nameformat"));
-			 rat.setName((String) reqAttribs.get("name"));
-			 eu.stork.extension.protocol.RequestedAttributesType rats = pextFact.createRequestedAttributesType();
-			 rats.getRequestedAttribute().add(rat);
-			 
-			 JAXBElement<eu.stork.extension.protocol.RequestedAttributesType> oreqattributes = pextFact.createRequestedAttributes(rats);
-			 if (oreqattributes != null) {
-					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created RequestedAttributes:" + oreqattributes.getName().getLocalPart());
-					       DOMResult result = new DOMResult();
-					       m2.marshal( oreqattributes, result ); 
-							_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created result so far:" +result);
-					       Document doc = (Document) result.getNode();
-					       Element element = doc.getDocumentElement();
-							_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created element so far:" +XMLHelper.prettyPrintXML(element));
-							UnmarshallerFactory factory = org.opensaml.xml.Configuration.getUnmarshallerFactory();
-							Unmarshaller unmarshaller = factory.getUnmarshaller( XSAny.TYPE_NAME );
-							_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created Unmarshaller:" + unmarshaller.toString());
-	
-							XMLObject xmlobject = (XMLObject) unmarshaller.unmarshall(element);
-							if (xmlobject != null) {
-								extObjects.add(xmlobject);
-							} else {
-								_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not create xmlobject !" );
-							}
-			 } else {
-					_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not create RequestedAttributes !" );
-			 }
 
+		 eu.stork.extension.protocol.RequestedAttributesType rats = pextFact.createRequestedAttributesType();
+		 JAXBElement<eu.stork.extension.protocol.RequestedAttributesType> oreqattributes = pextFact.createRequestedAttributes(rats);
+		 if (oreqattributes != null) {
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created RequestedAttributes:" + oreqattributes.getName().getLocalPart());
+				
+				for ( Map<String, Object> reqAttribs :  partnerData.getExtensionsdata4partner().getRequestedAttributes() ) {
+		 
+					eu.stork.extension.protocol.RequestedAttributeType rat = pextFact.createRequestedAttributeType();
+					
+					if (reqAttribs.get("isrequired") != null) rat.setIsRequired((Boolean) reqAttribs.get("isrequired"));
+					rat.setNameFormat((String) reqAttribs.get("nameformat"));
+					rat.setName((String) reqAttribs.get("name"));
+					rats.getRequestedAttribute().add(rat);
+
+				}
+
+					DOMResult result = new DOMResult();
+					m2.marshal( oreqattributes, result ); 
+//					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created result so far:" +result);
+					Document doc = (Document) result.getNode();
+					Element element = doc.getDocumentElement();
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created element so far:" +XMLHelper.prettyPrintXML(element));
+					UnmarshallerFactory factory = org.opensaml.xml.Configuration.getUnmarshallerFactory();
+					Unmarshaller unmarshaller = factory.getUnmarshaller( XSAny.TYPE_NAME );
+//					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created Unmarshaller:" + unmarshaller.toString());
+					
+					XMLObject xmlobject = (XMLObject) unmarshaller.unmarshall(element);
+					if (xmlobject != null) {
+						extObjects.add(xmlobject);
+					} else {
+						_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not create xmlobject !" );
+					}
+
+		 } else {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not create RequestedAttributes !" );
 		 }
 		 
 		extensions.getUnknownXMLObjects().addAll(extObjects);
