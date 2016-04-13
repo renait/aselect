@@ -2,22 +2,22 @@
 #
 # Author: Bauke Hiemstra - www.anoigo.nl
 #
-JAR="/cygdrive/c/Program Files (x86)/Java/jdk1.6.0_16/bin/jar.exe"
+JAR="/cygdrive/c/Program Files/Java/jdk1.7.0_79/bin/jar.exe"
 WORK_HOME=/cygdrive/e/Eclipse
 
 TARGET_DIR=$WORK_HOME/jars
 if test ! -d $TARGET_DIR
 then mkdir $TARGET_DIR
 fi
-BIN_DIR=$WORK_HOME/aselect/bin
-SOURCE_DIR=$WORK_HOME/aselect/src
+BIN_DIR=$WORK_HOME/bin
+SOURCE_DIR=$WORK_HOME/src
 HERE=`pwd`
 
 cd $SOURCE_DIR
 echo "Make $1, Source in $SOURCE_DIR, Jars to $TARGET_DIR"
 
 PROP_FILES=`find . -name all-wcprops`
-LAST_VERSION=`grep '!svn' $PROP_FILES | \
+LAST_VERSION=`grep '!svn' "$PROP_FILES" | \
 	sed -e '/.*!svn\/ver\//s///' -e '/\/.*/s///' | \
 	sort -r -n | head -1`
 VERSION_FILE=subversion_$LAST_VERSION

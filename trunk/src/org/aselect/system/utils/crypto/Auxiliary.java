@@ -16,9 +16,7 @@
 package org.aselect.system.utils.crypto;
 
 import java.io.BufferedInputStream;
-import java.io.BufferedOutputStream;
 import java.io.ByteArrayInputStream;
-import java.io.ByteArrayOutputStream;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -26,10 +24,8 @@ import java.io.PipedInputStream;
 import java.io.PipedOutputStream;
 import java.io.PrintStream;
 import java.io.Serializable;
-import java.io.StringReader;
 import java.io.StringWriter;
 import java.io.UnsupportedEncodingException;
-import java.lang.instrument.Instrumentation;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
@@ -44,13 +40,9 @@ import java.security.spec.InvalidKeySpecException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Collection;
-import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
-import java.util.Set;
-import java.util.Vector;
-import java.util.concurrent.Executors;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -58,24 +50,12 @@ import javax.crypto.Mac;
 import javax.crypto.SecretKeyFactory;
 import javax.crypto.spec.PBEKeySpec;
 import javax.crypto.spec.SecretKeySpec;
-import javax.servlet.http.HttpServletRequest;
 import javax.xml.bind.DatatypeConverter;
 
-import org.apache.commons.codec.binary.Base64;
-import org.apache.commons.lang.SerializationUtils;
 import org.aselect.system.utils.Base64Codec;
 
-import javax.xml.bind.DatatypeConverter;
-
-import java.security.cert.CertificateEncodingException;
-import java.security.cert.X509Certificate;
-import java.io.StringWriter;
-
-
 public class Auxiliary
-{
-
-	
+{	
 	private static final String HMAC_SHA1_ALGORITHM = "HmacSHA1";
 	private static final String HMAC_SHA256_ALGORITHM = "HmacSHA256";
 	private static final int DEFAULT_PBKDF2_KEYLENGTH = 256;	// bits
