@@ -349,7 +349,7 @@ public class PKI extends AbstractAuthSPProtocolHandler implements IAuthSPProtoco
 
 			htResponse.put("redirect_url", sbTemp.toString());
 		}
-		catch (ASelectAuthSPException eAA) {  // allready logged
+		catch (ASelectAuthSPException eAA) {  // already logged
 			htResponse.put("result", eAA.getMessage());
 		}
 		catch (Exception e) {

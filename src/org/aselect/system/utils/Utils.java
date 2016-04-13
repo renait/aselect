@@ -110,7 +110,7 @@ public class Utils
 		'0', '1', '2', '3', '4', '5', '6', '7', '8', '9', 'A', 'B', 'C', 'D', 'E', 'F'
 	};
 
-	/** "[]" barces UTF-8 encoded. */
+	/** "[]" braces UTF-8 encoded. */
 	private static final String ENCODED_BRACES = "%5B%5D";
 
 	private static final String MODULE = "Utils";
