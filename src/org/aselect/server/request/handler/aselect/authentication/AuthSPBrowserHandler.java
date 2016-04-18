@@ -77,6 +77,8 @@ package org.aselect.server.request.handler.aselect.authentication;
 
 import java.io.PrintWriter;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Set;
 import java.util.logging.Level;
 
 import javax.servlet.http.HttpServletRequest;
@@ -294,9 +296,21 @@ public class AuthSPBrowserHandler extends AbstractBrowserRequestHandler
 				_sessionManager.setUpdateSession(_htSessionContext, _systemLogger);  // 20120401, Bauke: postpone session action
 			}
 
-			// Additional attributes can be provided by the AuthSP
+			// Additional attributes can be provided by the AuthSP and will be transferred to the TgT
 			HashMap htAdditional = new HashMap();
+
+			// 20160418, Bauke: copy anything from htAuthspResponse that is not used specifically
+			Set<String> sKeys = htAuthspResponse.keySet();
+			for (Iterator i=sKeys.iterator(); i.hasNext(); ) {
+				String sKey = (String)i.next();
+				if (sKey.equals("result") || sKey.equals("rid") || sKey.equals("ser_attrs") ||
+						sKey.equals("uid") || sKey.equals("betrouwbaarheidsniveau"))
+					continue;
+				Utils.copyHashmapValue(sKey, htAdditional, htAuthspResponse);
+			}
+			Utils.copyHashmapValue("authsp_type", htAdditional, _htSessionContext);  // will overwrite value from htAuthspResponse
 			
+			// Specific attributes that deserve their own handling
 			// The NullAuthSP (so far the only one) can pass a set of attributes
 			String sSerAttrs = (String)htAuthspResponse.get("ser_attrs");
 			if (Utils.hasValue(sSerAttrs)) {  // inject the attributes
@@ -309,7 +323,7 @@ public class AuthSPBrowserHandler extends AbstractBrowserRequestHandler
 			String sUid = (String) htAuthspResponse.get("uid");
 			if (sUid != null) { // For all AuthSP's that can set the user id
 				// (and thereby replace the 'siam_user' value)
-				_htSessionContext.put("user_id", sUid);
+				_htSessionContext.put("user_id", sUid);  // This value will be used in the TgT
 				_htSessionContext.put("sel_uid", sUid);  // 20140427, Bauke added for 'nextauthsp' mechanism, we don't want 'siam_user' any more
 				_sessionManager.setUpdateSession(_htSessionContext, _systemLogger);  // 20120401, Bauke: postpone session action
 
@@ -317,18 +331,19 @@ public class AuthSPBrowserHandler extends AbstractBrowserRequestHandler
 				Utils.copyHashmapValue("sp_assert_url", htAdditional, _htSessionContext);
 				Utils.copyHashmapValue("sp_rid", htAdditional, _htSessionContext); // saml20 addition
 			}
-			Utils.copyHashmapValue("sel_level", htAdditional, htAuthspResponse);  // user chose a different level
 
+			/* 20160418: Replaced by the iterator loop above
+			Utils.copyHashmapValue("sel_level", htAdditional, htAuthspResponse);  // user chose a different level
 			// Bauke: transfer PKI attributes to the Context
 			Utils.copyHashmapValue("pki_subject_dn", htAdditional, htAuthspResponse);
 			Utils.copyHashmapValue("pki_issuer_dn", htAdditional, htAuthspResponse);
 			Utils.copyHashmapValue("pki_subject_id", htAdditional, htAuthspResponse);
 			Utils.copyHashmapValue("sms_phone", htAdditional, htAuthspResponse);
-			// 20090811, Bauke: save authsp_type for use by the Saml20 session sync
-			Utils.copyHashmapValue("authsp_type", htAdditional, htAuthspResponse);
-			Utils.copyHashmapValue("authsp_type", htAdditional, _htSessionContext);
 			// 20091118, Bauke: new functionality: copy attributes from AuthSP
 			Utils.copyHashmapValue("attributes", htAdditional, htAuthspResponse);
+			// 20090811, Bauke: save authsp_type for use by the Saml20 session sync
+			Utils.copyHashmapValue("authsp_type", htAdditional, htAuthspResponse);
+			*/
 
 			// RH, 201109, sn
 			// For non-direct_authsp sequential authsp implementation insert code here to handle any "next" authsps
@@ -384,7 +399,8 @@ public class AuthSPBrowserHandler extends AbstractBrowserRequestHandler
 					_sessionManager.setUpdateSession(_htSessionContext, _systemLogger);
 					_systemLogger.log(Level.FINEST, _sModule, sMethod, "Setting forced_level in  _htSessionContext: " + _htSessionContext);
 				}
-			} else {
+			}
+			else {
 				String forced_level = (String)_htSessionContext.get("forced_level");
 				if ( forced_level != null) {	// found forced_level but no next_authsp, so remove "old" forced_level
 					_htSessionContext.remove("forced_level");
@@ -393,19 +409,15 @@ public class AuthSPBrowserHandler extends AbstractBrowserRequestHandler
 				}
 			}
 			// RH, 20150914, en				
-
-			
 			
 			// 20111020, Bauke: split redirection from issueTGTandRedirect, so next_authsp variant will also set the TGT
 			TGTIssuer tgtIssuer = new TGTIssuer(_sMyServerId);
 			String sOldTGT = (String) htServiceRequest.get("aselect_credentials_tgt");
-//			String sTgt = tgtIssuer.issueTGTandRedirect(sRid, _htSessionContext, sAuthSp, htAdditional, _servletRequest, _servletResponse, sOldTGT, false /* no redirect */);
 			String sTgt = tgtIssuer.issueTGTandRedirect(sRid, _htSessionContext, sAuthSp, htAdditional, _servletRequest, _servletResponse, sOldTGT, false /* no redirect */, oProtocolHandler);
 			// sTgt could be null
 			// Cookie was set on the 'servletResponse'
 
 			// If there is a next_authsp, "present" form to user (auto post) and do not set tgt 
-//			if (next_authsp != null ) {
 			if (sResultCode.equals(Errors.ERROR_ASELECT_SUCCESS) && next_authsp != null ) {
 				_systemLogger.log(Level.INFO, _sModule, sMethod, "Found next_authsp: "+ next_authsp + " defined for app_id: "+app_id);
 				if (_servletResponse != null) {					// Direct user to next_authsp with form
@@ -450,7 +462,8 @@ public class AuthSPBrowserHandler extends AbstractBrowserRequestHandler
 				String sLang = (String)_htSessionContext.get("language");
 				_systemLogger.log(Level.INFO, _sModule, sMethod, "Redirect to " + sAppUrl);
 				tgtIssuer.sendTgtRedirect(sAppUrl, sTgt, sRid, _servletResponse, sLang);		
-			} else {
+			}
+			else {
 				_systemLogger.log(Level.FINER, _sModule, sMethod, "No outputstream available to redirect to so just return");
 				return;
 			}

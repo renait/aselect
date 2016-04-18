@@ -42,9 +42,7 @@ import org.aselect.server.utils.AttributeSetter;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectAuthSPException;
 import org.aselect.system.exception.ASelectConfigException;
-import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.BASE64Decoder;
-import org.aselect.system.utils.Utils;
 import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
@@ -472,10 +470,12 @@ public class PKI extends AbstractAuthSPProtocolHandler implements IAuthSPProtoco
 					hmResponse.put("uid", sSubjectId);  // 20120615, Bauke: set default value for uid
 				}
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "hmAttrs="+hmAttrs);
+				
 				HashMap hmWork = new HashMap();
 				HashMap hmNewAttrs = AttributeSetter.attributeProcessing(hmWork/*is empty*/, hmAttrs, attributeSetters, _systemLogger);
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "hmNewAttrs="+hmNewAttrs);
 				hmResponse.putAll(hmNewAttrs);
+				
 				return hmResponse;
 			}
 			_authenticationLogger.log(new Object[] {
