@@ -82,12 +82,12 @@ import java.net.URLConnection;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.logging.Level;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import org.aselect.server.authspprotocol.IAuthSPConditions;
 import org.aselect.server.authspprotocol.IAuthSPDirectLoginProtocolHandler;
 import org.aselect.server.authspprotocol.IAuthSPProtocolHandler;
 import org.aselect.server.config.ASelectConfigManager;
@@ -99,6 +99,7 @@ import org.aselect.server.session.SessionManager;
 import org.aselect.server.tgt.TGTIssuer;
 import org.aselect.server.udb.IUDBConnector;
 import org.aselect.server.udb.UDBConnectorFactory;
+import org.aselect.server.utils.AttributeSetter;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectAuthSPException;
 import org.aselect.system.exception.ASelectCommunicationException;
@@ -218,6 +219,9 @@ public class Ldap extends AbstractAuthSPProtocolHandler implements IAuthSPProtoc
 	// Localization
 	protected String _sUserLanguage = "";
 	protected String _sUserCountry = "";
+
+	// 20160414, Bauke: User id manipulation
+	private LinkedList<AttributeSetter> attributeSetters = new LinkedList<AttributeSetter>();
 	
 //	protected boolean outputAvailable = true;	// We assume output available presence per default
 	
@@ -246,7 +250,8 @@ public class Ldap extends AbstractAuthSPProtocolHandler implements IAuthSPProtoc
 	 *             the a select auth sp exception
 	 * @see org.aselect.server.authspprotocol.IAuthSPProtocolHandler#init(java.lang.Object, java.lang.Object)
 	 */
-	public void init(Object oAuthSPConfig, Object oAuthSPResource)
+	// Called via handleLogin3() in ApplicationBrowserHandler
+	public void init(Object oAuthSpConfig, Object oAuthSPResource)
 	throws ASelectAuthSPException
 	{
 		final String sMethod = "init";
@@ -256,7 +261,8 @@ public class Ldap extends AbstractAuthSPProtocolHandler implements IAuthSPProtoc
 		_systemLogger = ASelectSystemLogger.getHandle();
 		try {
 			try {
-				_sAuthsp = _configManager.getParam(oAuthSPConfig, "id");
+				_sAuthsp = _configManager.getParam(oAuthSpConfig, "id");
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Via IAuthSPProtocolHandler _sAuthsp="+_sAuthsp);
 			}
 			catch (ASelectConfigException eAC) {
 				_systemLogger.log(Level.WARNING, MODULE, sMethod,
@@ -271,6 +277,10 @@ public class Ldap extends AbstractAuthSPProtocolHandler implements IAuthSPProtoc
 						"Parameter 'url' not found in Ldap AuthSP configuration", eAC);
 				throw new ASelectAuthSPException(Errors.ERROR_ASELECT_INIT_ERROR, eAC);
 			}
+
+			// 20140417, Bauke: User id manipulation
+			AttributeSetter.initAttributesConfig(_configManager, oAuthSpConfig, attributeSetters, _systemLogger);			
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "size="+attributeSetters.size());
 		}
 		catch (ASelectAuthSPException eAA) {
 			_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Initialisation failed due to configuration error", eAA);
@@ -286,13 +296,13 @@ public class Ldap extends AbstractAuthSPProtocolHandler implements IAuthSPProtoc
 	 * new init function. <br>
 	 * <br>
 	 * 
-	 * @param sAuthSPId
-	 *            the s auth sp id
+	 * @param sAuthSpId
+	 *            the AuthSP id
 	 * @throws ASelectAuthSPException
-	 *             the a select auth sp exception
 	 * @see org.aselect.server.authspprotocol.IAuthSPDirectLoginProtocolHandler#init(java.lang.String)
 	 */
-	public void init(String sAuthSPId)
+	// Called via handleDirectLogin() in ApplicationBrowserHandler
+	public void init(String sAuthSpId)
 	throws ASelectAuthSPException
 	{
 		final String sMethod = "init";
@@ -301,15 +311,23 @@ public class Ldap extends AbstractAuthSPProtocolHandler implements IAuthSPProtoc
 		_authenticationLogger = ASelectAuthenticationLogger.getHandle();
 		_systemLogger = ASelectSystemLogger.getHandle();
 		_authSPHandlerManager = AuthSPHandlerManager.getHandle();
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Via IAuthSPDirectLoginProtocolHandler sAuthSpId="+sAuthSpId);
 		try {
-			_sAuthsp = sAuthSPId;
+			_sAuthsp = sAuthSpId;
 			try {
-				_sAuthspUrl = _authSPHandlerManager.getUrl(sAuthSPId);
+				_sAuthspUrl = _authSPHandlerManager.getUrl(sAuthSpId);
 			}
 			catch (ASelectException e) {
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "No parameter 'url' retrieved", e);
 				throw new ASelectAuthSPException(Errors.ERROR_ASELECT_INIT_ERROR, e);
 			}
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "_sAuthspUrl="+_sAuthspUrl);
+			
+			// 20140417, Bauke: User id manipulation
+			Object oAuthSpConfig = _configManager.getSection(_configManager.getSection(null, "authsps"), "authsp",	"id=" + sAuthSpId);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "oAuthSpConfig="+oAuthSpConfig);
+			AttributeSetter.initAttributesConfig(_configManager, oAuthSpConfig, attributeSetters, _systemLogger);			
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "size="+attributeSetters.size());
 		}
 		catch (ASelectAuthSPException eAA) {
 			_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Initialisation failed due to configuration error", eAA);
@@ -364,6 +382,7 @@ public class Ldap extends AbstractAuthSPProtocolHandler implements IAuthSPProtoc
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, sbBuffer.toString());
 				throw new ASelectAuthSPException(Errors.ERROR_ASELECT_AUTHSP_COULD_NOT_AUTHENTICATE_USER);
 			}
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "sRid="+sRid);
 			
 			HashMap htAllowedAuthsps = (HashMap) htSessionContext.get("allowed_user_authsps");
 			if (htAllowedAuthsps == null) {
@@ -499,6 +518,7 @@ public class Ldap extends AbstractAuthSPProtocolHandler implements IAuthSPProtoc
 						"Incorrect AuthSP response: one or more parameters missing.");
 				throw new ASelectAuthSPException(Errors.ERROR_ASELECT_AUTHSP_INVALID_RESPONSE);
 			}
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "sResultCode="+sResultCode);
 
 			// create complete as_url
 			sbBuffer = new StringBuffer(sAsUrl);
@@ -515,8 +535,7 @@ public class Ldap extends AbstractAuthSPProtocolHandler implements IAuthSPProtoc
 
 			boolean bVerifies = CryptoEngine.getHandle().verifySignature(_sAuthsp, sbSignature.toString(), sSignature);
 			if (!bVerifies) {
-				_systemLogger.log(Level.WARNING, MODULE, sMethod, "invalid signature in response from AuthSP:"
-						+ _sAuthsp);
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "invalid signature in response from AuthSP:"+_sAuthsp);
 				throw new ASelectAuthSPException(Errors.ERROR_ASELECT_AUTHSP_INVALID_RESPONSE);
 			}
 
@@ -546,10 +565,21 @@ public class Ldap extends AbstractAuthSPProtocolHandler implements IAuthSPProtoc
 				MODULE, Auxiliary.obfuscate(sUserId), htAuthspResponse.get("client_ip"), sOrg,
 				(String) htSessionContext.get("app_id"), "granted"
 			});
+			
 			// set response
 			htResponse.put("rid", sRid);
 			htResponse.put("authsp_type", "ldap");
 			htResponse.put("result", Errors.ERROR_ASELECT_SUCCESS);
+
+			// 20160414, Bauke: added new attribute creation, the only available source is the user id
+			HashMap hmAttrs = new HashMap();
+			hmAttrs.put("uid", sUserId);
+			
+			HashMap hmWork = new HashMap();
+			HashMap hmNewAttrs = AttributeSetter.attributeProcessing(hmWork/*is empty*/, hmAttrs, attributeSetters, _systemLogger);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "hmNewAttrs="+hmNewAttrs);
+			htResponse.putAll(hmNewAttrs);
+
 		}
 		catch (ASelectAuthSPException eAA) {  // already logged
 			htResponse.put("result", eAA.getMessage());
@@ -652,10 +682,7 @@ public class Ldap extends AbstractAuthSPProtocolHandler implements IAuthSPProtoc
 		String sMethod = "handleDirectLogin1";
 		
 		_systemLogger.log(Level.FINEST, MODULE, sMethod, "htServiceRequest: '"+htServiceRequest);
-		// not very useful: try {
 		showDirectLoginForm(servletRequest, htServiceRequest, htSessionContext, pwOut, sServerId);  // can change the session
-		//}
-		//catch (ASelectException e) { throw e; }
 	}
 
 	/**
@@ -806,6 +833,15 @@ public class Ldap extends AbstractAuthSPProtocolHandler implements IAuthSPProtoc
 				htSessionContext.put("sel_level", intAuthSPLevel.toString());  // equal to authsp_level in this case
 				htSessionContext.put("authsp_type", "ldap");
 
+				// 20160414, Bauke: added new attribute creation, the only available source is the user id
+				HashMap hmAttrs = new HashMap();
+				hmAttrs.put("uid", sUid);
+				
+				HashMap hmWork = new HashMap();
+				HashMap hmNewAttrs = AttributeSetter.attributeProcessing(hmWork/*is empty*/, hmAttrs, attributeSetters, _systemLogger);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "hmNewAttrs="+hmNewAttrs);
+				htAdditional.putAll(hmNewAttrs);
+				
 				String next_authsp = _authSPHandlerManager.getNextAuthSP(sAuthSPId, app_id);
 				String next_authsp_entry_level = _authSPHandlerManager.getNextAuthSPEntryLevel(sAuthSPId, app_id);	// RH, 20150914, n
 				if (next_authsp != null) {
@@ -825,7 +861,8 @@ public class Ldap extends AbstractAuthSPProtocolHandler implements IAuthSPProtoc
 					_systemLogger.log(Level.INFO, MODULE, sMethod, "next_authsp="+next_authsp+" allowed="+htUserAuthsps);
 					htSessionContext.put("allowed_user_authsps", htUserAuthsps);
 					// RH, 20150914, sn
-				} else {
+				}
+				else {
 					String forced_level = (String)htSessionContext.get("forced_level");
 					if ( forced_level != null) {	// found forced_level but no next_authsp, so remove "old" forced_level
 						htSessionContext.remove("forced_level");
@@ -834,7 +871,6 @@ public class Ldap extends AbstractAuthSPProtocolHandler implements IAuthSPProtoc
 					// RH, 20150914, en
 				}
 				// Store now, issueTGTandRedirect() will read it again
-				//_sessionManager.updateSession(sRid, htSessionContext);
 				_sessionManager.setUpdateSession(htSessionContext, _systemLogger);  // 20120403, Bauke: changed from updateSession
 				
 				if (servletResponse == null) {
@@ -849,7 +885,7 @@ public class Ldap extends AbstractAuthSPProtocolHandler implements IAuthSPProtoc
 				
 				setOutputAvailable(true); // Assume browser still present, 	// RH, 20130813, n
 				String sTgt = tgtIssuer.issueTGTandRedirect(sRid, htSessionContext, sAuthSPId, htAdditional, servletRequest, servletResponse,
-						sOldTGT, false /* no redirect */, this);	// RH, 20130813, n
+						sOldTGT, false /*no redirect*/, this);	// RH, 20130813, n
 
 				// Cookie was set on the 'servletResponse'
 

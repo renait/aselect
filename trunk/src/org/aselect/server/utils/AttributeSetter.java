@@ -86,6 +86,7 @@ public class AttributeSetter
 		String sMethod = "initAttributesConfig";
 		
 		Object oAttributes = ASelectConfigManager.getSimpleSection(oConfig, "attributes", false);
+		sysLogger.log(Level.FINEST, MODULE, sMethod, "oAttributes="+oAttributes);
 		if (oAttributes == null)
 			return;
 		Object oSetAttr = ASelectConfigManager.getSimpleSection(oAttributes, "set_attr", false);
@@ -95,6 +96,7 @@ public class AttributeSetter
 		while (oSetAttr != null) {
 			boolean bDestTgt = false, bSrcTgt = false;
 			String sDest = ASelectConfigManager.getSimpleParam(oSetAttr, "dest", false);
+			sysLogger.log(Level.FINEST, MODULE, sMethod, "dest="+sDest);
 			if (!Utils.hasValue(sDest)) {
 				sDest = ASelectConfigManager.getSimpleParam(oSetAttr, "tgt_dest", true);
 				bDestTgt = true;
@@ -180,7 +182,7 @@ public class AttributeSetter
 				
 				// Take from source, multi valued (Vector) attributes will be converted to a string
 				Object oValue = (setter.isSrcTgt())? htTGTContext.get(sSrc): hmAttributes.get(sSrc);
-				sysLog.log(Level.FINEST, MODULE, sMethod, "oValue="+oValue);
+				//sysLog.log(Level.FINEST, MODULE, sMethod, "oValue="+oValue);
 				if (oValue == null)
 					continue;
 				sValue = oValue.toString();

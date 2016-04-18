@@ -2255,8 +2255,6 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 				_systemLogger.log(Level.FINEST, _sModule, sMethod, "After lookup htAllowedAuthsps=" + htAllowedAuthsps);
 			}
 			//	RH, 20140424, en
-
-			
 			
 			// 20111013, Bauke: added absent phonenumber handling
 			HashMap htResponse = startAuthentication(sRid, htServiceRequest);

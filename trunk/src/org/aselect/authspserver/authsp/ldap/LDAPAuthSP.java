@@ -250,12 +250,11 @@ public class LDAPAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit good
 				sCountry = null;
 
 			// check if the request is an API call
-			String sRequestName = (String) htServiceRequest.get("request");
+			String sRequest = (String) htServiceRequest.get("request");
 //			_systemLogger.log(Level.FINEST, MODULE, sMethod, "LDAP GET { query-->" + sQueryString);
-//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "req="+sRequestName+" pwd="+(String)htServiceRequest.get("password"));
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "LDAP GET { query-->" + "request="+sRequestName  + ", rid="+htServiceRequest.get("rid"));
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "LDAP GET { query-->" + "request="+sRequest  + ", rid="+htServiceRequest.get("rid"));
 
-			if (sRequestName != null) {  // API request, no URL decoding done yet
+			if (sRequest != null) {  // API request, no URL decoding done yet
 				handleApiRequest(htServiceRequest, servletRequest, pwOut, servletResponse);
 			}
 			else { // Browser request

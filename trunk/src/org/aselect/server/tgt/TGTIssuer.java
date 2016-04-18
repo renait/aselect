@@ -478,8 +478,24 @@ public class TGTIssuer
 				return null;
 			}
 
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "Issue TGT for RID: " + sRid+" redirectToo="+redirectToo);
-			HashMap<String,Object> htTGTContext = new HashMap<String,Object>();
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "Issue TGT, redirectToo="+redirectToo+" for RID=" + sRid);
+
+			// 20160418, Bauke: use old TgT and the values therein, if present
+			boolean oldTGTPresent = false;
+			HashMap<String,Object> htTGTContext = null;
+			HashMap<String,Object> htSaveOldLevels = new HashMap<String,Object>();
+			if (sOldTGT != null) {
+				htTGTContext = _tgtManager.getTGT(sOldTGT);
+				if (htTGTContext != null) {
+					oldTGTPresent = true;
+					Utils.copyHashmapValue("authsp_level", htSaveOldLevels, htTGTContext);
+					Utils.copyHashmapValue("sel_level", htSaveOldLevels, htTGTContext);
+				}
+			}
+			if (htTGTContext == null)
+				htTGTContext = new HashMap<String,Object>();
+			// 20160418: end
+			
 			htTGTContext.put("rid", sRid);
 			htTGTContext.put("app_id", sAppId);
 			if (sLocalOrg != null)
@@ -530,7 +546,6 @@ public class TGTIssuer
 			
 			// overwrite or set additional properties in the newly created tgt context
 			if (htAdditional != null) {
-//				_systemLogger.log(Level.FINEST, MODULE, sMethod, "htAdditional="+htAdditional);
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "htAdditional="+Auxiliary.obfuscate(htAdditional));
 				htTGTContext.putAll(htAdditional);
 			}
@@ -579,20 +594,18 @@ public class TGTIssuer
 			if (bForcedAuthn)
 				htTGTContext.put("forced_authenticate", bForcedAuthn);
 
-			HashMap htOldTGTContext = null;
+			// 20160418, Bauke: reading old TgT moved up
 			UserSsoSession ssoSession = null;
 			// 20090617, Bauke: not for forced_authenticate
-			if (!bForcedAuthn && sOldTGT != null) {
-				htOldTGTContext = _tgtManager.getTGT(sOldTGT);
-				if (htOldTGTContext != null) {
-					// Higher old level takes precedence
-					HashMap htUpdate = compareOldTGTLevels(htOldTGTContext, htTGTContext);
-					if (!htUpdate.isEmpty())
-						htTGTContext.putAll(htUpdate);
-					htTGTContext.put("rid", sRid);
-					ssoSession = (UserSsoSession) htOldTGTContext.get("sso_session");
-				}
+			if (!bForcedAuthn && oldTGTPresent) { //sOldTGT != null) {
+				// Higher old level takes precedence, concerns authsp_level & sel_level
+				HashMap htUpdate = compareOldTGTLevels(htSaveOldLevels, htTGTContext);
+				if (!htUpdate.isEmpty())
+					htTGTContext.putAll(htUpdate);  // overwrite
+				htTGTContext.put("rid", sRid);
+				ssoSession = (UserSsoSession) htTGTContext.get("sso_session");
 			}
+			ensureSessionPresence(sUserId, htTGTContext, htSessionContext, ssoSession);
 
 			// Bauke: added for xsaml20
 			Utils.copyHashmapValue("sp_assert_url", htTGTContext, htSessionContext);
@@ -601,9 +614,7 @@ public class TGTIssuer
 			Utils.copyHashmapValue("sp_audience", htTGTContext, htSessionContext);
 			Utils.copyHashmapValue("sp_addkeyname", htTGTContext, htSessionContext);
 			Utils.copyHashmapValue("sp_addcertificate", htTGTContext, htSessionContext);
-
 			Utils.copyHashmapValue("sp_rid", htTGTContext, htSessionContext);
-			ensureSessionPresence(sUserId, htTGTContext, htSessionContext, ssoSession);
 			
 			// Bauke, 20081209 added for ADFS / WS-Fed
 			Utils.copyHashmapValue("wreply", htTGTContext, htSessionContext);
@@ -640,7 +651,11 @@ public class TGTIssuer
 
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "MustChoose="+mustChooseOrg+" Store TGT");
 			String sTgt = null;
-			if (htOldTGTContext == null) {
+			if (oldTGTPresent) {
+				_tgtManager.updateTGT(sOldTGT, htTGTContext);
+				sTgt = sOldTGT;
+			}
+			else { // Update the old TGT
 				// Create a new TGT, must set "name_id" to the sTgt value
 				sTgt = _tgtManager.createTGT(htTGTContext);
 
@@ -655,12 +670,8 @@ public class TGTIssuer
 					setASelectCookie(sTgt, sUserId, servletResponse);
 				}
 			}
-			else { // Update the old TGT
-				_tgtManager.updateTGT(sOldTGT, htTGTContext);
-				sTgt = sOldTGT;
-			}
 
-			// handle On Behalf Of if applicable
+			// handle "On Behalf Of" if applicable
 			// RH, 20141013, sn
 			if ( ApplicationManager.getHandle().getApplication(sAppId).isOBOEnabled() ) {
 				int step = 0;
@@ -679,7 +690,6 @@ public class TGTIssuer
 				// RH, 20140204,  Present On Behalf Of selection to the user
 				// The user must present obo
 				String sSelectForm = org.aselect.server.utils.Utils.presentOnBehalfOf(servletRequest, _configManager,
-//						htSessionContext, sRid, (String)htTGTContext.get("language"), 0 /*step 0, do obo or not */);
 						htSessionContext, sRid, (String)htTGTContext.get("language"), step /*step 0 = do obo or not */);
 				
 				Tools.pauseSensorData(_configManager, _systemLogger, htSessionContext);
