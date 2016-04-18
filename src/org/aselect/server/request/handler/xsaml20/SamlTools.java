@@ -499,9 +499,11 @@ public class SamlTools
 		}
 		else // not instanceof AuthnRequest
 		if (obj instanceof SubjectConfirmationData) {
-			if (maxNotBefore != null) {
-				((SubjectConfirmationData) obj).setNotBefore(refInstant.minus(maxNotBefore.longValue()));
-			}
+			// RH, 20160418, so,  saml specs say: do not set for method "bearer". We only support "bearer"
+//			if (maxNotBefore != null) {
+//				((SubjectConfirmationData) obj).setNotBefore(refInstant.minus(maxNotBefore.longValue()));
+//			}
+			// RH, 20160418, so
 			if (maxNotOnOrAfter != null) {
 				((SubjectConfirmationData) obj).setNotOnOrAfter(refInstant.plus(maxNotOnOrAfter.longValue()));
 			}
