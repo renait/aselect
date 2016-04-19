@@ -46,18 +46,16 @@
 -->
 	<condition property="full.build.version" value="${build.current.revision}" else="unknown" >
 		<isset property="build.current.revision"/>
-		</condition>
+	</condition>
 <!--		
 	<property name="full.build.version" value="${build.current.revision}" />
-	-->
-	<!-- for comaptibility with Bauke makejar.sh
+-->
+	<!-- for compatibility with Bauke makejar.sh
 	-->
 	<condition property="svnversion_file" value="subversion_${full.build.version}" else="subversion_unknown" >
 		<isset property="build.current.revision"/>
-		</condition>
-	
-	
-	
+	</condition>
+
 	<echo message="Full build version: ${full.build.version}"/>
 	
 	<property name="vendor" value="Anoigo" />
@@ -76,10 +74,10 @@
     <attribute name="exclude-pattern-9" default="" />
     <element name="manifest-tag" optional="true" />
     <sequential>
-    	<!--
+    <!--
         <jar basedir="target/classes" destfile="target/org.aselect.@{jar-name}-1.6.jar" >
--->
-      <jar basedir="target/classes" destfile="target/org.aselect.@{jar-name}.jar" >
+	-->
+    	<jar basedir="target/classes" destfile="target/org.aselect.@{jar-name}.jar" >
       	<manifest-tag />
 	    <include name="${svnversion_file}" />
         <include name="@{include-pattern}" />
@@ -108,15 +106,14 @@
 
   <target name="compile" description="Compile the Java files.">
     <mkdir dir="target/classes" />
-
 	<echo message="${full.build.version}${line.separator}" file="target/classes/${svnversion_file}" />
+
     <!-- STORK EXTENSIONS	-->
   	<!--
 	    <javac destdir="target/classes" optimize="true" debug="true" debuglevel="vars,source,lines" srcdir="src/eu" sourcepath="">
-	  -->
-  	<!-- -->	
-        <javac destdir="target/classes" optimize="true" srcdir="src/eu" sourcepath="">
-        	<!--    -->
+	-->
+    <javac destdir="target/classes" target="1.6" source="1.6" compiler="javac1.6" executable="C:/Program Files/Java/jdk1.6.0_45/bin/javac"
+    	fork="true" includeantruntime="false" optimize="true" srcdir="src/eu" sourcepath="">
       <classpath>
         <fileset dir="lib">
           <include name="*.jar" />
@@ -128,11 +125,11 @@
     </javac>
   	
     <!-- A-SELECT	-->
-	    <javac destdir="target/classes" optimize="true" debug="true" debuglevel="vars,source,lines" srcdir="src/org" sourcepath="">
-	  <!--	-->
   	<!--	
         <javac destdir="target/classes" optimize="true" srcdir="src/org" sourcepath="">
-        -->
+    -->
+	<javac destdir="target/classes" target="1.6" source="1.6" compiler="javac1.6" executable="C:/Program Files/Java/jdk1.6.0_45/bin/javac"
+		fork="true" includeantruntime="false" optimize="true" debug="true" debuglevel="vars,source,lines" srcdir="src/org" sourcepath="">
       <classpath>
         <fileset dir="lib">
           <include name="*.jar" />
@@ -142,6 +139,7 @@
         </fileset>
       </classpath>
     </javac>
+  	
   </target>
 
   <target name="jars" description="Build the JAR files." depends="compile">
@@ -211,16 +209,16 @@
     		</manifest>
     	</manifest-tag>
     </build-jar>
-    <build-jar jar-name="authsp.ip" include-pattern="org/aselect/authspserver/authsp/ip/**/*.class" />
+    <!--build-jar jar-name="authsp.ip" include-pattern="org/aselect/authspserver/authsp/ip/**/*.class" />
     <build-jar jar-name="authsp.ldap" include-pattern="org/aselect/authspserver/authsp/ldap/**/*.class" />
     <build-jar jar-name="authsp.null" include-pattern="org/aselect/authspserver/authsp/nullauthsp/**/*.class" />
     <build-jar jar-name="authsp.pki" include-pattern="org/aselect/authspserver/authsp/pki/**/*.class" />
     <build-jar jar-name="authsp.radius" include-pattern="org/aselect/authspserver/authsp/radius/**/*.class" />
     <build-jar jar-name="authsp.sms" include-pattern="org/aselect/authspserver/authsp/sms/**/*.class" />
-    <build-jar jar-name="authspserver"
+    <build-jar jar-name="authspserver-main"
                include-pattern="org/aselect/authspserver/**/*.class"
-               exclude-pattern-1="org/aselect/authspserver/authsp/**/*.class" />
-    <build-jar jar-name="authspserver-all"
+               exclude-pattern-1="org/aselect/authspserver/authsp/**/*.class" /-->
+    <build-jar jar-name="authspserver"
                include-pattern="org/aselect/authspserver/**/*.class" >
 		<manifest-tag>
 			<manifest>
@@ -234,7 +232,7 @@
 			</manifest>
 		</manifest-tag>
    	</build-jar>
-    <build-jar jar-name="server.attributes.requestors.api"
+    <!--build-jar jar-name="server.attributes.requestors.api"
                include-pattern="org/aselect/server/attributes/requestors/api/**/*.class" />
     <build-jar jar-name="server.attributes.requestors.flatfile"
                include-pattern="org/aselect/server/attributes/requestors/flatfile/**/*.class" />
@@ -256,7 +254,7 @@
                include-pattern="org/aselect/server/authspprotocol/handler/Radius.class" />
     <build-jar jar-name="server.authsphandler.smd"
                include-pattern="org/aselect/server/authspprotocol/handler/SMSAuthSPHandler.class" />
-    <build-jar jar-name="server"
+    <build-jar jar-name="server-main"
                include-pattern="org/aselect/server/**/*.class"
                exclude-pattern-1="org/aselect/server/attributes/requestors/*/**/*.class"
                exclude-pattern-2="org/aselect/server/authspprotocol/handler/*.class"
@@ -271,7 +269,7 @@
     <build-jar jar-name="server.request.handler.xsaml20"
                include-pattern="org/aselect/server/request/handler/xsaml20/**/*.class" />
     <build-jar jar-name="server.request.handler.wsfed"
-               include-pattern="org/aselect/server/request/handler/wsfed/**/*.class" />
+               include-pattern="org/aselect/server/request/handler/wsfed/**/*.class" /-->
     <build-jar jar-name="system" include-pattern="org/aselect/system/**/*.class" >
 		<manifest-tag>
 			<manifest>
@@ -285,12 +283,12 @@
 			</manifest>
 		</manifest-tag>
     </build-jar>
-    <build-jar jar-name="udb.flatfile" include-pattern="org/aselect/server/udb/flatfile/**/*.class" />
+    <!--build-jar jar-name="udb.flatfile" include-pattern="org/aselect/server/udb/flatfile/**/*.class" />
     <build-jar jar-name="udb.jdbc" include-pattern="org/aselect/server/udb/jdbc/**/*.class" />
     <build-jar jar-name="udb.jndi" include-pattern="org/aselect/server/udb/jndi/**/*.class" />
     <build-jar jar-name="udb.nodb" include-pattern="org/aselect/server/udb/nodb/**/*.class" />
-    <build-jar jar-name="udb.sasdb" include-pattern="org/aselect/server/udb/sasdb/**/*.class" />
-    <build-jar jar-name="server-all"
+    <build-jar jar-name="udb.sasdb" include-pattern="org/aselect/server/udb/sasdb/**/*.class" /-->
+    <build-jar jar-name="server"
                include-pattern="org/aselect/server/**/*.class" >
 		<manifest-tag>
 			<manifest>
