@@ -225,17 +225,16 @@ public class Saml20_ArtifactManager extends StorageManager
 	 * @param key
 	 *            Object.
 	 * @return Object
-	 * @throws ASelectStorageException
-	 *             the a select storage exception
 	 * @throws ParserConfigurationException
 	 *             the parser configuration exception
 	 * @throws IOException
 	 *             Signals that an I/O exception has occurred.
 	 * @throws SAXException
 	 *             the SAX exception
+	 * @throws ASelectException 
 	 */
 	public XMLObject getArtifactFromStorage(Object key)
-	throws ASelectStorageException, ParserConfigurationException, SAXException, IOException
+	throws ParserConfigurationException, SAXException, IOException, ASelectException
 	{
 		String sMethod = "getArtifactFromStorage";
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "get key=" + key);
@@ -251,7 +250,8 @@ public class Saml20_ArtifactManager extends StorageManager
 		// Element dom = (Element)super.get(key);
 
 		String serializedObject = (String) super.get(key);
-		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+//		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+		DocumentBuilderFactory dbFactory = Utils.createDocumentBuilderFactory(_systemLogger);
 		dbFactory.setNamespaceAware(true);
 		// dbFactory.setExpandEntityReferences(false);
 		// dbFactory.setIgnoringComments(true);

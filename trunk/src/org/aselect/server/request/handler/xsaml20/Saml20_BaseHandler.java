@@ -484,7 +484,8 @@ public abstract class Saml20_BaseHandler extends ProtoRequestHandler
 		XMLObject authzDecisionQuery = null;
 		try {
 			// Build XML Document
-			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+//			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+			DocumentBuilderFactory dbFactory = Utils.createDocumentBuilderFactory(_systemLogger);
 			dbFactory.setNamespaceAware(true);
 			DocumentBuilder builder = dbFactory.newDocumentBuilder();
 			StringReader stringReader = new StringReader(docReceived);

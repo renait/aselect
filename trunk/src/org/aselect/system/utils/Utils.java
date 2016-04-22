@@ -80,11 +80,14 @@ import java.util.logging.Level;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
 import org.aselect.server.log.ASelectSystemLogger;
 import org.aselect.system.communication.server.IInputMessage;
 import org.aselect.system.configmanager.ConfigManager;
 import org.aselect.system.error.Errors;
+import org.aselect.system.exception.ASelectCommunicationException;
 import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.logging.ISystemLogger;
@@ -1518,5 +1521,39 @@ public class Utils
 		}
 		return sEscapedUid;
 	}
+	
+	/**
+	 * @return
+	 * @throws ASelectException 
+	 */
+	public static DocumentBuilderFactory createDocumentBuilderFactory(SystemLogger oSysLog) throws ASelectCommunicationException
+	{
+		String sMethod = "createDocumentBuilderFactory";
+		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+		dbFactory.setNamespaceAware(true);
+		dbFactory.setExpandEntityReferences(false);
+		// dbFactory.setIgnoringComments(true);
+		
+		try {
+			dbFactory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", 
+		                   true);
+//			dbFactory.setFeature("http://apache.org/xml/features/external-general-entities", 
+//	                   false);
+//			dbFactory.setFeature("http://apache.org/xml/features/external-parameter-entities", 
+//	                   false);
+			dbFactory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", 
+	                   false);
+			
+		} 
+		catch (ParserConfigurationException e) {
+			if (oSysLog != null) {
+				oSysLog.log(Level.SEVERE, MODULE, sMethod, "Cannot set required parser feature", e);
+			}
+			throw new ASelectCommunicationException(Errors.ERROR_ASELECT_INTERNAL_ERROR, e);
+		}
+
+		return dbFactory;
+	}
+
 
 }

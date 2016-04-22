@@ -23,6 +23,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 import org.aselect.server.log.ASelectSystemLogger;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectException;
+import org.aselect.system.utils.Utils;
 import org.opensaml.saml2.core.LogoutRequest;
 import org.opensaml.saml2.core.LogoutResponse;
 import org.opensaml.saml2.core.StatusCode;
@@ -157,7 +158,8 @@ public class SoapLogoutRequestSender
 			// String sSamlResponse = URLDecoder.decode(resp, "UTF-8");
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "Received response:\n" + sSamlResponse);
 
-			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+//			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+			DocumentBuilderFactory dbFactory = Utils.createDocumentBuilderFactory(_systemLogger);
 			dbFactory.setNamespaceAware(true);
 			DocumentBuilder builder = dbFactory.newDocumentBuilder();
 			StringReader stringReader = new StringReader(sSamlResponse);

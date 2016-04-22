@@ -971,7 +971,8 @@ public class HandlerTools
 			baos.write(tokenArray);
 			String token = baos.toString("UTF-8"); // We should have gotten UTF-8 formatted strings
 	
-			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+//			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+			DocumentBuilderFactory dbFactory = Utils.createDocumentBuilderFactory(systemLogger);
 			dbFactory.setNamespaceAware(true);
 			// dbFactory.setExpandEntityReferences(false);
 			// dbFactory.setIgnoringComments(true);

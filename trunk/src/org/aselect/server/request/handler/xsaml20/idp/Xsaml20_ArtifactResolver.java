@@ -31,6 +31,7 @@ import org.aselect.server.request.handler.xsaml20.Saml20_ArtifactManager;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.Tools;
+import org.aselect.system.utils.Utils;
 import org.aselect.system.utils.crypto.Auxiliary;
 import org.joda.time.DateTime;
 import org.opensaml.common.SAMLObjectBuilder;
@@ -130,7 +131,8 @@ public class Xsaml20_ArtifactResolver extends Saml20_BaseHandler
 			String sReceivedSoap = Tools.stream2string(request.getInputStream());  // x_AssertionConsumer_x
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "Received SOAP message:\n" + sReceivedSoap);
 
-			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+//			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+			DocumentBuilderFactory dbFactory = Utils.createDocumentBuilderFactory(_systemLogger);
 			dbFactory.setNamespaceAware(true);
 			DocumentBuilder builder = dbFactory.newDocumentBuilder();
 

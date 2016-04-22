@@ -332,7 +332,8 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 				// save original, but, for (internal) transport, encode base64 
 				auth_proof = new String(org.apache.commons.codec.binary.Base64.encodeBase64(sSamlResponse.getBytes("UTF-8")));
 				
-				DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+//				DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+				DocumentBuilderFactory dbFactory = Utils.createDocumentBuilderFactory(_systemLogger);
 				dbFactory.setNamespaceAware(true);
 				// dbFactory.setExpandEntityReferences(false);
 				// dbFactory.setIgnoringComments(true);
@@ -413,7 +414,8 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 				sReceivedResponse = new String(org.apache.commons.codec.binary.Base64.decodeBase64(sReceivedResponse.getBytes("UTF-8")));	//	RH, 20130924, n
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "Received Response after base64 decoding=" +
 						Utils.firstPartOf(sReceivedResponse,600) + " RelayState="+sRelayState);	//	RH, 20130924, n
-				DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+//				DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+				DocumentBuilderFactory dbFactory = Utils.createDocumentBuilderFactory(_systemLogger);
 				dbFactory.setNamespaceAware(true);
 				// dbFactory.setExpandEntityReferences(false);
 				// dbFactory.setIgnoringComments(true);
