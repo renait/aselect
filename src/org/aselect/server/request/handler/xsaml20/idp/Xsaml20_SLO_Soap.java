@@ -143,7 +143,8 @@ public class Xsaml20_SLO_Soap extends Saml20_BaseHandler
 			String sReceivedSoap = Tools.stream2string(request.getInputStream()); // RH, 20080715, n
 			_oSystemLogger.log(Level.INFO, MODULE, sMethod, "Received SOAP:\n" + sReceivedSoap);
 
-			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+//			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+			DocumentBuilderFactory dbFactory = Utils.createDocumentBuilderFactory(_oSystemLogger);
 			dbFactory.setNamespaceAware(true);
 			DocumentBuilder builder = dbFactory.newDocumentBuilder();
 

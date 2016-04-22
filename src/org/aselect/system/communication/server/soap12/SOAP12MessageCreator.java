@@ -70,6 +70,7 @@ import org.aselect.system.communication.server.IProtocolResponse;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectCommunicationException;
 import org.aselect.system.logging.SystemLogger;
+import org.aselect.system.utils.Utils;
 import org.aselect.system.utils.crypto.Auxiliary;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -582,13 +583,15 @@ public class SOAP12MessageCreator implements IMessageCreatorInterface
 	 * 
 	 * @throws ASOAPException
 	 *             If parsing or validation fails.
+	 * @throws ASelectCommunicationException 
 	 */
 	private void createInputMessage()
-	throws ASOAPException
+	throws ASOAPException, ASelectCommunicationException
 	{
 		try {
 			// create DocumentBuilderFactory to parse SOAP message.
-			DocumentBuilderFactory oDbf = DocumentBuilderFactory.newInstance();
+//			DocumentBuilderFactory oDbf = DocumentBuilderFactory.newInstance();
+			DocumentBuilderFactory oDbf = Utils.createDocumentBuilderFactory(_systemLogger);
 			oDbf.setNamespaceAware(true);
 
 			// SOAP 1.2 SCHEMA VALIDATING default disabled because of

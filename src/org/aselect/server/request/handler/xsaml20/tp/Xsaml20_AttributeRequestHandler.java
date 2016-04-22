@@ -313,7 +313,8 @@ public class Xsaml20_AttributeRequestHandler extends Saml20_BaseHandler
 
 		Assertion assertion = null;
 
-		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+//		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+		DocumentBuilderFactory dbFactory = Utils.createDocumentBuilderFactory(_systemLogger);
 		dbFactory.setNamespaceAware(true);
 		DocumentBuilder builder;
 		try {

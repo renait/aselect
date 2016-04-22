@@ -28,6 +28,7 @@ import org.aselect.server.request.handler.xsaml20.SamlTools;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.Tools;
+import org.aselect.system.utils.Utils;
 import org.opensaml.common.xml.SAMLConstants;
 import org.opensaml.saml2.core.LogoutRequest;
 import org.opensaml.saml2.core.LogoutResponse;
@@ -129,7 +130,8 @@ public class Xsaml20_SLO_Soap extends Saml20_BaseHandler
 			String sReceivedSoap = Tools.stream2string(request.getInputStream()); // RH, 20080715, n
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "Received Soap LogoutRequest:\n" + sReceivedSoap);
 
-			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+//			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+			DocumentBuilderFactory dbFactory = Utils.createDocumentBuilderFactory(_systemLogger);
 			dbFactory.setNamespaceAware(true);
 			DocumentBuilder builder = dbFactory.newDocumentBuilder();
 

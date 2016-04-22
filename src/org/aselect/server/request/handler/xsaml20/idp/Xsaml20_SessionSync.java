@@ -458,7 +458,8 @@ public class Xsaml20_SessionSync extends Saml20_BaseHandler
 		try {
 			_systemLogger.log(Level.INFO, MODULE, _sMethod, "Received update: " + xacmlMessage);
 
-			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+//			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+			DocumentBuilderFactory dbFactory = Utils.createDocumentBuilderFactory(_systemLogger);
 			dbFactory.setNamespaceAware(true);
 			DocumentBuilder builder = dbFactory.newDocumentBuilder();
 
@@ -645,7 +646,8 @@ public class Xsaml20_SessionSync extends Saml20_BaseHandler
 		boolean saml = true;
 		try {
 			// Build XML Document
-			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+//			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
+			DocumentBuilderFactory dbFactory = Utils.createDocumentBuilderFactory(_systemLogger);
 			dbFactory.setNamespaceAware(true);
 			DocumentBuilder builder = dbFactory.newDocumentBuilder();
 			StringReader stringReader = new StringReader(request);
