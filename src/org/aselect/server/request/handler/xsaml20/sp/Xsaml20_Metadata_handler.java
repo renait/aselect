@@ -13,6 +13,8 @@ package org.aselect.server.request.handler.xsaml20.sp;
 
 import java.util.Enumeration;
 import java.util.Hashtable;
+import java.util.List;
+import java.util.Map;
 import java.util.logging.Level;
 
 import javax.servlet.ServletConfig;
@@ -32,6 +34,7 @@ import org.joda.time.DateTime;
 import org.opensaml.common.SAMLObjectBuilder;
 import org.opensaml.common.xml.SAMLConstants;
 import org.opensaml.saml2.metadata.AssertionConsumerService;
+import org.opensaml.saml2.metadata.AttributeConsumingService;
 import org.opensaml.saml2.metadata.ContactPerson;
 import org.opensaml.saml2.metadata.ContactPersonTypeEnumeration;
 import org.opensaml.saml2.metadata.EmailAddress;
@@ -43,7 +46,9 @@ import org.opensaml.saml2.metadata.Organization;
 import org.opensaml.saml2.metadata.OrganizationDisplayName;
 import org.opensaml.saml2.metadata.OrganizationName;
 import org.opensaml.saml2.metadata.OrganizationURL;
+import org.opensaml.saml2.metadata.RequestedAttribute;
 import org.opensaml.saml2.metadata.SPSSODescriptor;
+import org.opensaml.saml2.metadata.ServiceName;
 import org.opensaml.saml2.metadata.SingleLogoutService;
 import org.opensaml.saml2.metadata.SurName;
 import org.opensaml.saml2.metadata.TelephoneNumber;
@@ -391,6 +396,47 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 						ssoDescriptor.getSingleLogoutServices().add(sloHttpService);
 					}
 				}
+				// RH, 20160429, sn
+				if (AttributeConsumingService.DEFAULT_ELEMENT_LOCAL_NAME.equalsIgnoreCase(hHandler.getType()) ) {
+					if (hHandler.getIndex() == null) {	// should not happen, must be caught by initialization
+						_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Index cannot be null in metadata " +  hHandler.getType());
+						throw new ASelectException(Errors.ERROR_ASELECT_INIT_ERROR);
+					}
+					SAMLObjectBuilder<AttributeConsumingService> attrConsumingServiceBuilder = (SAMLObjectBuilder<AttributeConsumingService>) _oBuilderFactory
+							.getBuilder(AttributeConsumingService.DEFAULT_ELEMENT_NAME);
+					AttributeConsumingService attrConsumingService = attrConsumingServiceBuilder.buildObject();
+					attrConsumingService.setIndex(hHandler.getIndex());
+					if (hHandler.getIsdefault() != null) {
+						attrConsumingService.setIsDefault( hHandler.getIsdefault().booleanValue() );
+					}
+					// <ServiceName>
+					for (Map<String, ?> service : hHandler.getServices()) {
+						SAMLObjectBuilder<ServiceName> serviceNameBuilder = (SAMLObjectBuilder<ServiceName>) _oBuilderFactory
+								.getBuilder(ServiceName.DEFAULT_ELEMENT_NAME);
+						ServiceName serviceName = serviceNameBuilder.buildObject();
+						// localized name
+						serviceName.setName( new LocalizedString((String)service.get("name"), (String)service.get("lang")) );
+						attrConsumingService.getNames().add(serviceName);
+					}
+					// <ServiceDescription> // optional	// not implemented yet
+					// <RequestedAttribute>	
+					for (Map<String, ?> attribute : hHandler.getAttributes()) {
+						SAMLObjectBuilder<RequestedAttribute> requestedAttributeBuilder = (SAMLObjectBuilder<RequestedAttribute>) _oBuilderFactory
+								.getBuilder(RequestedAttribute.DEFAULT_ELEMENT_NAME);
+						RequestedAttribute requestedAttribute = requestedAttributeBuilder.buildObject();
+						// name
+						requestedAttribute.setName( (String)attribute.get("name") );
+						Boolean isrequired = (Boolean)attribute.get("isrequired");
+						// isRequired 	// optional
+						if (isrequired != null) {
+							requestedAttribute.setIsRequired(isrequired);
+						}
+						// <saml:AttributeValue> optional	// not implemented yet
+						attrConsumingService.getRequestAttributes().add(requestedAttribute);
+					}
+					ssoDescriptor.getAttributeConsumingServices().add(attrConsumingService);
+				}
+				// RH, 20160429, en
 			}
 		} else {	// publish all handlers in config 			// RH, 20110113, en
 		// Create the AssertionConsumerService
