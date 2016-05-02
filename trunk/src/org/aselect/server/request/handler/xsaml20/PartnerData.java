@@ -11,6 +11,7 @@
  */
 package org.aselect.server.request.handler.xsaml20;
 
+import java.util.ArrayList;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
@@ -200,6 +201,9 @@ public class PartnerData
 		private String responselocation =  null;
 		private String location =  null;
 
+		private List<Map<String, ?>> services = null;	// for attributeconsumingservice
+		private List<Map<String, ?>> attributes = null;	// for attributeconsumingservice
+
 		private HandlerInfo()
 		{
 			// hide this constructor
@@ -213,6 +217,7 @@ public class PartnerData
 			this.index =  index;
 			this.responselocation = responselocation;
 			this.location = location;
+
 		}
 
 		/**
@@ -263,7 +268,24 @@ public class PartnerData
 		public synchronized void setLocation(String location)
 		{
 			this.location = location;
-		}	
+		}
+		
+		public synchronized List<Map<String, ?>> getServices()
+		{
+			if (services == null) {
+				services = new ArrayList<Map<String, ?>>();
+			}
+			return services;
+		}
+
+		public synchronized List<Map<String, ?>> getAttributes()
+		{
+			if (attributes == null) {
+				attributes = new ArrayList<Map<String, ?>>();
+			}
+			return attributes;
+		}
+
 	}
 
 	
@@ -342,6 +364,7 @@ public class PartnerData
 		String metacontactsurname = null;
 		String metacontactemail = null;
 		String metacontactephone = null;
+
 		
 		private Vector<NamespaceInfo> namespaces = new Vector<NamespaceInfo>();
 		
@@ -552,6 +575,7 @@ public class PartnerData
 			return handlers.removeElement(handler);
 		}
 
+		
 		/**
 		 * @return the handlers
 		 */

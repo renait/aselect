@@ -19,10 +19,12 @@ import java.util.logging.Level;
 import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.server.request.handler.xsaml20.AbstractMetaDataManager;
 import org.aselect.server.request.handler.xsaml20.PartnerData;
+import org.aselect.server.request.handler.xsaml20.PartnerData.HandlerInfo;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.Utils;
+import org.opensaml.saml2.metadata.AttributeConsumingService;
 
 /**
  * class MetaDataManagerIdp, this class is reading the aselect xml file. The aselect xml file contains the metadata xml
@@ -187,8 +189,55 @@ public class MetaDataManagerSp extends AbstractMetaDataManager
 					// RH, 20120703, en
 
 					String metahandlerresponselocation = Utils.getSimpleParam(_configManager, _systemLogger, metaHandler, "responselocation", false);
-
-					idpData.getMetadata4partner().getHandlers().add(idpData.new HandlerInfo(metahandlertype,metahandlerbinding,  bMetahandlerisdefault,  iMetahandlerindex, metahandlerresponselocation, metahandlerlocation) );
+					
+					// RH, 20160419, sn, get optional attributeconsumingservice
+					HandlerInfo handerInfo = idpData.new HandlerInfo(metahandlertype,metahandlerbinding,  bMetahandlerisdefault,  iMetahandlerindex, metahandlerresponselocation, metahandlerlocation);
+					if (AttributeConsumingService.DEFAULT_ELEMENT_LOCAL_NAME.equalsIgnoreCase(metahandlertype)) {
+						Object servicesSection = Utils.getSimpleSection(_configManager, _systemLogger, metaHandler, "services", true);
+						while (servicesSection != null) {
+							_systemLogger.log(Level.CONFIG, MODULE, sMethod, "services section section found for: "+ sId);
+	
+							Object serviceSection = Utils.getSimpleSection(_configManager, _systemLogger, servicesSection, "service", true);
+							while (serviceSection != null) {
+										Map<String, Object> reqService = new Hashtable<String, Object>();
+										String  attributeconsumingservice_service_name = Utils.getSimpleParam(_configManager, _systemLogger, serviceSection, "name", true);
+										reqService.put("name", attributeconsumingservice_service_name);
+										String  attributeconsumingservice_service_lang = Utils.getSimpleParam(_configManager, _systemLogger, serviceSection, "lang", true);
+										reqService.put("lang", attributeconsumingservice_service_lang);
+	
+										handerInfo.getServices().add(reqService);
+										serviceSection = _configManager.getNextSection(serviceSection);
+							}
+							servicesSection = _configManager.getNextSection(servicesSection);
+						}
+	
+						Object attributesSection = Utils.getSimpleSection(_configManager, _systemLogger, metaHandler, "attributes", true);
+						while (attributesSection != null) {
+							_systemLogger.log(Level.CONFIG, MODULE, sMethod, "attributes section section found for: "+ sId);
+	
+							Object attributeSection = Utils.getSimpleSection(_configManager, _systemLogger, attributesSection, "attribute", true);
+							while (attributeSection != null) {
+										Map<String, Object> reqAttr = new Hashtable<String, Object>();
+										String  attributeconsumingservice_attribute_name = Utils.getSimpleParam(_configManager, _systemLogger, attributeSection, "name", true);
+										reqAttr.put("name", attributeconsumingservice_attribute_name);
+										String  attributeconsumingservice_attribute_required = Utils.getSimpleParam(_configManager, _systemLogger, attributeSection, "isrequired", false);
+										if (attributeconsumingservice_attribute_required != null) {
+											reqAttr.put("isrequired", Boolean.valueOf(attributeconsumingservice_attribute_required));
+										}
+	
+										// attributevalues not implemented
+										handerInfo.getAttributes().add(reqAttr);
+							
+										attributeSection = _configManager.getNextSection(attributeSection);
+	
+							}
+							attributesSection = _configManager.getNextSection(attributesSection);
+						}
+					}
+					// RH, 20160419, en
+					
+//					idpData.getMetadata4partner().getHandlers().add(idpData.new HandlerInfo(metahandlertype,metahandlerbinding,  bMetahandlerisdefault,  iMetahandlerindex, metahandlerresponselocation, metahandlerlocation) );	// RH, 20160428, o
+					idpData.getMetadata4partner().getHandlers().add( handerInfo );	// RH, 20160428, n
 					metaHandler = _configManager.getNextSection(metaHandler);
 				}
 
@@ -231,6 +280,9 @@ public class MetaDataManagerSp extends AbstractMetaDataManager
 					_systemLogger.log(Level.INFO, MODULE, sMethod, "No entitydescriptorextension found in metadata section for: "+ sId);
 				}
 				// RH, 20140320, en
+				
+				
+				
 				
 				String metaaddkeyname = Utils.getSimpleParam(_configManager, _systemLogger, metadataSection, "addkeyname", false);
 				if (metaaddkeyname != null)
