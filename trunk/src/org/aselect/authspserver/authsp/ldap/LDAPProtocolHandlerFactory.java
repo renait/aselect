@@ -143,7 +143,7 @@ public class LDAPProtocolHandlerFactory
 			String sAttrAllowedLogins = (String) htContext.get("attr_allowed_logins");
 			String sAttrValidUntil = (String) htContext.get("attr_valid_until");
 			String sLdapEscapes = (String) htContext.get("ldap_escapes");
-			systemLogger.log(Level.FINEST, MODULE, sMethod, "sUid="+sUid+ " users_dn="+sUsersDn+" uid_dn="+sUserIdDn);
+			systemLogger.log(Level.FINEST, MODULE, sMethod, "sUid="+Auxiliary.obfuscate(sUid) + " users_dn="+sUsersDn+" uid_dn="+sUserIdDn);
 
 			Class cClass = Class.forName(sProtocolHandlerName);
 			ILDAPProtocolHandler oProtocolHandler = (ILDAPProtocolHandler) cClass.newInstance();

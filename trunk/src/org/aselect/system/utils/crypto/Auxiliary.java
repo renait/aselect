@@ -61,7 +61,8 @@ public class Auxiliary
 	private static final int DEFAULT_PBKDF2_KEYLENGTH = 256;	// bits
 
 
-	private static final String DEFAULT_DIGEST_ALG = "SHA-256";
+//	private static final String DEFAULT_DIGEST_ALG = "SHA-256";	// RH, 20160510, o
+	private static final String DEFAULT_DIGEST_ALG = "RANDOM";	// RH, 20160510, n
 	private static final String PROPERTY_DEFAULT_DIGEST_ALG = "aselect.default.digest.alg";
 	private static final String[] ALGS = { "NONE", "RANDOM", "SHA-256" , "SHA-384" , "SHA-512" };
 	private static final List<String> ALLOWED_DIGEST_ALGS = Arrays.asList(ALGS);
@@ -73,7 +74,8 @@ public class Auxiliary
 
 	private static final String[] DEFAULT_KEYS = { "uid", "Uid", "UID", "uID", "bsn", "Bsn", "BSN", "obouid", "user_id" , "sel_uid", "userId", "user_Id",
 		"name_id", "Name_ID", "NAME_ID", "Name_id", "authid", "Authid", "AuthId", "AuthID",
-		"password", "pw", "passwd", "shared_secret", "secret", "cn", "CN" };
+		"password", "pw", "passwd", "shared_secret", "secret", "cn", "CN",
+	 	"full_dn", "mail", "email" };
 	public static final List<String> BANNED_KEYS = Arrays.asList(DEFAULT_KEYS);
 	private static SecureRandom sr = null;
 	private static  byte bytes[] = new byte[20];
