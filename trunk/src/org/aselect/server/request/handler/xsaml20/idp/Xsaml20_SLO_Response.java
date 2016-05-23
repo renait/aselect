@@ -28,6 +28,7 @@ import org.aselect.system.exception.ASelectCommunicationException;
 import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.exception.ASelectStorageException;
+import org.aselect.system.utils.crypto.Auxiliary;
 import org.opensaml.common.SignableSAMLObject;
 import org.opensaml.saml2.core.Issuer;
 import org.opensaml.saml2.core.LogoutRequest;
@@ -139,7 +140,8 @@ public class Xsaml20_SLO_Response extends Saml20_BrowserHandler
 		XMLObject originalRequest = null;
 		try {
 			originalRequest = SamlTools.unmarshallElement(element);
-			_systemLogger.log(Level.FINER, MODULE, sMethod, "originalRequest=" + XMLHelper.prettyPrintXML(originalRequest.getDOM()));	// RH, 20150224, n
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "originalRequest=" + Auxiliary.obfuscate(XMLHelper.prettyPrintXML(originalRequest.getDOM()), 
+					Auxiliary.REGEX_PATTERNS));	// RH, 20150224, n
 			
 		}
 		catch (MessageEncodingException e) {
@@ -188,7 +190,8 @@ public class Xsaml20_SLO_Response extends Saml20_BrowserHandler
 			XMLObject originatingSPRequest = null;
 			try {
 				originatingSPRequest = SamlTools.unmarshallElement(element2);
-				_systemLogger.log(Level.FINER, MODULE, sMethod, "originatingSPRequest=" + XMLHelper.prettyPrintXML(originatingSPRequest.getDOM()));
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "originatingSPRequest=" + Auxiliary.obfuscate(XMLHelper.prettyPrintXML(originatingSPRequest.getDOM()), 
+						Auxiliary.REGEX_PATTERNS));
 			}
 			catch (MessageEncodingException e) {
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Error while unmarshalling " + element, e);

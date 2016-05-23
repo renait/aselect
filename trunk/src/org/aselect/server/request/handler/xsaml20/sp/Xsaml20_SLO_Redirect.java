@@ -29,6 +29,7 @@ import org.aselect.server.request.handler.xsaml20.sp.MetaDataManagerSp;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 import org.opensaml.common.SignableSAMLObject;
 import org.opensaml.common.binding.BasicSAMLMessageContext;
 import org.opensaml.common.xml.SAMLConstants;
@@ -130,7 +131,8 @@ public class Xsaml20_SLO_Redirect extends Saml20_BaseHandler
 			decoder.decode(messageContext);
 
 			SignableSAMLObject samlMessage = (SignableSAMLObject) messageContext.getInboundSAMLMessage();
-			_systemLogger.log(Level.INFO, MODULE, sMethod, XMLHelper.prettyPrintXML(samlMessage.getDOM()));
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, Auxiliary.obfuscate(XMLHelper.prettyPrintXML(samlMessage.getDOM()), 
+					Auxiliary.REGEX_PATTERNS));
 
 			String elementName = samlMessage.getElementQName().getLocalPart();
 
@@ -192,7 +194,7 @@ public class Xsaml20_SLO_Redirect extends Saml20_BaseHandler
 			}
 			else {
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "SAMLMessage: "
-						+ XMLHelper.prettyPrintXML(samlMessage.getDOM()) + " is not recognized");
+						+ Auxiliary.obfuscate(XMLHelper.prettyPrintXML(samlMessage.getDOM()), Auxiliary.REGEX_PATTERNS) + " is not recognized");
 				throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 
 			}

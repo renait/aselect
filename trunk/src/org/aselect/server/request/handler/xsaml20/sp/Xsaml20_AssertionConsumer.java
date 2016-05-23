@@ -317,17 +317,17 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 					soapManager = new SoapManager();
 				}
 				Envelope envelope = soapManager.buildSOAPMessage(artifactResolve);
-				_systemLogger.log(Level.INFO, MODULE, sMethod, "Marshall");
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Marshall");
 				Element envelopeElem = SamlTools.marshallMessage(envelope);
 //				_systemLogger.log(Level.INFO, MODULE, sMethod, "Writing SOAP message:\n"+ XMLHelper.nodeToString(envelopeElem));
-				_systemLogger.log(Level.INFO, MODULE, sMethod, "Writing SOAP message:\n"+ Auxiliary.obfuscate(XMLHelper.nodeToString(envelopeElem), Auxiliary.REGEX_PATTERNS));
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Writing SOAP message:\n"+ Auxiliary.obfuscate(XMLHelper.nodeToString(envelopeElem), Auxiliary.REGEX_PATTERNS));
 				// XMLHelper.prettyPrintXML(envelopeElem));
 	
 				// ------------ Send/Receive the SOAP message
 				String sSamlResponse = soapManager.sendSOAP(XMLHelper.nodeToString(envelopeElem), sASelectServerUrl);  // x_AssertionConsumer_x
 				//byte[] sSamlResponseAsBytes = sSamlResponse.getBytes();
 //				_systemLogger.log(Level.INFO, MODULE, sMethod, "Received response: "+sSamlResponse+" length=" + sSamlResponse.length());
-				_systemLogger.log(Level.INFO, MODULE, sMethod, "Received response: "+Auxiliary.obfuscate(sSamlResponse)+" original length=" + sSamlResponse.length());
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Received response: "+Auxiliary.obfuscate(sSamlResponse)+" original length=" + sSamlResponse.length());
 				
 				// save original, but, for (internal) transport, encode base64 
 				auth_proof = new String(org.apache.commons.codec.binary.Base64.encodeBase64(sSamlResponse.getBytes("UTF-8")));
@@ -452,7 +452,8 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 			if (samlResponseObject instanceof Response) {
 				// SSO
 				Response samlResponse = (Response) samlResponseObject;
-				_systemLogger.log(Level.INFO, MODULE, sMethod, "Processing Response=" + Auxiliary.obfuscate(XMLHelper.prettyPrintXML(samlResponse.getDOM()),Auxiliary.REGEX_PATTERNS));
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Processing Response=" + Auxiliary.obfuscate(XMLHelper.prettyPrintXML(samlResponse.getDOM()),
+						Auxiliary.REGEX_PATTERNS));
 
 				// RH, 20121205, sn
 				MetaDataManagerSp metadataManager = MetaDataManagerSp.getHandle();
@@ -557,10 +558,10 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Found EncryptedID:" + sEncryptedID);
 						// Try to get the NameID
 						SAMLObject decryptedObject = SamlTools.decryptSamlObject(encryptedid);
-						if ( decryptedObject != null ) {
-							String sDecryptedID = Auxiliary.obfuscate(XMLHelper.nodeToString(decryptedObject.getDOM()));
-							_systemLogger.log(Level.FINEST, MODULE, sMethod, "Decrypted ID:" + sDecryptedID);
-						}
+//						if ( decryptedObject != null ) {
+//							String sDecryptedID = Auxiliary.obfuscate(XMLHelper.nodeToString(decryptedObject.getDOM()));
+//							_systemLogger.log(Level.FINEST, MODULE, sMethod, "Decrypted ID:" + sDecryptedID);
+//						}
 						nameid = (NameID) decryptedObject;	// Should be a NameID Element
 					} else { // should contain nameid
 						nameid = subject.getNameID();
@@ -691,8 +692,8 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 	//								XSStringImpl xsString = (XSStringImpl) attr.getOrderedChildren().get(0);// RH, 20120124, so
 	//								String sAttrValue = xsString.getValue();// RH, 20120124, o
 	//								sAttrValue = xsString.getValue();// RH, 20120124, eo
-	    							String sValue = Auxiliary.obfuscate(XMLHelper.nodeToString(xmlObj.getDOM()));
-	    							_systemLogger.log(Level.FINEST, MODULE, sMethod, "sValue:" + sValue);
+//	    							String sValue = Auxiliary.obfuscate(XMLHelper.nodeToString(xmlObj.getDOM()));
+//	    							_systemLogger.log(Level.FINEST, MODULE, sMethod, "sValue:" + sValue);
 	//    							String sChild = Auxiliary.obfuscate(XMLHelper.nodeToString(xmlObj.getDOM().getFirstChild()));
 	    							EncryptedID eID = null;
 	    							if (xmlObj.getOrderedChildren() != null && !xmlObj.getOrderedChildren().isEmpty()) {
@@ -706,8 +707,8 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 	        	                            if ( eID != null) {
 	        	                            	final SAMLObject attributevalue = SamlTools.decryptSamlObject(eID);
 	//        	    							_systemLogger.log(Level.FINEST, MODULE, sMethod, "attributevalue decrypted");
-	        	    							String sDecryptedValue = Auxiliary.obfuscate(XMLHelper.nodeToString(attributevalue.getDOM()));
-	        	    							_systemLogger.log(Level.FINEST, MODULE, sMethod, "sDecryptedValue:" + sDecryptedValue);
+//	        	    							String sDecryptedValue = Auxiliary.obfuscate(XMLHelper.nodeToString(attributevalue.getDOM()));
+//	        	    							_systemLogger.log(Level.FINEST, MODULE, sMethod, "sDecryptedValue:" + sDecryptedValue);
 	        		                            xmlObj = attributevalue;
 	        	                            } else {
 	        									_systemLogger.log(Level.WARNING, MODULE, sMethod, "AtrributeValue not an instance of EncryptedElementType");

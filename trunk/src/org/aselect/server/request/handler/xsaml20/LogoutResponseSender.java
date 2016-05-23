@@ -21,6 +21,7 @@ import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.server.log.ASelectSystemLogger;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectException;
+import org.aselect.system.utils.crypto.Auxiliary;
 import org.opensaml.common.SAMLObjectBuilder;
 import org.opensaml.common.binding.BasicSAMLMessageContext;
 import org.opensaml.saml2.binding.encoding.HTTPRedirectDeflateEncoder;
@@ -128,7 +129,7 @@ public class LogoutResponseSender
 			throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR, e);
 		}
 		String msg = XMLHelper.prettyPrintXML(node);
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "About to send:\n" + msg);
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "About to send:\n" + Auxiliary.obfuscate(msg, Auxiliary.REGEX_PATTERNS));
 
 		// store it in de history
 		SamlHistoryManager history = SamlHistoryManager.getHandle();

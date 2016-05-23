@@ -319,7 +319,7 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 				sRelayState = null;
 			
 			SignableSAMLObject samlMessage = (SignableSAMLObject) messageContext.getInboundSAMLMessage();
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "Class="+samlMessage.getClass().getName()+" SamlMsg="
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Class="+samlMessage.getClass().getName()+" SamlMsg="
 					+Auxiliary.obfuscate(XMLHelper.prettyPrintXML(samlMessage.getDOM()), Auxiliary.REGEX_PATTERNS));
 			
 			// Decide what part of the message we need, also sets _oSamlIssuer

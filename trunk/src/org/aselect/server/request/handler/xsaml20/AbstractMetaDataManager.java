@@ -847,7 +847,7 @@ public abstract class AbstractMetaDataManager
 		Marshaller marshaller = marshallerFactory.getMarshaller(descriptor);
 
 		_systemLogger.log(Level.FINER, MODULE, sMethod, "Marshall " + descriptor);
-		// _systemLogger.log(Level.INFO, MODULE, sMethod, XMLHelper.prettyPrintXML(descriptor.getDOM()));
+		//_systemLogger.log(Level.FINEST, MODULE, sMethod, XMLHelper.prettyPrintXML(descriptor.getDOM()));
 		Element domDescriptor = marshaller.marshall(descriptor, parser.newDocument());
 		return domDescriptor;
 	}

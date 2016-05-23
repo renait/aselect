@@ -34,6 +34,7 @@ import org.aselect.system.exception.ASelectException;
 import org.aselect.system.logging.Audit;
 import org.aselect.system.utils.Tools;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 import org.opensaml.common.SignableSAMLObject;
 import org.opensaml.saml2.core.Issuer;
 import org.opensaml.saml2.core.LogoutRequest;
@@ -123,8 +124,8 @@ public class Xsaml20_SLO_Redirect extends Saml20_BrowserHandler
 
 		try {
 			LogoutRequest logoutRequest = (LogoutRequest) samlMessage;
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "received SAMLRequest: \n"
-					+ XMLHelper.prettyPrintXML(logoutRequest.getDOM()));
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "received SAMLRequest: \n"
+					+ Auxiliary.obfuscate(XMLHelper.prettyPrintXML(logoutRequest.getDOM()), Auxiliary.REGEX_PATTERNS));
 
 			Response errorResponse = validateLogoutRequest(logoutRequest, httpRequest);
 			if (errorResponse != null) {

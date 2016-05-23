@@ -19,6 +19,7 @@ import org.aselect.server.request.handler.xsaml20.idp.MetaDataManagerIdp;
 import org.aselect.system.error.Errors;
 import org.aselect.server.request.handler.xsaml20.SamlTools;
 import org.aselect.system.exception.ASelectException;
+import org.aselect.system.utils.crypto.Auxiliary;
 import org.opensaml.common.xml.SAMLConstants;
 import org.opensaml.saml2.core.LogoutResponse;
 import org.opensaml.saml2.metadata.SingleLogoutService;
@@ -69,7 +70,8 @@ public class SoapLogoutResponseSender
 		try {
 			envelopeElem = SamlTools.marshallMessage(envelope);
 			// String msg = XMLHelper.prettyPrintXML(envelopeElem);
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "Sending message:\n" + XMLHelper.nodeToString(envelopeElem));
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Sending message:\n" + Auxiliary.obfuscate(XMLHelper.nodeToString(envelopeElem), 
+					Auxiliary.REGEX_PATTERNS));
 		}
 		catch (MessageEncodingException e) {
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, e.getMessage(), e);
