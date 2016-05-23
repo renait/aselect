@@ -203,7 +203,7 @@ public class Xsaml20_SLO_Soap extends Saml20_BaseHandler
 			SoapManager soapManager = new SoapManager();
 			Envelope envelope = soapManager.buildSOAPMessage(logoutResponse);
 			Element envelopeElem = SamlTools.marshallMessage(envelope);
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "Send SAML response:\n" + Auxiliary.obfuscate(XMLHelper.nodeToString(envelopeElem), Auxiliary.REGEX_PATTERNS));
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Send SAML response:\n" + Auxiliary.obfuscate(XMLHelper.nodeToString(envelopeElem), Auxiliary.REGEX_PATTERNS));
 			SamlTools.sendSOAPResponse(request, response, XMLHelper.nodeToString(envelopeElem));  // x_LogoutReq_x Sp
 		}
 		catch (Exception e) {

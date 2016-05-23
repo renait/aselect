@@ -3622,7 +3622,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 			String sWantSigning = "true";  // always signing on
 			Assertion assertion = HandlerTools.createAttributeStatementAssertion(htAttribs, _sServerUrl, subject, "true".equalsIgnoreCase(sWantSigning));
 			String sResult = XMLHelper.nodeToString(assertion.getDOM());
-			_systemLogger.log(Level.FINE, MODULE, sMethod, "sResult="+sResult);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "sResult="+Auxiliary.obfuscate(sResult, Auxiliary.REGEX_PATTERNS));
 
 			if ("saml".equalsIgnoreCase(sOutputFormat)) {
 				sResponse = sResult;

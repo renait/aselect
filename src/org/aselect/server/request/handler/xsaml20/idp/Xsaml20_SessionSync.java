@@ -289,7 +289,7 @@ public class Xsaml20_SessionSync extends Saml20_BaseHandler
 		Element envelopeElem = null;
 		try {
 			envelopeElem = SamlTools.marshallMessage(envelope);
-			_systemLogger.log(Level.INFO, MODULE, _sMethod, "Send SAML response:\n"
+			_systemLogger.log(Level.FINEST, MODULE, _sMethod, "Send SAML response:\n"
 					+ Auxiliary.obfuscate(XMLHelper.nodeToString(envelopeElem),Auxiliary.REGEX_PATTERNS));
 			// XMLHelper.prettyPrintXML(envelopeElem));
 		}
@@ -613,7 +613,7 @@ public class Xsaml20_SessionSync extends Saml20_BaseHandler
 		try {
 			Node node = marshaller.marshall(response);
 			String msg = XMLHelper.prettyPrintXML(node);
-			_systemLogger.log(Level.INFO, MODULE, sMethod, Auxiliary.obfuscate(msg, Auxiliary.REGEX_PATTERNS));
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, Auxiliary.obfuscate(msg, Auxiliary.REGEX_PATTERNS));
 		}
 		catch (MarshallingException e) {
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, e.getMessage(), e);

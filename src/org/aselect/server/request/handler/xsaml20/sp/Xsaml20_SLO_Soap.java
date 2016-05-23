@@ -29,6 +29,7 @@ import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.Tools;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 import org.opensaml.common.xml.SAMLConstants;
 import org.opensaml.saml2.core.LogoutRequest;
 import org.opensaml.saml2.core.LogoutResponse;
@@ -207,7 +208,8 @@ public class Xsaml20_SLO_Soap extends Saml20_BaseHandler
 			Envelope envelope = soapManager.buildSOAPMessage(logoutResponse);
 			Element envelopeElem = SamlTools.marshallMessage(envelope);
 
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "Writing SOAP message:\n" + XMLHelper.nodeToString(envelopeElem));
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Writing SOAP message:\n" + Auxiliary.obfuscate(XMLHelper.nodeToString(envelopeElem), 
+					Auxiliary.REGEX_PATTERNS));
 			SamlTools.sendSOAPResponse(request, response, XMLHelper.nodeToString(envelopeElem));  // x_LogoutRequest_x Idp
 		}
 		catch (Exception e) {

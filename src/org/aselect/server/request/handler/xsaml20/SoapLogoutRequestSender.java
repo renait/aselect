@@ -24,6 +24,7 @@ import org.aselect.server.log.ASelectSystemLogger;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 import org.opensaml.saml2.core.LogoutRequest;
 import org.opensaml.saml2.core.LogoutResponse;
 import org.opensaml.saml2.core.StatusCode;
@@ -145,7 +146,8 @@ public class SoapLogoutRequestSender
 		Element envelopeElem = null;
 		try {
 			envelopeElem = SamlTools.marshallMessage(envelope);
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "Sending SOAP message:\n" + XMLHelper.nodeToString(envelopeElem));
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Sending SOAP message:\n" + Auxiliary.obfuscate(XMLHelper.nodeToString(envelopeElem), 
+					Auxiliary.REGEX_PATTERNS));
 		}
 		catch (MessageEncodingException e) {
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Exception during marshallling of envelope");

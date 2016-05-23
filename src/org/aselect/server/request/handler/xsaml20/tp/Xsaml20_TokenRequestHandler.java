@@ -21,6 +21,7 @@ import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.BASE64Encoder;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 import org.opensaml.saml2.core.Assertion;
 import org.opensaml.xml.Configuration;
 import org.opensaml.xml.XMLObjectBuilderFactory;
@@ -180,7 +181,7 @@ public class Xsaml20_TokenRequestHandler extends Saml20_BaseHandler
 					HashMap ht = new HashMap(parms);
 					ht.put(TGT_NAMEID_KEY, uid);
 					subject = tgtm.createTGT(ht);
-					_systemLogger.log(Level.INFO, MODULE, sMethod, "TGT created:" + subject);
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "TGT created:" + Auxiliary.obfuscate(subject, Auxiliary.REGEX_PATTERNS));
 				}
 				String sign = servletRequest.getParameter(PARM_NAME_REQUESTSIGNING);
 				Assertion ass = HandlerTools.createAttributeStatementAssertion(parms, issuer, subject, "true".equalsIgnoreCase(sign));

@@ -424,7 +424,7 @@ public class SessionSyncRequestSender
 			_oSystemLogger.log(Level.WARNING, MODULE, _sMethod, "MessageEncodingException!", e);
 			e.printStackTrace();
 		}
-		_oSystemLogger.log(Level.INFO, MODULE, _sMethod, "FederationUrl=" + _sFederationUrl + " SOAP message:"
+		_oSystemLogger.log(Level.FINEST, MODULE, _sMethod, "FederationUrl=" + _sFederationUrl + " SOAP message:"
 				+ Auxiliary.obfuscate(XMLHelper.nodeToString(envelopeElem), Auxiliary.REGEX_PATTERNS));
 		return sendMessageToFederation(XMLHelper.nodeToString(envelopeElem), sNameID, sTgT);
 	}

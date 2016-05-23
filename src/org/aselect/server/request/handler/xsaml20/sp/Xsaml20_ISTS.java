@@ -587,7 +587,8 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 				MarshallerFactory marshallerFactory = Configuration.getMarshallerFactory();
 				Marshaller marshaller = marshallerFactory.getMarshaller(messageContext.getOutboundSAMLMessage());
 				Node nodeMessageContext = marshaller.marshall(messageContext.getOutboundSAMLMessage());
-				_systemLogger.log(Level.FINER, MODULE, sMethod, "RelayState="+sRelayState+" OutboundSAMLMessage:\n"+Auxiliary.obfuscate(XMLHelper.prettyPrintXML(nodeMessageContext), Auxiliary.REGEX_PATTERNS));
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "RelayState="+sRelayState+" OutboundSAMLMessage:\n"+Auxiliary.obfuscate(XMLHelper.prettyPrintXML(nodeMessageContext), 
+						Auxiliary.REGEX_PATTERNS));
 				
 				if (useSha256) {
 					Saml20_RedirectEncoder encoder = new Saml20_RedirectEncoder();  // is a HTTPRedirectDeflateEncoder
@@ -609,7 +610,7 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 				_systemLogger.log(Level.FINER, MODULE, sMethod, "Signed the authnRequest ======<"+authnRequest);
 
 				String sAssertion = XMLHelper.nodeToString(authnRequest.getDOM());
-				_systemLogger.log(Level.FINER, MODULE, sMethod, "Assertion=" + Auxiliary.obfuscate(sAssertion, Auxiliary.REGEX_PATTERNS));
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Assertion=" + Auxiliary.obfuscate(sAssertion, Auxiliary.REGEX_PATTERNS));
 				try {
 					byte[] bBase64Assertion = sAssertion.getBytes("UTF-8");
 					BASE64Encoder b64enc = new BASE64Encoder();
@@ -717,10 +718,11 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created QualityAuthenticationAssuranceLevel:" + oqal.getName().getLocalPart());
 				       DOMResult result = new DOMResult();
 				       m.marshal( oqal, result ); 
-						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created result so far:" +result);
+//						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created result so far:" +result);
 				       Document doc = (Document) result.getNode();
 				       Element element = doc.getDocumentElement();
-						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created element so far:" +XMLHelper.prettyPrintXML(element));
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created element so far:" +Auxiliary.obfuscate(XMLHelper.prettyPrintXML(element), 
+								Auxiliary.REGEX_PATTERNS));
 						UnmarshallerFactory factory = org.opensaml.xml.Configuration.getUnmarshallerFactory();
 						Unmarshaller unmarshaller = factory.getUnmarshaller( XSAny.TYPE_NAME );
 						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created Unmarshaller:" + unmarshaller.toString());
@@ -739,10 +741,11 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created spSector:" + ospSect.getName().getLocalPart());
 				       DOMResult result = new DOMResult();
 				       m.marshal( ospSect, result ); 
-						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created result so far:" +result);
+//						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created result so far:" +result);
 				       Document doc = (Document) result.getNode();
 				       Element element = doc.getDocumentElement();
-						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created element so far:" +XMLHelper.prettyPrintXML(element));
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created element so far:" +Auxiliary.obfuscate(XMLHelper.prettyPrintXML(element), 
+								Auxiliary.REGEX_PATTERNS));
 						UnmarshallerFactory factory = org.opensaml.xml.Configuration.getUnmarshallerFactory();
 						Unmarshaller unmarshaller = factory.getUnmarshaller( XSAny.TYPE_NAME );
 						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created Unmarshaller:" + unmarshaller.toString());
@@ -762,10 +765,11 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created spInstitution:" + ospInstitution.getName().getLocalPart());
 				       DOMResult result = new DOMResult();
 				       m.marshal( ospInstitution, result ); 
-						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created result so far:" +result);
+//						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created result so far:" +result);
 				       Document doc = (Document) result.getNode();
 				       Element element = doc.getDocumentElement();
-						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created element so far:" +XMLHelper.prettyPrintXML(element));
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created element so far:" +Auxiliary.obfuscate(XMLHelper.prettyPrintXML(element), 
+								Auxiliary.REGEX_PATTERNS));
 						UnmarshallerFactory factory = org.opensaml.xml.Configuration.getUnmarshallerFactory();
 						Unmarshaller unmarshaller = factory.getUnmarshaller( XSAny.TYPE_NAME );
 						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created Unmarshaller:" + unmarshaller.toString());
@@ -786,10 +790,11 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created spApplication:" + ospApplication.getName().getLocalPart());
 				       DOMResult result = new DOMResult();
 				       m.marshal( ospApplication, result ); 
-						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created result so far:" +result);
+//						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created result so far:" +result);
 				       Document doc = (Document) result.getNode();
 				       Element element = doc.getDocumentElement();
-						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created element so far:" +XMLHelper.prettyPrintXML(element));
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created element so far:" +Auxiliary.obfuscate(XMLHelper.prettyPrintXML(element), 
+								Auxiliary.REGEX_PATTERNS));
 						UnmarshallerFactory factory = org.opensaml.xml.Configuration.getUnmarshallerFactory();
 						Unmarshaller unmarshaller = factory.getUnmarshaller( XSAny.TYPE_NAME );
 						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created Unmarshaller:" + unmarshaller.toString());
@@ -809,10 +814,11 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created spCountry:" + ospCountry.getName().getLocalPart());
 				       DOMResult result = new DOMResult();
 				       m.marshal( ospCountry, result ); 
-						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created result so far:" +result);
+//						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created result so far:" +result);
 				       Document doc = (Document) result.getNode();
 				       Element element = doc.getDocumentElement();
-						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created element so far:" +XMLHelper.prettyPrintXML(element));
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created element so far:" +Auxiliary.obfuscate(XMLHelper.prettyPrintXML(element), 
+								Auxiliary.REGEX_PATTERNS));
 						UnmarshallerFactory factory = org.opensaml.xml.Configuration.getUnmarshallerFactory();
 						Unmarshaller unmarshaller = factory.getUnmarshaller( XSAny.TYPE_NAME );
 						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created Unmarshaller:" + unmarshaller.toString());
@@ -850,10 +856,11 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created oeIDSectorShare:" + oeIDSectorShare.getName().getLocalPart());
 				       DOMResult result = new DOMResult();
 				       m2.marshal( oeIDSectorShare, result ); 
-						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created result so far:" +result);
+//						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created result so far:" +result);
 				       Document doc = (Document) result.getNode();
 				       Element element = doc.getDocumentElement();
-						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created element so far:" +XMLHelper.prettyPrintXML(element));
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created element so far:" +Auxiliary.obfuscate(XMLHelper.prettyPrintXML(element), 
+								Auxiliary.REGEX_PATTERNS));
 						UnmarshallerFactory factory = org.opensaml.xml.Configuration.getUnmarshallerFactory();
 						Unmarshaller unmarshaller = factory.getUnmarshaller( XSAny.TYPE_NAME );
 						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created Unmarshaller:" + unmarshaller.toString());
@@ -873,10 +880,11 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created eIDCrossSectorShare:" + oeIDCrossSectorShare.getName().getLocalPart());
 				       DOMResult result = new DOMResult();
 				       m2.marshal( oeIDCrossSectorShare, result ); 
-						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created result so far:" +result);
+//						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created result so far:" +result);
 				       Document doc = (Document) result.getNode();
 				       Element element = doc.getDocumentElement();
-						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created element so far:" +XMLHelper.prettyPrintXML(element));
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created element so far:" +Auxiliary.obfuscate(XMLHelper.prettyPrintXML(element), 
+								Auxiliary.REGEX_PATTERNS));
 						UnmarshallerFactory factory = org.opensaml.xml.Configuration.getUnmarshallerFactory();
 						Unmarshaller unmarshaller = factory.getUnmarshaller( XSAny.TYPE_NAME );
 						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created Unmarshaller:" + unmarshaller.toString());
@@ -897,10 +905,11 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created eIDCrossBorderShare:" + oeIDCrossBorderShare.getName().getLocalPart());
 				       DOMResult result = new DOMResult();
 				       m2.marshal( oeIDCrossBorderShare, result ); 
-						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created result so far:" +result);
+//						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created result so far:" +result);
 				       Document doc = (Document) result.getNode();
 				       Element element = doc.getDocumentElement();
-						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created element so far:" +XMLHelper.prettyPrintXML(element));
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created element so far:" +Auxiliary.obfuscate(XMLHelper.prettyPrintXML(element), 
+								Auxiliary.REGEX_PATTERNS));
 						UnmarshallerFactory factory = org.opensaml.xml.Configuration.getUnmarshallerFactory();
 						Unmarshaller unmarshaller = factory.getUnmarshaller( XSAny.TYPE_NAME );
 						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created Unmarshaller:" + unmarshaller.toString());
@@ -937,7 +946,8 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 //					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created result so far:" +result);
 					Document doc = (Document) result.getNode();
 					Element element = doc.getDocumentElement();
-					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created element so far:" +XMLHelper.prettyPrintXML(element));
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created element so far:" +Auxiliary.obfuscate(XMLHelper.prettyPrintXML(element), 
+							Auxiliary.REGEX_PATTERNS));
 					UnmarshallerFactory factory = org.opensaml.xml.Configuration.getUnmarshallerFactory();
 					Unmarshaller unmarshaller = factory.getUnmarshaller( XSAny.TYPE_NAME );
 //					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created Unmarshaller:" + unmarshaller.toString());

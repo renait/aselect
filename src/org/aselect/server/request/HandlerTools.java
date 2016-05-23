@@ -50,6 +50,7 @@ import org.aselect.system.exception.ASelectStorageException;
 import org.aselect.system.utils.BASE64Decoder;
 import org.aselect.system.utils.BASE64Encoder;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 import org.joda.time.DateTime;
 import org.opensaml.common.SAMLObjectBuilder;
 import org.opensaml.common.SAMLVersion;
@@ -388,7 +389,7 @@ public class HandlerTools
 		XMLObjectBuilderFactory _oBuilderFactory;
 		_oBuilderFactory = org.opensaml.xml.Configuration.getBuilderFactory();
 
-		systemLogger.log(Level.INFO, MODULE, sMethod, "Issuer="+sIssuer+" Subject="+sSubject);
+		systemLogger.log(Level.FINEST, MODULE, sMethod, "Issuer="+sIssuer+" Subject="+sSubject);
 
 
 		SAMLObjectBuilder<Assertion> assertionBuilder = (SAMLObjectBuilder<Assertion>) _oBuilderFactory
@@ -404,7 +405,7 @@ public class HandlerTools
 		nameID.setNameQualifier(sIssuer);
 		nameID.setValue(sSubject);
 		
-		systemLogger.log(Level.INFO, MODULE, sMethod, nameID.getValue());
+		systemLogger.log(Level.FINEST, MODULE, sMethod, nameID.getValue());
 		SAMLObjectBuilder<Subject> subjectBuilder = (SAMLObjectBuilder<Subject>) _oBuilderFactory
 				.getBuilder(Subject.DEFAULT_ELEMENT_NAME);
 		Subject subject = subjectBuilder.buildObject();
@@ -449,7 +450,7 @@ public class HandlerTools
 		if (sign) {
 			systemLogger.log(Level.FINER, MODULE, sMethod, "Sign the final Assertion >======");
 			assertion = (Assertion)SamlTools.signSamlObject(assertion);
-			systemLogger.log(Level.FINER, MODULE, sMethod, "Signed the Assertion ======<" + assertion);
+			systemLogger.log(Level.FINER, MODULE, sMethod, "Signed the Assertion ======<");
 		}
 
 		// // Only for testing
@@ -489,7 +490,7 @@ public class HandlerTools
 		XMLObjectBuilderFactory _oBuilderFactory;
 		_oBuilderFactory = org.opensaml.xml.Configuration.getBuilderFactory();
 
-		systemLogger.log(Level.INFO, MODULE, sMethod, "Issuer="+sIssuer+" Subject="+sSubject);
+		systemLogger.log(Level.FINEST, MODULE, sMethod, "Issuer="+sIssuer+" Subject="+sSubject);
 		XMLObjectBuilder stringBuilder = _oBuilderFactory.getBuilder(XSString.TYPE_NAME);
 
 		SAMLObjectBuilder<AttributeStatement> attributeStatementBuilder = (SAMLObjectBuilder<AttributeStatement>) _oBuilderFactory
@@ -515,7 +516,7 @@ public class HandlerTools
 
 		
 		
-		systemLogger.log(Level.FINER, MODULE, sMethod, nameID.getValue());
+		systemLogger.log(Level.FINEST, MODULE, sMethod, nameID.getValue());
 		SAMLObjectBuilder<Subject> subjectBuilder = (SAMLObjectBuilder<Subject>) _oBuilderFactory
 				.getBuilder(Subject.DEFAULT_ELEMENT_NAME);
 		Subject subject = subjectBuilder.buildObject();
@@ -588,7 +589,7 @@ public class HandlerTools
 			systemLogger.log(Level.FINER, MODULE, sMethod, "Sign the final Assertion >======");
 //			assertion = (Assertion)SamlTools.signSamlObject(assertion);
 			assertion = (Assertion)SamlTools.signSamlObject(assertion, null, true, true); // sha1 default algorithm
-			systemLogger.log(Level.FINER, MODULE, sMethod, "Signed the Assertion ======<" + assertion);
+			systemLogger.log(Level.FINER, MODULE, sMethod, "Signed the Assertion ======<");
 		}
 
 		return assertion;
@@ -832,7 +833,7 @@ public class HandlerTools
 			Node node = marshaller.marshall(assertion);
 			if (doLog) {
 				String msg = XMLHelper.prettyPrintXML(node);
-				systemLogger.log(Level.FINEST, MODULE, sMethod, msg);
+				systemLogger.log(Level.FINEST, MODULE, sMethod, Auxiliary.obfuscate(msg, Auxiliary.REGEX_PATTERNS));
 			}
 		}
 		catch (MarshallingException e) {
@@ -936,7 +937,7 @@ public class HandlerTools
 		String sMethod = "base64EncodeAssertion";
 		ASelectSystemLogger systemLogger = ASelectSystemLogger.getHandle();
 		String sAssertion = XMLHelper.nodeToString(samlAssert.getDOM());
-		systemLogger.log(Level.FINER, MODULE, sMethod, "Assertion=" + sAssertion);
+		systemLogger.log(Level.FINEST, MODULE, sMethod, "Assertion=" + Auxiliary.obfuscate(sAssertion, Auxiliary.REGEX_PATTERNS));
 
 		try {
 			byte[] bBase64Assertion = sAssertion.getBytes("UTF-8");
@@ -963,7 +964,7 @@ public class HandlerTools
 		String sMethod = "base64DecodeAssertion";
 		XMLObject xmlObject = null;
 		ASelectSystemLogger systemLogger = ASelectSystemLogger.getHandle();
-		systemLogger.log(Level.FINER, MODULE, sMethod, "base64Decoding: " + sSamlAssert);
+		systemLogger.log(Level.FINEST, MODULE, sMethod, "base64Decoding: " + Auxiliary.obfuscate(sSamlAssert, Auxiliary.REGEX_PATTERNS));
 		BASE64Decoder b64dec = new BASE64Decoder();
 		byte[] tokenArray = b64dec.decodeBuffer(sSamlAssert);
 		ByteArrayOutputStream baos = new ByteArrayOutputStream();

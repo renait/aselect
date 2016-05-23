@@ -324,7 +324,7 @@ public class Xsaml20_AttributeRequestHandler extends Saml20_BaseHandler
 			Document docReceivedAssertion = builder.parse(inputSource);
 			Element elementReceivedAssertion = docReceivedAssertion.getDocumentElement();
 
-			_systemLogger.log(Level.FINER, MODULE, sMethod, "unmarhalling DOM:"
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "unmarhalling DOM:"
 					+ Auxiliary.obfuscate(XMLHelper.prettyPrintXML(elementReceivedAssertion), Auxiliary.REGEX_PATTERNS));
 			assertion = unmarshallAssertion(elementReceivedAssertion);
 		}

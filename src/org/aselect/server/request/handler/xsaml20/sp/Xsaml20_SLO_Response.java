@@ -33,6 +33,7 @@ import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.Tools;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 import org.opensaml.common.SignableSAMLObject;
 import org.opensaml.common.binding.BasicSAMLMessageContext;
 import org.opensaml.saml2.core.Issuer;
@@ -145,7 +146,8 @@ public class Xsaml20_SLO_Response extends Saml20_BaseHandler
 			decoder.decode(messageContext);
 
 			SignableSAMLObject samlMessage = (SignableSAMLObject) messageContext.getInboundSAMLMessage();
-			_systemLogger.log(Level.INFO, MODULE, sMethod, XMLHelper.prettyPrintXML(samlMessage.getDOM()));
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, Auxiliary.obfuscate(XMLHelper.prettyPrintXML(samlMessage.getDOM()), 
+					Auxiliary.REGEX_PATTERNS));
 
 			String elementName = samlMessage.getElementQName().getLocalPart();
 
@@ -159,7 +161,7 @@ public class Xsaml20_SLO_Response extends Saml20_BaseHandler
 			}
 			else {
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "SAMLMessage: "
-						+ XMLHelper.prettyPrintXML(samlMessage.getDOM()) + " is not recognized");
+						+ Auxiliary.obfuscate(XMLHelper.prettyPrintXML(samlMessage.getDOM()), Auxiliary.REGEX_PATTERNS) + " is not recognized");
 				throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 			}
 			if (issuer == null) {
@@ -315,8 +317,8 @@ public class Xsaml20_SLO_Response extends Saml20_BaseHandler
 			Document docReceivedSoap = builder.parse(inputSource);
 			Element elementReceivedSoap = docReceivedSoap.getDocumentElement();
 			Node logoutResponseNode = SamlTools.getNode(elementReceivedSoap, LOGOUTRESPONSE);
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "LogoutResponse:\n"
-					+ XMLHelper.nodeToString(logoutResponseNode));
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "LogoutResponse:\n"
+					+ Auxiliary.obfuscate(XMLHelper.nodeToString(logoutResponseNode), Auxiliary.REGEX_PATTERNS));
 
 			// Unmarshall to the SAMLmessage
 			UnmarshallerFactory factory = org.opensaml.xml.Configuration.getUnmarshallerFactory();

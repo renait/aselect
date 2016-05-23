@@ -936,7 +936,7 @@ public class SamlTools
 		try {
 			Node node = marshaller.marshall(logoutResponse);
 			String msg = XMLHelper.prettyPrintXML(node);
-			systemLogger.log(Level.INFO, MODULE, sMethod, "Built message:\n" + Auxiliary.obfuscate(msg, Auxiliary.REGEX_PATTERNS));
+			systemLogger.log(Level.FINEST, MODULE, sMethod, "Built message:\n" + Auxiliary.obfuscate(msg, Auxiliary.REGEX_PATTERNS));
 		}
 		catch (MarshallingException e) {
 			systemLogger.log(Level.WARNING, MODULE, sMethod, "Exception marhalling message: " + e.getMessage());
