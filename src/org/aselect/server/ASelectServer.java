@@ -204,6 +204,7 @@ import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.servlet.ASelectHttpServlet;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * This is the A-Select Server main class. It is responsible for <code>init()</code>ializing and <code>destroy()</code>
@@ -614,6 +615,9 @@ public class ASelectServer extends ASelectHttpServlet
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "Stop TimerSensor");
 			ConfigManager.timerSensorStopThread(_timerSensorThread);
 		}
+		
+		Auxiliary.teardown();
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "Auxiliary teared down");
 		try { java.lang.Thread.sleep(1000);	} catch (InterruptedException e) {}
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "Resources closed");
 	}

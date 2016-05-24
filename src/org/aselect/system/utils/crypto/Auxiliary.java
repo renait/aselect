@@ -37,12 +37,19 @@ import java.security.cert.CertificateException;
 import java.security.cert.CertificateFactory;
 import java.security.cert.X509Certificate;
 import java.security.spec.InvalidKeySpecException;
+import java.text.SimpleDateFormat;
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.Calendar;
 import java.util.Collection;
+import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
+import java.util.concurrent.ConcurrentHashMap;
+import java.util.concurrent.Executors;
+import java.util.concurrent.ScheduledExecutorService;
+import java.util.concurrent.TimeUnit;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
@@ -54,7 +61,7 @@ import javax.xml.bind.DatatypeConverter;
 
 import org.aselect.system.utils.Base64Codec;
 
-public class Auxiliary
+public  final class Auxiliary
 {	
 	private static final String HMAC_SHA1_ALGORITHM = "HmacSHA1";
 	private static final String HMAC_SHA256_ALGORITHM = "HmacSHA256";
@@ -79,7 +86,9 @@ public class Auxiliary
 	public static final List<String> BANNED_KEYS = Arrays.asList(DEFAULT_KEYS);
 	private static SecureRandom sr = null;
 	private static  byte bytes[] = new byte[20];
- 
+//	private static final Map<String, String> digestedMap = new HashMap<String, String>();
+	private static final Map<String, String> digestedMap = new ConcurrentHashMap<String, String>();
+	private static final ScheduledExecutorService scheduledThreadPool = Executors.newScheduledThreadPool(2);
 	
 	static {
 		try {
@@ -87,7 +96,15 @@ public class Auxiliary
 			if (DIGEST_ALG == null || !ALLOWED_DIGEST_ALGS.contains(DIGEST_ALG )) {
 				DIGEST_ALG = DEFAULT_DIGEST_ALG;
 			}
+			if (DEFAULT_DIGEST_ALG.equals(DIGEST_ALG)) {
+				scheduledThreadPool.scheduleAtFixedRate(new Auxiliary.CleanupDigestMap(), 0, 24,
+			            TimeUnit.HOURS);
+//				System.out.println( "=+=+=+=+=" + ( new SimpleDateFormat( "yyyy-MM-dd'T'HH:mm:ss.SSS" ) ).format( Calendar.getInstance().getTime() ) + 
+//						": " + Thread.currentThread().getName() + ": " + "scheduleAtFixedRate");	// must go
+			}
 		} catch (Exception se) {
+			System.err.println( "=+=+=+=+=" + ( new SimpleDateFormat( "yyyy-MM-dd'T'HH:mm:ss.SSS" ) ).format( Calendar.getInstance().getTime() ) + 
+					": " + Thread.currentThread().getName() + ": " + "Exception at Auxiliary static initializer: " + se.getMessage());
 			DIGEST_ALG = DEFAULT_DIGEST_ALG;
 		}
 	}
@@ -119,6 +136,10 @@ public class Auxiliary
 		
 	}
 
+	
+	private Auxiliary() {	// hide contructor
+		
+	}
 	
 	/**
 	 * 
@@ -340,12 +361,11 @@ public class Auxiliary
 		if ( plaintext != null ) {
 			if ("NONE".equalsIgnoreCase(algorithm)) {
 				digested = "{" +algorithm + "}{" + plaintext + "}";
-//				System.out.println("Not digesting the String.");	// must go
 			} else if ("RANDOM".equalsIgnoreCase(algorithm)) {
-		        sr.nextBytes(bytes);
-		        digested = "{" +algorithm + "}{" + Base64Codec.encode(bytes) + "}";
+//		        sr.nextBytes(bytes);
+//		        digested = "{" +algorithm + "}{" + Base64Codec.encode(bytes) + "}";
+		        digested = "{" +algorithm + "}{" + getRandom(plaintext) + "}";
 			} else {
-//				System.out.println("Start digesting the String...");	// must go
 				MessageDigest md;
 				try {
 					md = MessageDigest.getInstance(algorithm);
@@ -361,7 +381,6 @@ public class Auxiliary
 					digested = null;
 					e.printStackTrace();
 				}
-//				System.out.println("...finish digesting the String.");	// must go
 			}
 		}
 		return digested;
@@ -369,6 +388,18 @@ public class Auxiliary
 	
 	
 	
+	private static String getRandom(String plaintext)
+	{
+		String digested = digestedMap.get(plaintext);
+		if (digested == null) {
+	        sr.nextBytes(bytes);
+	        digested =  Base64Codec.encode(bytes) ;
+	        digestedMap.put(plaintext, digested);
+	    }
+		return digested;
+
+	}
+
 	public static byte[] calculateRawRFC2104HMAC(byte[] data, byte[] key)
 	throws java.security.SignatureException
 	{
@@ -505,13 +536,32 @@ public class Auxiliary
 	}
 
 	
-	
+	public static class CleanupDigestMap implements Runnable {
+		
+		@Override
+		public void run() {
+//			System.out.println( "=+=+=+=+=" + ( new SimpleDateFormat( "yyyy-MM-dd'T'HH:mm:ss.SSS" ) ).format( Calendar.getInstance().getTime() ) + 
+//					Thread.currentThread().getName() + ": " + "Cleaning up digestedMap");// must go
+			digestedMap.clear();
+		}
+	}
 	
 
+	public  static void teardown () {
+		if (scheduledThreadPool != null) {
+//			System.out.println( "=+=+=+=+=" + ( new SimpleDateFormat( "yyyy-MM-dd'T'HH:mm:ss.SSS" ) ).format( Calendar.getInstance().getTime() ) + 
+//					Thread.currentThread().getName() + ": " + "Shutting down  scheduledThreadPool");// must go
+			scheduledThreadPool.shutdownNow();
+//			System.out.println( "=+=+=+=+=" + ( new SimpleDateFormat( "yyyy-MM-dd'T'HH:mm:ss.SSS" ) ).format( Calendar.getInstance().getTime() ) + 
+//					Thread.currentThread().getName() + ": " + "scheduledThreadPool shut down initialized");// must go
+		}
+    }
+	
 	private static void usage(PrintStream outStream) {
 		outStream.println("Usage: org.aselect.system.utils.crypto.Auxiliary \"<plaintext_1>\" [\"<plaintext_2>\" ... \"<plaintext_n>\"]");
 	}
 	
+
 //	public static void main(String[] args)
 //	{
 //		if ( args.length > 0 ) {
