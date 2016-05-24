@@ -310,13 +310,18 @@ void timer_finish(TIMER_DATA *pTimer);
 char *timer_pack(pool *pPool, TIMER_DATA *pTimer, char *senderId, char *sAppId, int ok);
 
 #define ASELECT_FILTER_TRACE
+#ifdef NO_TRACE_LOG
+#undef ASELECT_FILTER_TRACE
+#endif
 
+
+    void aselect_filter_trace_logfilename(char *fmt);
 /*
  * Trace definitions
  */
 #ifdef ASELECT_FILTER_TRACE
 
-    void aselect_filter_trace_logfilename(char *fmt);
+//    void aselect_filter_trace_logfilename(char *fmt);
     void aselect_filter_trace(const char *fmt, ... );
     void aselect_filter_trace2(const char *filename, int line, const char *fmt, ...);    
     

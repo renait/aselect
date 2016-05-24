@@ -62,7 +62,7 @@
 
 #include "asf_common.h"
 
-#ifdef ASELECT_FILTER_TRACE
+//	#ifdef ASELECT_FILTER_TRACE
 //
 // Bauke: Added fall back when logfile cannot be created
 //
@@ -137,7 +137,7 @@ void aselect_filter_trace2(const char *filename, int line, const char *fmt, ...)
         fclose(f);
     }
 }
-#endif
+//	#endif
 
 //
 // Prints out the contents of a table if tracing is enabled
@@ -464,7 +464,7 @@ char *aselect_filter_get_param(pool *pPool, char *pcArgs, char *pcKey, char *pcD
 
 char *aselect_filter_get_param_multi(pool *pPool, char *pcArgs, char *pcKey, char *pcDelimiter, int bUrlDecode, int *pSearchPos)
 {
-    char *pcTemp, *pcTemp2, *pcValue = NULL;
+    char *pcTemp = NULL, *pcTemp2, *pcValue = NULL;
     int lenValue = 0;
 	int first = 1;
 	int multiValued = 0;
