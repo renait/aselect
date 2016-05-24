@@ -1,0 +1,354 @@
+<?xml version="1.0"?>
+
+<!-- Johan Stuyts - JavaThinker                               -->
+<!-- A script for Ant. To use it you have to:                 -->
+<!-- Put the sources in 'src/org'                             -->
+<!-- Put the dependencies in 'lib' or 'lib-compile            -->
+<!-- The result will end up in 'target'                       -->
+<!-- Use 'ant jars' to build the JAR files.                   -->
+<!-- Bauke Hiemstra - www.anoigo.nl: Adapted for A-Select 1.6 -->
+<!-- Remy Hanswijk - www.anoigo.nl: Some improvements		  -->
+
+<project name="A-Select" default="jars" >
+	<!-- default only does compile and jars	-->
+	<!-- consider using "clean jars commitlog libs" 	-->
+
+	<property name="ant.build.javac.source" value="1.6" />
+	<property name="ant.build.javac.target" value="1.6" />
+	
+
+<!--
+	<buildnumber/>
+	
+	<echo message="buildnumber: ${build.number}"/>
+-->	
+
+	
+	<exec outputproperty="build.current.revision" executable="svnversion" failifexecutionfails="false"  >
+		<!-- version 1.7 or later	-->
+	         <arg line="-n -c" />
+	         <redirector>
+	           <outputfilterchain>
+	             <tokenfilter>
+	                 <replaceregex pattern="^[0-9]*:?" replace="" flags="g"/>
+	             </tokenfilter>
+	          </outputfilterchain>
+	        </redirector>
+	</exec>
+	<!--
+	<property name="build.current.version" value="unknown" />
+	<exec outputproperty="build.current.version" executable="svn" failifexecutionfails="false" >
+	  <arg line="info" />
+	  <redirector>
+	  <outputfilterchain>
+	  <linecontainsregexp><regexp pattern="^URL:" /></linecontainsregexp>
+	   <tokenfilter>
+	     <replaceregex pattern=".*\/([^\/]+)$" replace="\1" flags="g"/>
+	   </tokenfilter>
+	  </outputfilterchain>
+	</redirector>
+	</exec>
+-->
+	<condition property="full.build.version" value="${build.current.revision}" else="unknown" >
+		<isset property="build.current.revision"/>
+		</condition>
+<!--		
+	<property name="full.build.version" value="${build.current.revision}" />
+	-->
+	<!-- for comaptibility with Bauke makejar.sh
+	-->
+	<condition property="svnversion_file" value="subversion_${full.build.version}" else="subversion_unknown" >
+		<isset property="build.current.revision"/>
+		</condition>
+	
+	
+	<echo message="Full build version: ${full.build.version}"/>
+	
+	<property name="vendor" value="Anoigo" />
+	
+  <macrodef name="build-jar">
+    <attribute name="jar-name" />
+    <attribute name="include-pattern" />
+    <attribute name="exclude-pattern-1" default="" />
+    <attribute name="exclude-pattern-2" default="" />
+    <attribute name="exclude-pattern-3" default="" />
+    <attribute name="exclude-pattern-4" default="" />
+    <attribute name="exclude-pattern-5" default="" />
+    <attribute name="exclude-pattern-6" default="" />
+    <attribute name="exclude-pattern-7" default="" />
+    <attribute name="exclude-pattern-8" default="" />
+    <attribute name="exclude-pattern-9" default="" />
+    <element name="manifest-tag" optional="true" />
+    <sequential>
+    	<!--
+        <jar basedir="target/classes" destfile="target/org.aselect.@{jar-name}-1.6.jar" >
+-->
+      <jar basedir="target/classes" destfile="target/org.aselect.@{jar-name}.jar" >
+      	<manifest-tag />
+	    <include name="${svnversion_file}" />
+        <include name="@{include-pattern}" />
+        <exclude name="@{exclude-pattern-1}" />
+        <exclude name="@{exclude-pattern-2}" />
+        <exclude name="@{exclude-pattern-3}" />
+        <exclude name="@{exclude-pattern-4}" />
+        <exclude name="@{exclude-pattern-5}" />
+        <exclude name="@{exclude-pattern-6}" />
+        <exclude name="@{exclude-pattern-7}" />
+        <exclude name="@{exclude-pattern-8}" />
+        <exclude name="@{exclude-pattern-9}" />
+      </jar>
+    </sequential>
+  </macrodef>
+	
+
+	<target name="commitlog" description="Produces svn commit log file">
+	<!--	revision history	-->
+	<!--
+	<svn  failonerror="false">
+	   <log path="." changedPathes="false" destFile="change_log" />
+	</svn>
+	-->
+		<exec output="target/svn.commit.log" executable="svn" failifexecutionfails="false"  >
+		<!-- version 1.7 or later	-->
+	         <arg line="log -r HEAD:1" />
+		<!--
+	         <redirector>
+	           <outputfilterchain>
+	             <tokenfilter>
+	                 <replaceregex pattern="^[0-9]*:?" replace="" flags="g"/>
+	             </tokenfilter>
+	          </outputfilterchain>
+	        </redirector>
+	    -->
+		</exec>
+	</target>	
+
+
+	  <target name="libs" description="Create directory with deployable jars.">
+	  	<copy file="target/org.aselect.system.jar" tofile="deployable/org.aselect.system.jar" preservelastmodified="true"/>
+	  	<copy file="target/org.aselect.authspserver-all.jar" tofile="deployable/org.aselect.authspserver.jar" preservelastmodified="true"/>
+	  	<copy file="target/org.aselect.server-all.jar" tofile="deployable/org.aselect.server.jar" preservelastmodified="true"/>
+	  	<copy file="target/org.aselect.lbsensor.jar" tofile="deployable/org.aselect.lbsensor.jar" preservelastmodified="true"/>
+	  	<copy file="target/org.aselect.eu.stork.jar" tofile="deployable/org.aselect.eu.stork.jar" preservelastmodified="true"/>
+		<copy file="target/org.aselect.agent.jar" tofile="deployable/org.aselect.agent.jar" preservelastmodified="true"/>
+		<copy file="target/svn.commit.log" tofile="deployable/svn.commit.log" preservelastmodified="true"/>
+	  </target>
+	
+  <target name="clean" description="Delete all build artifacts.">
+    <delete includeemptydirs="true">
+      <fileset dir="target">
+        <include name="**" />
+        <exclude name="eclipse/**" />
+      </fileset>
+    </delete>
+    <mkdir dir="target" />
+    <delete includeemptydirs="true" failonerror="false">
+      <fileset dir="deployable">
+        <include name="**" />
+        <exclude name="eclipse/**" />
+      </fileset>
+    </delete>
+    <mkdir dir="deployable" />
+  </target>
+
+  <target name="compile" description="Compile the Java files.">
+    <mkdir dir="target/classes" />
+
+	<echo message="${full.build.version}${line.separator}" file="target/classes/${svnversion_file}" />
+    <!-- STORK EXTENSIONS	-->
+  	<!--
+	    <javac destdir="target/classes" optimize="true" debug="true" debuglevel="vars,source,lines" srcdir="src/eu" sourcepath="">
+	   -->
+	    	<!--  -->
+        <javac destdir="target/classes" optimize="true" srcdir="src/eu" sourcepath="">
+          <!--	-->
+      <classpath>
+        <fileset dir="lib">
+          <include name="*.jar" />
+        </fileset>
+        <fileset dir="lib-compile">
+          <include name="*.jar" />
+        </fileset>
+      </classpath>
+    </javac>
+  	
+    <!-- A-SELECT	-->
+  	 <!--
+	    <javac destdir="target/classes" optimize="true" debug="true" debuglevel="vars,source,lines" srcdir="src/org" sourcepath="">
+	  -->
+  	<!--		-->
+        <javac destdir="target/classes" optimize="true" srcdir="src/org" sourcepath="">
+        	<!--	   -->
+      <classpath>
+        <fileset dir="lib">
+          <include name="*.jar" />
+        </fileset>
+        <fileset dir="lib-compile">
+          <include name="*.jar" />
+        </fileset>
+      </classpath>
+    </javac>
+  </target>
+
+  <target name="jars" description="Build the JAR files." depends="compile">
+   	<tstamp>
+    <format property="touch.time" pattern="d-MMMM-yyyy HH:mm" />
+   	</tstamp>
+
+	<echo message="Full build version: ${touch.time}"/>
+
+    <build-jar jar-name="eu.stork"
+               include-pattern="eu/stork/**/*.class" >
+		<manifest-tag>
+			<manifest>
+				<attribute name="SIAM-Revision" value="${full.build.version}"/>
+				<attribute name="SIAM-BuiltStamp" value="${touch.time}" />
+				<attribute name="Specification-Vendor" value="${vendor}"/>
+				<attribute name="Specification-Version" value="${full.build.version} ${touch.time}"/>
+				<attribute name="Implementation-Title" value="SIAM Server Stork Extensions"/>
+				<attribute name="Implementation-Vendor" value="${vendor}"/>
+				<attribute name="Implementation-Version" value="${full.build.version} ${touch.time}"/>
+			</manifest>
+		</manifest-tag>
+    </build-jar>
+
+    <build-jar jar-name="agent" include-pattern="org/aselect/agent/**/*.class" >
+    	<manifest-tag>
+    		<manifest>
+    			<attribute name="SIAM-Revision" value="${full.build.version}"/>
+				<attribute name="SIAM-BuiltStamp" value="${touch.time}"/>
+				<attribute name="Specification-Vendor" value="${vendor}"/>
+				<attribute name="Specification-Version" value="${full.build.version} ${touch.time}"/>
+				<attribute name="Implementation-Title" value="SIAM Agent"/>
+				<attribute name="Implementation-Vendor" value="${vendor}"/>
+				<attribute name="Implementation-Version" value="${full.build.version} ${touch.time}"/>
+	   			<attribute name="Main-Class" value="org.aselect.agent.ASelectAgent"/>
+    			<!--
+    			<attribute name="Class-Path" value="org.aselect.system.jar mysql-connector-java-5.1.7-bin.jar  
+    			 cryptix-jce-provider.jar xercesImpl.jar xmlParserAPIs.jar 
+    			 commons-dbcp-1.2.2.jar commons-pool-1.4.jar . "/>
+    			 -->
+    			<!--	-->
+    			<attribute name="Class-Path" value="org.aselect.system.jar mysql-connector-java-5.1.7-bin.jar sqljdbc4.jar  
+    			 cryptix-jce-provider.jar xercesImpl.jar xmlParserAPIs.jar 
+    			 commons-dbcp-1.2.2.jar commons-pool-1.4.jar . "/>
+    			<!--	-->
+    			<!--
+    			<attribute name="Class-Path" value="org.aselect.system.jar cryptix-jce-provider.jar xercesImpl.jar xmlParserAPIs.jar 
+    			 commons-dbcp-1.2.2.jar commons-pool-1.4.jar . "/>
+    			-->
+    			
+    		</manifest>
+    	</manifest-tag>
+    </build-jar>
+    <build-jar jar-name="lbsensor" include-pattern="org/aselect/lbsensor/**/*.class" >
+    	<manifest-tag>
+    		<manifest>
+    			<attribute name="SIAM-Revision" value="${full.build.version}"/>
+				<attribute name="SIAM-BuiltStamp" value="${touch.time}"/>
+				<attribute name="Specification-Vendor" value="${vendor}"/>
+				<attribute name="Specification-Version" value="${full.build.version} ${touch.time}"/>
+				<attribute name="Implementation-Title" value="SIAM LBSensor"/>
+				<attribute name="Implementation-Vendor" value="${vendor}"/>
+				<attribute name="Implementation-Version" value="${full.build.version} ${touch.time}"/>
+    			<attribute name="Main-Class" value="org.aselect.lbsensor.LbSensor"/>
+    			<attribute name="Class-Path" value="org.aselect.system.jar mysql-connector-java-5.1.7-bin.jar sqljdbc4.jar 
+    			 commons-dbcp-1.2.2.jar commons-pool-1.4.jar log4j-1.2.15.jar . "/>
+    		</manifest>
+    	</manifest-tag>
+    </build-jar>
+    <build-jar jar-name="authsp.ip" include-pattern="org/aselect/authspserver/authsp/ip/**/*.class" />
+    <build-jar jar-name="authsp.ldap" include-pattern="org/aselect/authspserver/authsp/ldap/**/*.class" />
+    <build-jar jar-name="authsp.null" include-pattern="org/aselect/authspserver/authsp/nullauthsp/**/*.class" />
+    <build-jar jar-name="authsp.pki" include-pattern="org/aselect/authspserver/authsp/pki/**/*.class" />
+    <build-jar jar-name="authsp.radius" include-pattern="org/aselect/authspserver/authsp/radius/**/*.class" />
+    <build-jar jar-name="authsp.sms" include-pattern="org/aselect/authspserver/authsp/sms/**/*.class" />
+    <build-jar jar-name="authspserver"
+               include-pattern="org/aselect/authspserver/**/*.class"
+               exclude-pattern-1="org/aselect/authspserver/authsp/**/*.class" />
+    <build-jar jar-name="authspserver-all"
+               include-pattern="org/aselect/authspserver/**/*.class" >
+		<manifest-tag>
+			<manifest>
+				<attribute name="SIAM-Revision" value="${full.build.version}"/>
+				<attribute name="SIAM-BuiltStamp" value="${touch.time}"/>
+				<attribute name="Specification-Vendor" value="${vendor}"/>
+				<attribute name="Specification-Version" value="${full.build.version} ${touch.time}"/>
+				<attribute name="Implementation-Title" value="SIAM AuthSP"/>
+				<attribute name="Implementation-Vendor" value="${vendor}"/>
+				<attribute name="Implementation-Version" value="${full.build.version} ${touch.time}"/>
+			</manifest>
+		</manifest-tag>
+   	</build-jar>
+    <build-jar jar-name="server.attributes.requestors.api"
+               include-pattern="org/aselect/server/attributes/requestors/api/**/*.class" />
+    <build-jar jar-name="server.attributes.requestors.flatfile"
+               include-pattern="org/aselect/server/attributes/requestors/flatfile/**/*.class" />
+    <build-jar jar-name="server.attributes.requestors.jndi"
+               include-pattern="org/aselect/server/attributes/requestors/jndi/**/*.class" />
+    <build-jar jar-name="server.attributes.requestors.opaque"
+               include-pattern="org/aselect/server/attributes/requestors/opaque/**/*.class" />
+    <build-jar jar-name="server.attributes.requestors.tgt"
+               include-pattern="org/aselect/server/attributes/requestors/tgt/**/*.class" />
+    <build-jar jar-name="server.authsphandler.ip"
+               include-pattern="org/aselect/server/authspprotocol/handler/IP.class" />
+    <build-jar jar-name="server.authsphandler.ldap"
+               include-pattern="org/aselect/server/authspprotocol/handler/Ldap.class" />
+    <build-jar jar-name="server.authsphandler.nullauthsp"
+               include-pattern="org/aselect/server/authspprotocol/handler/NullAuthSP.class" />
+    <build-jar jar-name="server.authsphandler.pki"
+               include-pattern="org/aselect/server/authspprotocol/handler/PKI.class" />
+    <build-jar jar-name="server.authsphandler.radius"
+               include-pattern="org/aselect/server/authspprotocol/handler/Radius.class" />
+    <build-jar jar-name="server.authsphandler.smd"
+               include-pattern="org/aselect/server/authspprotocol/handler/SMSAuthSPHandler.class" />
+    <build-jar jar-name="server"
+               include-pattern="org/aselect/server/**/*.class"
+               exclude-pattern-1="org/aselect/server/attributes/requestors/*/**/*.class"
+               exclude-pattern-2="org/aselect/server/authspprotocol/handler/*.class"
+               exclude-pattern-3="org/aselect/server/request/handler/*/**/*.class"
+               exclude-pattern-4="org/aselect/server/udb/*/**/*.class" />
+    <build-jar jar-name="server.request.handler.aselect"
+               include-pattern="org/aselect/server/request/handler/aselect/**/*.class" />
+    <build-jar jar-name="server.request.handler.saml11"
+               include-pattern="org/aselect/server/request/handler/saml11/**/*.class" />
+    <build-jar jar-name="server.request.handler.shibboleth"
+               include-pattern="org/aselect/server/request/handler/shibboleth/**/*.class" />
+    <build-jar jar-name="server.request.handler.xsaml20"
+               include-pattern="org/aselect/server/request/handler/xsaml20/**/*.class" />
+    <build-jar jar-name="server.request.handler.wsfed"
+               include-pattern="org/aselect/server/request/handler/wsfed/**/*.class" />
+    <build-jar jar-name="system" include-pattern="org/aselect/system/**/*.class" >
+		<manifest-tag>
+			<manifest>
+				<attribute name="SIAM-Revision" value="${full.build.version}"/>
+				<attribute name="SIAM-BuiltStamp" value="${touch.time}"/>
+				<attribute name="Specification-Vendor" value="${vendor}"/>
+				<attribute name="Specification-Version" value="${full.build.version} ${touch.time}"/>
+				<attribute name="Implementation-Title" value="SIAM System"/>
+				<attribute name="Implementation-Vendor" value="${vendor}"/>
+				<attribute name="Implementation-Version" value="${full.build.version} ${touch.time}"/>
+			</manifest>
+		</manifest-tag>
+    </build-jar>
+    <build-jar jar-name="udb.flatfile" include-pattern="org/aselect/server/udb/flatfile/**/*.class" />
+    <build-jar jar-name="udb.jdbc" include-pattern="org/aselect/server/udb/jdbc/**/*.class" />
+    <build-jar jar-name="udb.jndi" include-pattern="org/aselect/server/udb/jndi/**/*.class" />
+    <build-jar jar-name="udb.nodb" include-pattern="org/aselect/server/udb/nodb/**/*.class" />
+    <build-jar jar-name="udb.sasdb" include-pattern="org/aselect/server/udb/sasdb/**/*.class" />
+    <build-jar jar-name="server-all"
+               include-pattern="org/aselect/server/**/*.class" >
+		<manifest-tag>
+			<manifest>
+				<attribute name="SIAM-Revision" value="${full.build.version}"/>
+				<attribute name="SIAM-BuiltStamp" value="${touch.time}" />
+				<attribute name="Specification-Vendor" value="${vendor}"/>
+				<attribute name="Specification-Version" value="${full.build.version} ${touch.time}"/>
+				<attribute name="Implementation-Title" value="SIAM Server"/>
+				<attribute name="Implementation-Vendor" value="${vendor}"/>
+				<attribute name="Implementation-Version" value="${full.build.version} ${touch.time}"/>
+			</manifest>
+		</manifest-tag>
+    </build-jar>
+  </target>
+</project>
