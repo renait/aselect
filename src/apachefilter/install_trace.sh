@@ -4,6 +4,7 @@
 APXS=/usr/sbin/apxs
 SRC="mod_aselect_filter.c asf_common.c"
 OBJ="mod_aselect_filter.so"
+OBJ_TRACE="mod_aselect_filter_trace_log.so"
 
 LAST_VERSION=`cat filter_version`
 #echo -n 'Enter version number: '
@@ -16,8 +17,9 @@ sed -i -e "/subversion_[0-9]*/s//subversion_${LAST_VERSION}/" src/mod_aselect_fi
 case $@ in
 ''|apache20)
     cd src
-    $APXS -i -a -DNO_TRACE_LOG -c $SRC
+    $APXS -i -a -c $SRC
     cd ..
+    mv src/.libs/$OBJ src/.libs/$OBJ_TRACE
     echo Version=$LAST_VERSION
     ;;
 clean)
