@@ -37,6 +37,7 @@ import org.aselect.system.communication.client.IClientCommunicator;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.*;
+import org.aselect.system.utils.crypto.Auxiliary;
 import org.opensaml.SAMLException;
 import org.opensaml.SAMLSubject;
 
@@ -527,7 +528,7 @@ public class AccountSTS extends ProtoRequestHandler
 //					sAudience, htAttributes, sSubjConf);	// RH, 20130924, o
 			String sRequestorToken = createRequestorToken(servletRequest, _sProviderId, sUid, _sUserDomain, _sNameIdFormat,
 					sAudience, htAttributes, sSubjConf, _htSP_SignAlgorithm.get(sAudience));	// RH, 20130924, n
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Token OUT: RequestorToken wresult=" + sRequestorToken);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Token OUT: RequestorToken wresult=" + Auxiliary.obfuscate(sRequestorToken,  Auxiliary.REGEX_PATTERNS));
 
 			// Return Requestor Token - Step 6
 			// POST to Requestor's STS (IdP): take wreply and wctx from Step 5

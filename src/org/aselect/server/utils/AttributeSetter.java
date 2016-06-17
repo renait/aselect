@@ -13,6 +13,7 @@ import org.aselect.system.exception.ASelectAttributesException;
 import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.Utils;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /*
  * @author Bauke Hiemstra
@@ -227,11 +228,11 @@ public class AttributeSetter
 				// RH, 20160229, en
 				
 				if (setter.isDestTgt()) {
-					sysLog.log(Level.FINEST, MODULE, sMethod, "Tgt: "+sDest+"="+sValue);
+					sysLog.log(Level.FINEST, MODULE, sMethod, "Tgt: "+sDest+"="+Auxiliary.obfuscate(sValue));
 					htTGTContext.put(sDest, sValue);
 				}
 				else {
-					sysLog.log(Level.FINEST, MODULE, sMethod, "New: "+sDest+"="+sValue);
+					sysLog.log(Level.FINEST, MODULE, sMethod, "New: "+sDest+"="+Auxiliary.obfuscate(sValue));
 					htNewAttrs.put(sDest, sValue);
 				}
 			}

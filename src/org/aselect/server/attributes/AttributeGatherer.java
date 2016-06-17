@@ -642,7 +642,7 @@ public class AttributeGatherer
 							else
 								htAttributes.put(sKey, htAttrsFromAR.get(sKey));
 						}
-						_systemLogger.log(Level.INFO, _MODULE, sMethod, "GATHER === all attrs after merge="+htAttributes);
+						_systemLogger.log(Level.FINEST, _MODULE, sMethod, "GATHER === all attrs after merge="+Auxiliary.obfuscate(htAttributes));
 					}
 				}
 			}

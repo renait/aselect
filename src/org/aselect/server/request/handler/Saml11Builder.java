@@ -30,8 +30,15 @@ import org.aselect.server.tgt.TGTManager;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.Tools;
-import org.aselect.system.utils.Utils;
-import org.opensaml.*;
+import org.aselect.system.utils.crypto.Auxiliary;
+import org.opensaml.SAMLAssertion;
+import org.opensaml.SAMLAttribute;
+import org.opensaml.SAMLAttributeStatement;
+import org.opensaml.SAMLAudienceRestrictionCondition;
+import org.opensaml.SAMLAuthenticationStatement;
+import org.opensaml.SAMLException;
+import org.opensaml.SAMLNameIdentifier;
+import org.opensaml.SAMLSubject;
 import org.w3c.dom.Node;
 
 //
@@ -213,14 +220,14 @@ public class Saml11Builder
 
 		SAMLAuthenticationStatement oSAMLAuthenticationStatement = generateSAMLAuthenticationStatement(sUid,
 				sNameIdFormat, sIP, sHost, dCurrent, sConfirmationMethod);
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "SAML oSAMLAuthenticationStatement="
-				+ oSAMLAuthenticationStatement);
+//		_systemLogger.log(Level.INFO, MODULE, sMethod, "SAML oSAMLAuthenticationStatement="
+//				+ oSAMLAuthenticationStatement);
 		if (oSAMLAuthenticationStatement != null)
 			vSAMLStatements.add(oSAMLAuthenticationStatement);
 
-		_systemLogger.log(Level.FINEST, MODULE, sMethod, "SAML htAttributes=" + htAttributes);
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "SAML htAttributes=" + Auxiliary.obfuscate(htAttributes));
 		if (_bSendAttributeStatement) {
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "sUid=" + sUid);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "sUid=" + Auxiliary.obfuscate(sUid));
 			SAMLAttributeStatement oSAMLAttributeStatement = generateSAMLAttributeStatement(sUid, sNameIdFormat,
 					htAttributes);
 			// _systemLogger.log(Level.INFO, MODULE, sMethod, "oSAMLAttributeStatement="+oSAMLAttributeStatement);
@@ -274,14 +281,14 @@ public class Saml11Builder
 		String sMethod = "generateSAMLAuthenticationStatement";
 		SAMLAuthenticationStatement oSAMLAuthenticationStatement = null;
 		try {
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "IDENT Uid=" + sUid + " ServerID=" + _sASelectServerID);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "IDENT Uid=" + Auxiliary.obfuscate(sUid) + " ServerID=" + _sASelectServerID);
 			SAMLNameIdentifier oSAMLNameIdentifier = new SAMLNameIdentifier(sUid, null/* qualifier */, // _sASelectServerID,
 					(sNameIdFormat == null) ? SAMLNameIdentifier.FORMAT_UNSPECIFIED : sNameIdFormat);
-			_systemLogger.log(Level.FINER, MODULE, sMethod, "SUBJECT oSAMLNameIdentifier=" + oSAMLNameIdentifier);
+//			_systemLogger.log(Level.FINER, MODULE, sMethod, "SUBJECT oSAMLNameIdentifier=" + oSAMLNameIdentifier);
 
 			SAMLSubject oSAMLSubject = new SAMLSubject(oSAMLNameIdentifier, null, null, null);
 			oSAMLSubject.addConfirmationMethod(SAMLSubject.CONF_BEARER); // sConfirmationMethod
-			_systemLogger.log(Level.FINER, MODULE, sMethod, "AUTH oSAMLSubject=" + oSAMLSubject);
+//			_systemLogger.log(Level.FINER, MODULE, sMethod, "AUTH oSAMLSubject=" + oSAMLSubject);
 
 			oSAMLAuthenticationStatement = new SAMLAuthenticationStatement(oSAMLSubject, // The subject
 					sConfirmationMethod, // SAMLAuthenticationStatement.AuthenticationMethod_Password, // Authentication
@@ -321,6 +328,7 @@ public class Saml11Builder
 		SAMLAttribute oSAMLAttribute = null;
 		try {
 			Vector vAttributes = new Vector();
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "htAttributes=" + Auxiliary.obfuscate(htAttributes));
 			Set keys = htAttributes.keySet();
 			for (Object s : keys) {
 				String sKey = (String) s;
@@ -331,7 +339,7 @@ public class Saml11Builder
 				// String sKey = (String)enumAttributeNames.nextElement();
 				Object oValue = htAttributes.get(sKey);
 				oSAMLAttribute = createSAMLAttribute(sKey, oValue, _sAttributeNamespace);
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Attr Key=" + sKey + ", oValue=" + oValue); // +", oSAMLAttribute="+oSAMLAttribute);
+//				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Attr Key=" + sKey + ", oValue=" + oValue); // +", oSAMLAttribute="+oSAMLAttribute);
 				// RM_37_01
 				if (!sKey.equals("DiscoveryResourceOffering"))
 					vAttributes.add(oSAMLAttribute);
@@ -344,9 +352,9 @@ public class Saml11Builder
 					(sNameIdFormat == null) ? SAMLNameIdentifier.FORMAT_UNSPECIFIED : sNameIdFormat);
 
 			SAMLSubject oSAMLSubject = new SAMLSubject(oSAMLNameIdentifier, null, null, null);
-			_systemLogger.log(Level.FINER, MODULE, sMethod, "oSAMLSubject=" + oSAMLSubject);
+//			_systemLogger.log(Level.FINER, MODULE, sMethod, "oSAMLSubject=" + oSAMLSubject);
 			oSAMLAttributeStatement = new SAMLAttributeStatement(oSAMLSubject, vAttributes);
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "oSAMLAttributeStatement=" + oSAMLAttributeStatement);
+//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "oSAMLAttributeStatement=" + oSAMLAttributeStatement);
 		}
 		catch (Exception e) {
 			_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Could not create SAMLAttributeStatement", e);

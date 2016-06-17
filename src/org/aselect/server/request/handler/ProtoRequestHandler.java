@@ -282,13 +282,13 @@ public abstract class ProtoRequestHandler extends AbstractRequestHandler
 		
 		String sTgtAttributes = (String) htTGTContext.get("attributes");
 		HashMap htTgtAttributes = org.aselect.server.utils.Utils.deserializeAttributes(sTgtAttributes);
-		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Attributes from TGT-\"attributes\"=" + htTgtAttributes);
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Attributes from TGT-\"attributes\"=" + Auxiliary.obfuscate(htTgtAttributes));
 
 		AttributeGatherer oAttributeGatherer = AttributeGatherer.getHandle();
 		HashMap htAttribs = oAttributeGatherer.gatherAttributes(htTGTContext);
 		if (htAttribs == null)
 			htAttribs = new HashMap();
-		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Attributes after Gathering=" + htAttribs);
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Attributes after Gathering=" + Auxiliary.obfuscate(htAttribs));
 		// Can be empty, can contain multi-valued attributes in Vectors
 
 		// Copy the gathered attributes over the ticket context attributes
@@ -1185,7 +1185,7 @@ public abstract class ProtoRequestHandler extends AbstractRequestHandler
 		}
 		SAMLAssertion oSAMLAssertion = _saml11Builder.createMySAMLAssertion(sProviderId, sUid, sNameIdFormat, sIP,
 				sHost, sSubjConf, sAudience, htAttributes);
-		_systemLogger.log(Level.FINEST, MODULE, sMethod, "oSAMLAssertion=" + oSAMLAssertion);
+//		_systemLogger.log(Level.FINEST, MODULE, sMethod, "oSAMLAssertion=" + oSAMLAssertion);
 
 		// Sign the assertion
 		Vector vCertificatesToInclude = new Vector();
