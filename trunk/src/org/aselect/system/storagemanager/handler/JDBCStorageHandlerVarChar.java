@@ -23,6 +23,7 @@ import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectStorageException;
 import org.aselect.system.utils.BASE64Decoder;
 import org.aselect.system.utils.BASE64Encoder;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * @deprecated class hasn't been updated and therefore may be buggy, use {@link #JDBCStorageHandler()}
@@ -77,7 +78,7 @@ public class JDBCStorageHandlerVarChar extends JDBCStorageHandler
 				oRet = decode(b64e.decodeBuffer(_sContextValue.substring(identifierQuote.length(), _sContextValue
 						.length()
 						- identifierQuote.length())));
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "result=" + oRet);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "result=" + Auxiliary.obfuscate(oRet));
 			}
 			else {
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "The supplied key is not mapped to any value.");
