@@ -591,8 +591,10 @@ public abstract class AbstractMetaDataManager
 		for (KeyDescriptor keydescriptor : keyDescriptors) {
 			UsageType useType = keydescriptor.getUse();
 			if (!useType.name().equalsIgnoreCase("SIGNING")) {
-				_systemLogger.log(Level.FINE, MODULE, sMethod, "Use type: " + useType + " != SIGNING");
-				return null;
+//				_systemLogger.log(Level.FINE, MODULE, sMethod, "Use type: " + useType + " != SIGNING");	// RH, 20160512, o
+				_systemLogger.log(Level.FINE, MODULE, sMethod, "Use type: " + useType + " != SIGNING, trying next if present");	// RH, 20160512, n
+//				return null;	// RH, 20160512, o
+				continue;	// RH, 20160512, n
 			}
 
 			org.opensaml.xml.signature.KeyInfo keyinfo = keydescriptor.getKeyInfo();
