@@ -53,6 +53,8 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
+import java.util.Set;
 import java.util.Vector;
 import java.util.logging.Level;
 
@@ -281,6 +283,20 @@ public class TGTIssuer
 			Utils.copyHashmapValue("redirect_sync_time", htTGTContext, htSessionContext);
 			Utils.copyHashmapValue("redirect_ists_url", htTGTContext, htSessionContext);
 			Utils.copyHashmapValue("redirect_post_form", htTGTContext, htSessionContext);
+			
+			// RH, 20160627, sn
+			// copy parameters2forward to tgt, 	// htTGTContext != null
+			if (_configManager.getParameters2forward() != null && !_configManager.getParameters2forward().isEmpty()) {	// avoid unnecessary work
+				Iterator<String> iter = htSessionContext.keySet().iterator();	
+				while (iter.hasNext()) {
+					String key = iter.next();
+					if (key.startsWith("x-")) {
+						Utils.copyHashmapValue(key, htTGTContext, htSessionContext);
+					}
+				}
+			}
+			// RH, 20160627, en
+
 			
 			Long now = new Date().getTime();
 			htTGTContext.put("sessionsynctime", Long.toString(now));
@@ -636,6 +652,19 @@ public class TGTIssuer
 			Utils.copyHashmapValue("redirect_sync_time", htTGTContext, htSessionContext);
 			Utils.copyHashmapValue("redirect_ists_url", htTGTContext, htSessionContext);
 			Utils.copyHashmapValue("redirect_post_form", htTGTContext, htSessionContext);
+			
+			// RH, 20160627, sn
+			// copy parameters2forward to tgt, 	// htTGTContext != null
+			if (_configManager.getParameters2forward() != null && !_configManager.getParameters2forward().isEmpty()) {	// avoid unnecessary work
+				Iterator<String> iter = htSessionContext.keySet().iterator();	
+				while (iter.hasNext()) {
+					String key = iter.next();
+					if (key.startsWith("x-")) {
+						Utils.copyHashmapValue(key, htTGTContext, htSessionContext);
+					}
+				}
+			}
+			// RH, 20160627, en
 			
 			Long now = new Date().getTime();
 			htTGTContext.put("sessionsynctime", Long.toString(now));

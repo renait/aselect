@@ -453,9 +453,11 @@ public class ApplicationAPIHandler extends AbstractAPIRequestHandler
 		if (Utils.hasValue(sAppId))
 			_timerSensor.setTimerSensorAppId(sAppId);
 
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "hmRequest=" + hmRequest);
+//		_systemLogger.log(Level.INFO, MODULE, sMethod, "hmRequest=" + hmRequest);
+		_systemLogger.log(Level.INFO, _sModule, sMethod, "hmRequest=" + hmRequest);
 		HashMap<String, Object> hmResponse = handleAuthenticateAndCreateSession(hmRequest, null);
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "hmResponse=" + hmResponse);
+//		_systemLogger.log(Level.INFO, MODULE, sMethod, "hmResponse=" + hmResponse);
+		_systemLogger.log(Level.INFO, _sModule, sMethod, "hmResponse=" + hmResponse);
 
 		try {
 			String sValue = (String)hmResponse.get("rid");
@@ -647,7 +649,8 @@ public class ApplicationAPIHandler extends AbstractAPIRequestHandler
 		
 		String sTgT = org.aselect.server.utils.Utils.decodeCredentials(sEncTGT, _systemLogger);
 		if (sTgT == null) {
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "Can not decode credentials");
+//			_systemLogger.log(Level.INFO, MODULE, sMethod, "Can not decode credentials");
+			_systemLogger.log(Level.INFO, _sModule, sMethod, "Can not decode credentials");
 			throw new ASelectException(Errors.ERROR_ASELECT_SERVER_TGT_NOT_VALID);
 		}
 

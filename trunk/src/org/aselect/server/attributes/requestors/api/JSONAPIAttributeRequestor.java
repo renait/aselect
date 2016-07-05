@@ -107,6 +107,7 @@ public class JSONAPIAttributeRequestor extends APIAttributeRequestor {
 		String sURL = null;
 
 		HashMap htAttributes = new HashMap();
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "vAttributes:" + vAttributes);
 		try {
 			if (!vAttributes.isEmpty()) {  // Attributes should be gathered.
 				// get connection
