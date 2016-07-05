@@ -14,8 +14,11 @@ package org.aselect.server.request.handler;
 import java.security.PublicKey;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.Vector;
 import java.util.logging.Level;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
 
 import org.aselect.server.application.Application;
 import org.aselect.server.application.ApplicationManager;
@@ -136,7 +139,7 @@ public abstract class BasicRequestHandler
 			if (sUid != null)
 				sbData.append(sUid);
 
-			_systemLogger.log(Level.FINER, MODULE, sMethod, "sbData=" + sbData);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "sbData=" + Auxiliary.obfuscate(sbData));
 			verifyApplicationSignature(sSignature, sbData.toString(), sAppId);
 		}
 
@@ -180,13 +183,51 @@ public abstract class BasicRequestHandler
 		if (sUid == null) {
 			sUid = aApp.getForcedUid();
 		}
-		_systemLogger.log(Level.FINE, MODULE, sMethod, "sAuthsp="+sAuthsp+" sUid="+Auxiliary.obfuscate(sUid));
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "sAuthsp="+sAuthsp+" sUid="+Auxiliary.obfuscate(sUid));
 				
 		// Create Session
 		HashMap htSessionContext = new HashMap();
 		htSessionContext.put("usi", sUsi);
 		htSessionContext.put("app_id", sAppId);
 		htSessionContext.put("app_url", sAppUrl);
+		
+		////////////////////////////////////////
+		if (sAppUrl != null && sAppUrl.length() > 0 && _configManager.getParameters2forward() != null) {
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "sAppUrl="+sAppUrl+" Parameters2forward="+_configManager.getParameters2forward());
+			int i =  sAppUrl.indexOf('?');
+			if ( i >= 0 ) {
+				String app_url_querystring = sAppUrl.substring(i + 1);	// cut the '?'
+				HashMap app_url_parms = Utils.convertCGIMessage(app_url_querystring, false); 	// already URL decoded, returns lowercase keys
+				Iterator<String> iter = _configManager.getParameters2forward().keySet().iterator();
+				while (iter.hasNext()) {
+					String parm2forward = iter.next();
+					String parmvalue = (String) app_url_parms.get(parm2forward.toLowerCase());
+					if (parmvalue != null) {
+						HashMap<String, Pattern> patterns = _configManager.getParameters2forward().get(parm2forward);
+						if (sAppId != null) {	// should not be null
+							Pattern pattern = patterns.get(sAppId);
+							if (pattern == null) {
+								pattern = patterns.get(null);	// get default for other applications
+							}
+							if (pattern != null) {
+								Matcher m = pattern.matcher(parmvalue);
+								if (m.matches()) {
+									htSessionContext.put("x-" +parm2forward , parmvalue);
+									_systemLogger.log(Level.FINEST, MODULE, sMethod, "Added to session: "+"x-" +parm2forward +"="+parmvalue);
+								} else {
+									_systemLogger.log(Level.FINEST, MODULE, sMethod, "Value: "+ parmvalue + ", does not match pattern:" + pattern);
+									// To decide whether to throw exception or silently ignore
+								}
+							}
+						}
+						
+					}
+				}
+			}
+		}
+		
+		///////////////////////////////////////
+		
 		htSessionContext.put("level", intAppLevel); // NOTE: Integer put
 		if (intMaxAppLevel != null)
 			htSessionContext.put("max_level", intMaxAppLevel);

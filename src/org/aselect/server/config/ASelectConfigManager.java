@@ -235,8 +235,6 @@ package org.aselect.server.config;
 
 import java.io.File;
 import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.IOException;
 import java.net.MalformedURLException;
 import java.net.URL;
 import java.security.KeyStore;
@@ -248,6 +246,8 @@ import java.util.Properties;
 import java.util.Vector;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import javax.servlet.http.HttpServletRequest;
 
@@ -421,6 +421,9 @@ public class ASelectConfigManager extends ConfigManager
 	// <String> will contain query parameters, <Vector<String>> will contain app_id's
 	// If <Vector<String>> == null, urldecoding will take place for all applications
 	private HashMap<String, Vector<String>> parameters2decode = null;
+	////////////////////////////////////////
+	private HashMap<String, HashMap<String, Pattern>> parameters2forward = null;
+	private final String DEFAULT_REGEX = "[\\w]{0,80}";	// 80 or less word characters + underscore
 
 	private String _sPreviousSessionCookieName = null;
 	private String _sPreviousSessionAuthspID = null;
@@ -753,6 +756,63 @@ public class ASelectConfigManager extends ConfigManager
 		}
 		
 		//////////////////////////////////////////////////////////////////////////////
+		
+		//	RH, 20160621, sn
+		//	place allowed query string parameters here
+		// with regex for validation/sanitization
+		///////////////////////////////////////////////////////// querystringparameterforward configuration
+		try {
+			Object oURLForwarding = getSection(_oASelectConfigSection, "transformation", "id=querystringparameterforwarding");
+			Object oURLForwardParameter = getSection(oURLForwarding, "parameter");
+			parameters2forward = new HashMap<String, HashMap<String, Pattern>>();
+			while (oURLForwardParameter != null) {
+				Vector<String> apps = null;
+				String queryparametername = getParam(oURLForwardParameter, "name");
+				String queryparameterregex = DEFAULT_REGEX;
+				HashMap<String, Pattern> app_regex = null;
+				app_regex = parameters2forward.get(queryparametername);
+				if (app_regex == null) {
+					app_regex = new HashMap<String, Pattern>();
+				}
+				try {
+					queryparameterregex = getParam(oURLForwardParameter, "regex");
+				} catch (ASelectConfigException ace) {
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, 
+							"No attribute 'regex' found, using default regex");
+				}
+				try {
+					Pattern pattern = Pattern.compile(queryparameterregex);
+					String application = null;
+					try {
+						application = getParam(oURLForwardParameter, "application");
+					} catch (ASelectConfigException e) {
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, 
+								"No attribute 'application' found, setting regex for default applications and requestparameters with name: " + queryparametername);
+					}
+					app_regex.put(application, pattern);	// application can be null
+
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Setting URL parameter forward for parameter: " + queryparametername + " in application: " + application + " with pattern:" + pattern);
+					
+					parameters2forward.put(queryparametername, app_regex);
+
+				} catch (PatternSyntaxException pse) {
+					_systemLogger.log(Level.SEVERE, MODULE, sMethod, 
+							"Error compiling regex:"  + queryparameterregex + " for requestparameters with name: " + queryparametername);
+					throw new ASelectConfigException("Error compiling regex", pse);
+				}
+
+				oURLForwardParameter = getNextSection(oURLForwardParameter);
+			}
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "Successfully loaded querystringparameterforwarding configuration: " + parameters2forward);
+
+		} catch (ASelectConfigException e) {
+			_systemLogger.log(Level.FINER, MODULE, sMethod, 
+					"No valid 'transformation' section with id='querystringparameterforwarding' found or no 'parameter' section found or no 'name' section found, urlparameterforwarding on GET not enabled.");
+		}
+		
+		//	RH, 20160621, en
+		//////////////////////////////////////////////////////////////////////////////
+		
 		
 		// loading html templates
 		loadAllHTMLTemplates(sWorkingDir);
@@ -2327,6 +2387,11 @@ public class ASelectConfigManager extends ConfigManager
 	public int getPreviousSessionCookieAge()
 	{
 		return _iPreviousSessionCookieAge;
+	}
+
+	public synchronized HashMap<String, HashMap<String, Pattern>> getParameters2forward()
+	{
+		return parameters2forward;
 	}
 
 
