@@ -126,6 +126,8 @@ static char *extractAttributeNames(pool *pPool, char *text, char *paramNames);
 static char *getRequestedAttributes(pool *pPool, PASELECT_FILTER_CONFIG pConfig);
 static char *extractValueFromList(pool *pPool, char *pSpecial, char *keyName);
 
+static int purgeApplAttributes(pool *pPool, request_rec *pRequest, PASELECT_FILTER_CONFIG pConfig);
+
 //
 // Called once during the module initialization phase.
 // can be used to setup the filter configuration 
@@ -619,8 +621,11 @@ static int aselect_filter_handler(request_rec *pRequest)
     // 20120610, Bauke: Default usi is my own, could be modified by the Agent (verify_credentials or verify_ticket)
     passUsiAttribute = timer_usi(pPool, &timer_data);
 
+
 	aselect_filter_print_table(pRequest, pRequest->headers_in, "headers_in (to application)");
 	aselect_filter_print_table(pRequest, pRequest->headers_out, "headers_out (to user's browser)");
+
+
 
     // NOTE: the application ticket is a cookie, check if the browser can handle cookies else we run into a loop
     // check cookie, no cookie, validate_user, set cookie, check cookie, no cookie.... and so on
@@ -1336,6 +1341,75 @@ static char *extractValueFromList(pool *pPool, char *pSpecial, char *keyName)
 	if (pComma) { *pComma = saveS; }
 	return pResult;
 }
+
+/**
+ * 		cleanup filter defined headers to application //
+ *
+ */
+static int purgeApplAttributes(pool *pPool, request_rec *pRequest, PASELECT_FILTER_CONFIG pConfig)
+{
+	int i, iError = 0;
+    char *p, *q = NULL;
+
+    TRACE1("purgeApplAttributes-> pRequest->args:%s", (pRequest->args)? pRequest->args: "NULL");
+	aselect_filter_print_table(pRequest, pRequest->headers_in, "purgeApplAttributes->headers_in (to application)");
+
+	for (i = 0; i < pConfig->iAttrCount; i++) {
+		char condName[1200], attrValue[400], applAttrName[200];
+		int purge;
+
+
+		TRACE2("purgeApplAttributes->Splitting attribute filter, Attribute [%d] %s", i, pConfig->pAttrFilter[i]);
+		splitAttrFilter(pConfig->pAttrFilter[i], condName, sizeof(condName),
+				attrValue, sizeof(attrValue), applAttrName, sizeof(applAttrName));
+
+		if (applAttrName[0] == '\0')  // no HTTP header name
+			continue;
+		TRACE3("purgeApplAttributes->Attr[%s|%s|%s]", condName, attrValue, applAttrName);
+
+		ap_table_unset(pRequest->headers_in, applAttrName); // remove from headers to application
+
+		// Remove the same attribute from the original attributes query string (if present), can occur more than once
+		//TRACE2("Purge: name=%s request=%s", applAttrName, pRequest->args);
+		for (purge=1; purge; ) {
+			purge = 0;
+			for (p = pRequest->args; p != NULL; p = q+1) {
+				q = strstr(p, applAttrName);
+				if (!q)
+					break;
+				// Example args: my_uid=9876&uid2=0000&uid=1234&uid=9876
+				if (q==pRequest->args || *(q-1) == '&' || *(q-1) == ' ') {
+					int nextChar = *(q+strlen(applAttrName));
+					if (nextChar == '=' || nextChar  == '&' || nextChar == '\0') {
+						purge = 1;
+						break;  // handle this one
+					}
+				}
+			}
+			if (purge) {  // found, purge attribute from Request args
+				char *r;
+				for (r=q; *r && *r != '&'; r++)
+					;
+				if (*r == '&')
+					r++;
+				//TRACE2("Purge: %.*s", r-q, q);
+				// r on begin of next attribute
+				for ( ; *r; )
+					*q++ = *r++;
+				*q = '\0';
+				TRACE2("purgeApplAttributes->Purged name=%s request=%s", applAttrName, pRequest->args);
+				if (q > pRequest->args && *(q-1) == '&')  // 't was the last
+					*(q-1) = '\0';
+			}
+	}
+
+	}
+    TRACE1("purgeApplAttributes->Finished purgeApplAttributes, pRequest->args:%s", (pRequest->args)? pRequest->args: "NULL");
+	aselect_filter_print_table(pRequest, pRequest->headers_in, "purgeApplAttributes->headers_in (to application)");
+	return iError;
+}
+
+
 //
 // Bauke added: Pass attributes in the query string and/or in the header and/or in a Saml token
 //
@@ -1457,6 +1531,7 @@ static int aselect_filter_passAttributesInUrl(int iError, char *pcAttributes, ch
 				continue;
 			}
 
+
 			// applAttrName has a value
 			if (strcmp(applAttrName, "language")==0) {
 				char *p = (pRequest->args)? strstr(pRequest->args, "language="): NULL;
@@ -1470,6 +1545,16 @@ static int aselect_filter_passAttributesInUrl(int iError, char *pcAttributes, ch
 					continue; 
 				}
 			}
+
+			// RH, 20160802, sn
+			// If above particular conditions are met, headers are left untouched due to 'continue' statement
+			// otherwise we'll first purge the header
+			if (strchr(pConfig->pcPassAttributes,'h')!=0 || strchr(pConfig->pcPassAttributes,'H')!=0) {
+				TRACE1("Purging HDR:%s", applAttrName);
+				ap_table_unset(pRequest->headers_in, applAttrName); // remove from headers to application
+			}
+			// RH, 20160802, en
+
 
 			// Pass this attribute, either in the Query string or in the HTTP-header
 			p = NULL;
@@ -1541,6 +1626,7 @@ static int aselect_filter_passAttributesInUrl(int iError, char *pcAttributes, ch
 					// 20160319, was: ap_table_set(headers_in, ap_psprintf(pPool, "X-%s", applAttrName), p);  // 20111206 decoded);
 				}
 
+			}	// RH, 20160802, moved } above purge to always purge applAttrName from pRequest->args
 				// A value for 'applAttrName' was added
 				// Remove the same attribute from the original attributes (if present), can occur more than once
 				//TRACE2("Purge: name=%s request=%s", applAttrName, pRequest->args);
@@ -1574,7 +1660,7 @@ static int aselect_filter_passAttributesInUrl(int iError, char *pcAttributes, ch
 						if (q > pRequest->args && *(q-1) == '&')  // 't was the last
 							*(q-1) = '\0';
 					}
-				}
+//				}	// RH, 20160802, moved } above purge to always purge applAttrName from pRequest->args
 			}  // handle a single argument
 
 			TRACE3("New Arguments [%d]: %s, Request=%s", i, newArgs, pRequest->args);
@@ -1583,6 +1669,12 @@ static int aselect_filter_passAttributesInUrl(int iError, char *pcAttributes, ch
     else {
 		TRACE("No attributes in response");
 		//pRequest->args = "";
+		// RH, 20160802, sn
+		// We still have to purge configured applAttrName(s)
+		int purgeResult = purgeApplAttributes(pPool, pRequest, pConfig);
+		TRACE1("==== 0. purgeApplAttributes: %s", purgeResult == 0 ? "Success" : "Failure" );
+		// RH, 20160802, en
+
     }
     TRACE1("PassAttributes=%s", pConfig->pcPassAttributes);
     if (strchr(pConfig->pcPassAttributes,'q')!=0) {
