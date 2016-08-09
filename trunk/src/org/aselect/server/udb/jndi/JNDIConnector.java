@@ -298,13 +298,15 @@ public class JNDIConnector implements IUDBConnector
 			String sEscapedUid = Utils.ldapEscape(sUserId, _sLdapEscapes, _oASelectSystemLogger);
 
 			sbQuery = new StringBuffer("(").append(_sUserDN).append("=").append(sEscapedUid).append(")");
+			StringBuffer sbQuery4log = new StringBuffer("(").append(_sUserDN).append("=").append(Auxiliary.obfuscate(sEscapedUid)).append(")");
 			SearchControls oScope = new SearchControls();
 			oScope.setSearchScope(SearchControls.SUBTREE_SCOPE);
 			// No attr specification used: oScope.setReturningAttributes(attrs);*/
 
 			oDirContext = getConnection();
 			try {
-				_oASelectSystemLogger.log(Level.FINEST, MODULE, sMethod, "Query="+sbQuery.toString());
+//				_oASelectSystemLogger.log(Level.FINEST, MODULE, sMethod, "Query="+sbQuery.toString());
+				_oASelectSystemLogger.log(Level.FINEST, MODULE, sMethod, "Query="+sbQuery4log.toString());
 				oSearchResults = oDirContext.search(_sBaseDN, sbQuery.toString(), oScope);
 			}
 			catch (NamingException e) {
@@ -930,8 +932,10 @@ public class JNDIConnector implements IUDBConnector
 		}
 
 		try {
-			_oASelectSystemLogger.log(Level.INFO, MODULE, sMethod, "JNDI " + sDriver + "_" + sPrincipal + "_"
-					+ sPassword + "_" + sUseSSL + "_" + sUrl);
+//			_oASelectSystemLogger.log(Level.INFO, MODULE, sMethod, "JNDI " + sDriver + "_" + sPrincipal + "_"
+//					+ sPassword + "_" + sUseSSL + "_" + sUrl);
+			_oASelectSystemLogger.log(Level.FINEST, MODULE, sMethod, "JNDI " + sDriver + "_" + Auxiliary.obfuscate(sPrincipal) + "_"
+					+ sUseSSL + "_" + sUrl);
 			oInitialDirContext = new InitialDirContext(createJNDIEnvironment(sDriver, sPrincipal, sPassword, sUseSSL, sUrl));
 		}
 		catch (Exception e) {
