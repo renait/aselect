@@ -840,7 +840,15 @@ public class Ldap extends AbstractAuthSPProtocolHandler implements IAuthSPProtoc
 				HashMap hmWork = new HashMap();
 				HashMap hmNewAttrs = AttributeSetter.attributeProcessing(hmWork/*is empty*/, hmAttrs, attributeSetters, _systemLogger);
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "hmNewAttrs="+hmNewAttrs);
-				htAdditional.putAll(hmNewAttrs);
+				// RH, 20160823, sn, handleLoginToken has htAdditional == null so avoid null pointer
+				if (hmNewAttrs != null && !hmNewAttrs.isEmpty()) {
+					if (htAdditional == null) {
+						htAdditional = new HashMap();
+					}
+					htAdditional.putAll(hmNewAttrs);
+				}
+				// RH, 20160823, en
+//				htAdditional.putAll(hmNewAttrs);// RH, 20160823, o
 				
 				String next_authsp = _authSPHandlerManager.getNextAuthSP(sAuthSPId, app_id);
 				String next_authsp_entry_level = _authSPHandlerManager.getNextAuthSPEntryLevel(sAuthSPId, app_id);	// RH, 20150914, n
