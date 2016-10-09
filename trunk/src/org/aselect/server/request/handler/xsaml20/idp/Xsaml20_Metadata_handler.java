@@ -11,10 +11,14 @@
  */
 package org.aselect.server.request.handler.xsaml20.idp;
 
+import java.io.UnsupportedEncodingException;
+import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.logging.Level;
 
 import javax.servlet.ServletConfig;
 
+import org.apache.commons.codec.binary.Base64;
 import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.server.request.handler.xsaml20.AbstractMetaDataManager;
 import org.aselect.server.request.handler.xsaml20.Saml20_Metadata;
@@ -38,13 +42,14 @@ import org.opensaml.xml.io.Marshaller;
 import org.opensaml.xml.io.MarshallerFactory;
 import org.opensaml.xml.io.MarshallingException;
 import org.opensaml.xml.signature.KeyInfo;
+import org.opensaml.xml.signature.KeyName;
 import org.opensaml.xml.signature.X509Certificate;
 import org.opensaml.xml.signature.X509Data;
 import org.opensaml.xml.signature.XMLSignatureBuilder;
+import org.opensaml.xml.signature.impl.KeyNameBuilder;
 import org.opensaml.xml.signature.impl.X509CertificateBuilder;
 import org.opensaml.xml.signature.impl.X509DataBuilder;
 import org.w3c.dom.Node;
-
 import org.opensaml.xml.util.XMLHelper;
 
 // Configuration example
@@ -264,11 +269,13 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 		// Create final EntityDescriptor
 		ssoDescriptor.setWantAuthnRequestsSigned(true);
 		// ssoDescriptor.getKeyDescriptors().add(keyDescriptor);
-		ssoDescriptor.getKeyDescriptors().add(createKeyDescriptor(getSigningCertificate()));
+//		ssoDescriptor.getKeyDescriptors().add(createKeyDescriptor(getSigningCertificate()));	// RH, 20161007, o
+		ssoDescriptor.getKeyDescriptors().add(createKeyDescriptor(getSigningCertificate(), isAddkeyname2descriptors()));	// RH, 20161007, n
 		ssoDescriptor.addSupportedProtocol(SAMLConstants.SAML20P_NS);
 		entityDescriptor.getRoleDescriptors().add(ssoDescriptor);
 
-		pdpDescriptor.getKeyDescriptors().add(createKeyDescriptor(getSigningCertificate()));
+//		pdpDescriptor.getKeyDescriptors().add(createKeyDescriptor(getSigningCertificate()));	// RH, 20161007, o
+		pdpDescriptor.getKeyDescriptors().add(createKeyDescriptor(getSigningCertificate(), isAddkeyname2descriptors()));	// RH, 20161007, n
 		pdpDescriptor.addSupportedProtocol(SAMLConstants.SAML20P_NS);
 		// Make pdp descriptor optional
 		if ( isAddpdpdescriptor() ) {
@@ -302,8 +309,8 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 		return xmlMDRequest;
 	}
 
+	
 	// Create the KeyDescriptor
-	// RM_47_02
 	/**
 	 * Creates the key descriptor.
 	 * 
@@ -313,6 +320,24 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 	 */
 	private KeyDescriptor createKeyDescriptor(String signingCertificate)
 	{
+		return createKeyDescriptor(signingCertificate, false);	// backwards compatibility 
+	}
+	
+	// Create the KeyDescriptor
+	// RM_47_02
+	/**
+	 * Creates the key descriptor.
+	 * 
+	 * @param signingCertificate
+	 *            the signing certificate
+	 * @param boolean addkeyname
+	 *           add the keyname (thumbprint) as well
+	 * @return the key descriptor
+	 */
+	private KeyDescriptor createKeyDescriptor(String signingCertificate, boolean addkeyname)
+	{
+		String sMethod = "createKeyDescriptor";
+
 		SAMLObjectBuilder<KeyDescriptor> keyDescriptorBuilder = (SAMLObjectBuilder<KeyDescriptor>) _oBuilderFactory
 				.getBuilder(KeyDescriptor.DEFAULT_ELEMENT_NAME);
 		KeyDescriptor keyDescriptor = keyDescriptorBuilder.buildObject();
@@ -330,8 +355,32 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 		X509DataBuilder x509DataBuilder = (X509DataBuilder) _oBuilderFactory.getBuilder(X509Data.DEFAULT_ELEMENT_NAME);
 		X509Data x509Data = x509DataBuilder.buildObject();
 		x509Data.getX509Certificates().add(x509Certificate);
-
 		keyInfo.getX509Datas().add(x509Data);
+
+		// RH, 20161007, sn
+		if (addkeyname) {
+			byte[] baCert;
+			try {
+				baCert = signingCertificate.getBytes();	// use platform default because we encoded like that as well
+				byte[] baCertDecoded = Base64.decodeBase64(baCert);
+				MessageDigest mdDigest = MessageDigest.getInstance("SHA1");
+				mdDigest.update(baCertDecoded);
+				String sCertFingerPrint = Utils.byteArrayToHexString(mdDigest.digest());
+				
+				XMLSignatureBuilder<KeyName> keyNameBuilder = (XMLSignatureBuilder<KeyName>) _oBuilderFactory
+						.getBuilder(KeyName.DEFAULT_ELEMENT_NAME);
+				KeyName keyName = keyNameBuilder.buildObject();
+	
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "sCertFingerPrint:" + sCertFingerPrint);
+				keyName.setValue(sCertFingerPrint);
+				keyInfo.getKeyNames().add(keyName);
+			}
+			catch (NoSuchAlgorithmException e) {	// should never happen
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not create MessageDigest for creating fingerprint, KeyName not added. " + e.getMessage());
+			}
+		}
+		// RH, 20161007, en
+		
 		keyDescriptor.setKeyInfo(keyInfo);
 
 		return keyDescriptor;
