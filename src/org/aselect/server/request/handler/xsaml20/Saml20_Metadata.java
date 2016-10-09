@@ -54,6 +54,8 @@ public class Saml20_Metadata extends ProtoRequestHandler
 	public final static boolean DEFAULT_USESHA256 = false;
 	public final static boolean DEFAULT_ADDPDPDESCRIPTOR = true;	// RH, 20151124, n, backward compatibility
 
+	public final static boolean DEFAULT_ADDKEYNAME2DESCRIPTORS = false;	// RH, 20161007, n, backward compatibility
+
 	private String workingDir = null;
 	private String redirectURL;
 	private String signingCertificate;
@@ -94,6 +96,7 @@ public class Saml20_Metadata extends ProtoRequestHandler
 	private boolean usesha256 = DEFAULT_USESHA256;
 	private boolean addpdpdescriptor = DEFAULT_ADDPDPDESCRIPTOR;
 	
+	private boolean addkeyname2descriptors = DEFAULT_ADDKEYNAME2DESCRIPTORS;	// RH, 20161007, n
 	
 
 	protected XMLObjectBuilderFactory _oBuilderFactory;
@@ -175,6 +178,15 @@ public class Saml20_Metadata extends ProtoRequestHandler
 				_systemLogger.log(Level.FINER, MODULE, sMethod, "Using addpdpdescriptor: " + addpdpdescriptor);
 				// RH, 20151124, en
 				
+				// RH, 20161007, sn
+				String metaaddkeyname2descriptors = Utils.getSimpleParam(_configManager, _systemLogger, oConfig, "addkeyname2descriptors", false);
+				if (metaaddkeyname2descriptors != null) {
+					addkeyname2descriptors = Boolean.parseBoolean(metaaddkeyname2descriptors);
+				} else {
+					addkeyname2descriptors = DEFAULT_ADDKEYNAME2DESCRIPTORS;
+				}
+				_systemLogger.log(Level.FINER, MODULE, sMethod, "Using addkeyname2descriptors: " + addkeyname2descriptors);
+				// RH, 20161007, en
 				
 				
 			}
@@ -937,5 +949,15 @@ public class Saml20_Metadata extends ProtoRequestHandler
 	public void setAddpdpdescriptor(boolean addpdpdescriptor)
 	{
 		this.addpdpdescriptor = addpdpdescriptor;
+	}
+
+	public synchronized boolean isAddkeyname2descriptors()
+	{
+		return addkeyname2descriptors;
+	}
+
+	public synchronized void setAddkeyname2descriptors(boolean addkeyname2descriptors)
+	{
+		this.addkeyname2descriptors = addkeyname2descriptors;
 	}
 }
