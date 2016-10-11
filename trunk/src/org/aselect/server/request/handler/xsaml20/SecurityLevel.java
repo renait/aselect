@@ -27,7 +27,7 @@ public class SecurityLevel
 	final private static String LOA2 = "urn:etoegang:core:assurance-class:loa2";  // 10
 	final private static String LOA2PLUS= "urn:etoegang:core:assurance-class:loa2plus";  // 15
 	final private static String LOA3 = "urn:etoegang:core:assurance-class:loa3";  // 20
-	final private static String LOA4 = "urn:etoegang:core:assurance-class:loa4";  // 30
+	final private static String LOA4 = "urn:etoegang:core:assurance-class:loa4";  // 30 // 25
 
 	// Standard SAML levels, 2 and 7 private additions?
 	final private static String PREVIOUSSESSION_URI = "urn:oasis:names:tc:SAML:2.0:ac:classes:PreviousSession";  // 2	// RH, 20141113, n
@@ -37,6 +37,8 @@ public class SecurityLevel
 	final private static String MOBILETWOFACTORUNREGISTERED_URI = "urn:oasis:names:tc:SAML:2.0:ac:classes:MobileTwoFactorUnregistered";  // 15
 	//final private static String MOBILETWOFACTORCONTRACT_URI = "urn:oasis:names:tc:SAML:2.0:ac:classes:TimeSyncToken";  // Novell
 	final private static String MOBILETWOFACTORCONTRACT_URI = "urn:oasis:names:tc:SAML:2.0:ac:classes:MobileTwoFactorContract";  // 20
+
+	final private static String SMARTCARD_URI = "urn:oasis:names:tc:SAML:2.0:ac:classes:Smartcard";  // 25	// RH, 20161004, n
 	final private static String SMARTCARDPKI_URI = "urn:oasis:names:tc:SAML:2.0:ac:classes:SmartcardPKI";  // 30
 
 	// We might want to refer to these levels from other Classes so make them public
@@ -90,10 +92,11 @@ public class SecurityLevel
 		new SecurityLevelEntry(10, "10", PASSWORDPROTECTEDTRANSPORT_URI, LOA2),
 		new SecurityLevelEntry(15, "15", MOBILETWOFACTORUNREGISTERED_URI, LOA2PLUS),
 		new SecurityLevelEntry(20, "20", MOBILETWOFACTORCONTRACT_URI, LOA3),
+		new SecurityLevelEntry(25, "25", SMARTCARD_URI, null),	// no loa level (yet) defined for SMARTCARD_URI, beware to sustain ono-to-one relation for backward compatibility
 		new SecurityLevelEntry(30, "30", SMARTCARDPKI_URI, LOA4)
 	};
 	
-	/**
+	/**MOBILETWOFACTORCONTRACT_URI
 	 * Checks if 'iLvel' is low, but not previous session.
 	 * 
 	 * @param iLevel
