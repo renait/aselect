@@ -559,7 +559,13 @@ public class AttributeGatherer
 					String sRequestorID = (_iGathererVersion>=2)? ((String)s).substring(4): (String)s;
 					Vector vAttributes = (Vector) htReleasePolicy.get(sRequestorID);
 					_systemLogger.log(Level.FINEST, _MODULE, sMethod, "GATHER << Requestor=" + sRequestorID+" release="+vAttributes);
-					
+					//	RH, 20161010, sn
+					// fix for v2 gatherer always gathering over all storedRequestors
+					if (vAttributes == null || vAttributes.isEmpty()) {	// we need to find at least one element for this requestor, otherwise skip
+						_systemLogger.log(Level.WARNING, _MODULE, sMethod, "GATHER no attribute(s) found in release policy="+sReleasePolicy + ", for requestor=" + sRequestorID + ", skipping...");
+						continue;
+					}
+					//	RH, 20161010, en
 					IAttributeRequestor attributeRequestor = (IAttributeRequestor) _htRequestors.get(sRequestorID);
 					if (attributeRequestor == null) {
 						StringBuffer sb = new StringBuffer("Unknown requestor \"").append(sRequestorID).append("\"");
