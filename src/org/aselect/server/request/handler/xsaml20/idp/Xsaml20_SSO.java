@@ -96,6 +96,7 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 	private final String AUTHNREQUEST = "AuthnRequest";
 	private String _sPostTemplate = null;
 	private String _sSpecialSettings = null;
+	private String _sNameIDAttribute = null;	// RH, 20161013, n
 
 	// Communication for processReturn()
 	private String _sAppId = null;
@@ -165,7 +166,17 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 		catch (ASelectConfigException e) {
 			;
 		}
-		
+		// RH, 20161013, sn
+		try {
+			_sNameIDAttribute = _configManager.getParam(oHandlerConfig, "nameid_attribute");
+		}
+		catch (ASelectConfigException e) {
+			_sNameIDAttribute = null;
+			_systemLogger.log(Level.CONFIG, MODULE, sMethod, "No config item 'nameid_attribute' found, using defaults");
+			;
+		}
+		// RH, 20161013, en
+
 //		// RH, 20140925,sn
 //		try {
 //			String use_sha256 =_sReqSigning = _configManager.getParam(oHandlerConfig, "use_sha256");
@@ -1277,8 +1288,18 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 			
 			// 20090602, Bauke Saml-core-2.0, section 2.2.2: SHOULD be omitted:
 			// nameID.setNameQualifier(_sASelectServerUrl);
-			nameID.setValue((bNvlPersist)? sUid: sTgt);  // 20100811: depends on NameIDType
-			_systemLogger.log(Level.FINER, MODULE, sMethod, "nameID=" + Utils.firstPartOf(nameID.getValue(), 30));
+			// RH, 20161013, sn
+			if (_sNameIDAttribute != null) {
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "requested attribute for nameid=" + _sNameIDAttribute); // RH, 20161013, n
+				String sname = (String) htAttributes.get(_sNameIDAttribute);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "value found=" + (sname == null ? "" : Auxiliary.obfuscate(sname))); // RH, 20161013, n
+				nameID.setValue(sname == null ? "" : sname);
+			} else {	// the old way
+			// RH, 20161013, en
+				nameID.setValue((bNvlPersist)? sUid: sTgt);  // 20100811: depends on NameIDType
+			} // RH, 20161013, n
+//			_systemLogger.log(Level.FINER, MODULE, sMethod, "nameID=" + Utils.firstPartOf(nameID.getValue(), 30)); // RH, 20161013, o
+			_systemLogger.log(Level.FINER, MODULE, sMethod, "nameID=" + Auxiliary.obfuscate(Utils.firstPartOf(nameID.getValue(), 30))); // RH, 20161013, n
 
 			SAMLObjectBuilder<Subject> subjectBuilder = (SAMLObjectBuilder<Subject>) builderFactory
 					.getBuilder(Subject.DEFAULT_ELEMENT_NAME);
