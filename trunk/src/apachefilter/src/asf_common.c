@@ -988,6 +988,39 @@ char *aselect_filter_get_cookie(pool *pPool, table *headers_in, char *pcAttribut
     return pcValue;
 }
 
+// RH, 20161107, sn
+// aselect_filter_get_header retrieves the request header and returns the value as a string
+char *aselect_filter_get_header(pool *pPool, table *headers_in, char *pcHeaderName )
+//
+//
+//char *aselect_filter_get_cookie(pool *pPool, table *headers_in, char *pcAttribute)
+{
+//    char        *pcValues;
+    char        *pcValue = NULL;
+
+    //TRACE1("GET-Cookie: %s", pcAttribute);
+    pcValue = (char *)ap_table_get(headers_in, pcHeaderName);
+    if (pcValue) {
+        TRACE2("HeaderName: %s, found, value: %s", pcHeaderName, pcValue);
+//        pcValue = aselect_filter_get_param(pPool, pcValues, pcAttribute, ";", FALSE);
+//        if (pcValue) {
+//            TRACE3("Get-Cookie: %s=%.30s%s", pcAttribute, pcValue, (strlen(pcValue)>30)? "...": "");
+//        }
+//        else {
+//			TRACE1("Get-Cookie: %s not found", pcAttribute);
+//            pcValue = NULL;
+//        }
+    }
+    else {
+	TRACE1("HeaderName: %s, not found", pcHeaderName);
+        pcValue = NULL;
+    }
+    return pcValue;
+}
+// RH, 20161107, en
+
+
+
 int aselect_filter_show_barhtml(pool *pPool, request_rec *pRequest, PASELECT_FILTER_CONFIG pConfig, char *pcASelectAppURL)
 {
     table *headers_out = pRequest->headers_out;

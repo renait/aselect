@@ -76,7 +76,7 @@ module AP_MODULE_DECLARE_DATA aselect_filter_module;
 //static handler_rec      aselect_filter_handlers[];
 static const command_rec    aselect_filter_cmds[];
 
-char *version_number = "====subversion_508====";
+char *version_number = "====subversion_====";
 
 // -----------------------------------------------------
 // Functions 
@@ -127,6 +127,8 @@ static char *getRequestedAttributes(pool *pPool, PASELECT_FILTER_CONFIG pConfig)
 static char *extractValueFromList(pool *pPool, char *pSpecial, char *keyName);
 
 static int purgeApplAttributes(pool *pPool, request_rec *pRequest, PASELECT_FILTER_CONFIG pConfig);
+
+static char *evaluateHTTPResultCode(request_rec *pRequest, pool *pPool, PASELECT_FILTER_CONFIG pConfig);// RH, 20161108, n
 
 //
 // Called once during the module initialization phase.
@@ -395,6 +397,33 @@ static char *getRequestedAttributes(pool *pPool, PASELECT_FILTER_CONFIG pConfig)
 	TRACE1("getRequestedAttributes:: %s", paramNames+1);
 	return paramNames+1;
 }
+
+//  RH, 20161108, sn
+static char *evaluateHTTPResultCode(request_rec *pRequest, pool *pPool, PASELECT_FILTER_CONFIG pConfig)
+{
+        char *result = NULL;
+	int i;
+	for (i = 0; i < pConfig->iHeaderHandlerCount; i++) {
+        	char resultCode[5], headerName[400], headerValue[400]; // check with other buffers with the same name
+		TRACE2("evaluateHTTPResultCode:: %d: %s", i, pConfig->pHeaderHandler[i]);
+		splitAttrFilter(pConfig->pHeaderHandler[i], resultCode,sizeof(resultCode), headerName,sizeof(headerName), headerValue,sizeof(headerValue));
+
+		// Look in headerName and headerValue matching headerName, headerValue pair
+		if (headerName[0] != '\0') {
+
+                        char *value = aselect_filter_get_header(pPool, pRequest->headers_in, headerName);
+        		TRACE2("evaluateHTTPResultCode::Found headerValue:: %d: %s", i, value == NULL ? "NULL" : value);
+                        if (value && !strcmp(headerValue,value)) { // only if specific header with value found
+                            result = ap_psprintf(pPool, "%s", resultCode);
+                            break;  // find first
+                        }
+		}
+	}
+        TRACE1("evaluateHTTPResultCode::Returning  resultCode: %s", result);
+	return result;
+}
+//  RH, 20161108, en
+
 
 static char *extractAttributeNames(pool *pPool, char *text, char *paramNames)
 {
@@ -1153,39 +1182,56 @@ static int aselect_filter_handler(request_rec *pRequest)
 					pcAppUrl = ap_psprintf(pPool, "%.*s%s", (int)(p-pcAppUrl), pcAppUrl, p+len);
 				}
 			}
-			TRACE1("Redirect for authentication to app_url: %s", pcAppUrl);
-			if ((pcResponseAU = aselect_filter_auth_user(pRequest, pPool, pConfig, pcAppUrl, &timer_data))) {
-				iError = aselect_filter_get_error(pPool, pcResponseAU);
-			}
 
-			if (iError == ASELECT_FILTER_ASAGENT_ERROR_OK) {
-				TRACE1("response: %s", pcResponseAU);
-				//
-				// build the redirection URL from the response
-				//
-				if ((pcRID = aselect_filter_get_param(pPool, pcResponseAU, "rid", "&", TRUE))) {
-					if ((pcASelectServer = aselect_filter_get_param(pPool, pcResponseAU, "a-select-server", "&", TRUE))) {
-						if ((pcASUrl = aselect_filter_get_param(pPool, pcResponseAU, "as_url", "&", TRUE))) {
-							iRet = aselect_filter_gen_top_redirect(pPool, addedSecurity, pRequest, pcASUrl,
-										pcASelectServer, pcRID, pConfig->pCurrentApp->pcLocation);
-						}
-						else {
-							iError = ASELECT_FILTER_ERROR_AGENT_RESPONSE;
-						}
-					}
-					else {
-						iError = ASELECT_FILTER_ERROR_AGENT_RESPONSE;
-					}
-				}
-				else {
-					iError = ASELECT_FILTER_ERROR_AGENT_RESPONSE;
-				}
-			}
-			else {
-				TRACE1("aselect_filter_auth_user FAILED (%d)", iError);
-				ap_log_rerror(APLOG_MARK, APLOG_NOERRNO|APLOG_WARNING, 0, pRequest,
-					/*ap_psprintf(pPool, */"ASELECT_FILTER:: aselect_filter_auth_user FAILED (%d)", iError);
-			}
+                        
+                        // RH, 20161107, sn
+//                        char *headerName = "X-Requested-With";
+//                        char *headerValue = NULL;
+//                        headerValue = aselect_filter_get_header(pPool, headers_in, headerName);
+                        // RH, 20161107, sn
+                        char *res = evaluateHTTPResultCode(pRequest, pPool, pConfig);
+                        if (res) { // only if specific header found
+                            // we'll leave iError=ASELECT_FILTER_ASAGENT_ERROR_OK and set iRet to resultcode from config
+//                                iRet=HTTP_UNAUTHORIZED;
+                            iRet=atoi(res);
+                            TRACE1("iRet is now: %d", iRet);
+                        }
+                        else {  // we didn't find specific header, do like we used to
+                        // RH, 20161107, en
+                            TRACE1("Redirect for authentication to app_url: %s", pcAppUrl);
+                            if ((pcResponseAU = aselect_filter_auth_user(pRequest, pPool, pConfig, pcAppUrl, &timer_data))) {
+                                    iError = aselect_filter_get_error(pPool, pcResponseAU);
+                            }
+
+                            if (iError == ASELECT_FILTER_ASAGENT_ERROR_OK) {    // do something with specific header for XmlHttpRequest here
+                                    TRACE1("response: %s", pcResponseAU);
+                                    //
+                                    // build the redirection URL from the response
+                                    //
+                                    if ((pcRID = aselect_filter_get_param(pPool, pcResponseAU, "rid", "&", TRUE))) {
+                                            if ((pcASelectServer = aselect_filter_get_param(pPool, pcResponseAU, "a-select-server", "&", TRUE))) {
+                                                    if ((pcASUrl = aselect_filter_get_param(pPool, pcResponseAU, "as_url", "&", TRUE))) {
+                                                            iRet = aselect_filter_gen_top_redirect(pPool, addedSecurity, pRequest, pcASUrl,
+                                                                                    pcASelectServer, pcRID, pConfig->pCurrentApp->pcLocation);
+                                                    }
+                                                    else {
+                                                            iError = ASELECT_FILTER_ERROR_AGENT_RESPONSE;
+                                                    }
+                                            }
+                                            else {
+                                                    iError = ASELECT_FILTER_ERROR_AGENT_RESPONSE;
+                                            }
+                                    }
+                                    else {
+                                            iError = ASELECT_FILTER_ERROR_AGENT_RESPONSE;
+                                    }
+                            }
+                            else {
+                                    TRACE1("aselect_filter_auth_user FAILED (%d)", iError);
+                                    ap_log_rerror(APLOG_MARK, APLOG_NOERRNO|APLOG_WARNING, 0, pRequest,
+                                            /*ap_psprintf(pPool, */"ASELECT_FILTER:: aselect_filter_auth_user FAILED (%d)", iError);
+                            }
+                        }   // RH, 20161107, n
 			break;
 
 		case ASELECT_FILTER_ACTION_SET_TICKET:
@@ -2545,6 +2591,29 @@ static const char *aselect_filter_pass_attributes(cmd_parms *parms, void *mconfi
     return NULL;
 }
 
+// Define all http headers that should be handled differently from the config file
+//
+static const char *aselect_filter_add_header_handling(cmd_parms *parms, void *mconfig, const char *arg)
+{
+    char **pHeader;
+    PASELECT_FILTER_CONFIG pConfig;
+
+    pConfig = (PASELECT_FILTER_CONFIG) ap_get_module_config(parms->server->module_config, &aselect_filter_module);
+    if (!pConfig) {
+		return "A-Select ERROR: Internal error when setting HTTP header handlers";
+    }
+    if (pConfig->iHeaderHandlerCount >= ASELECT_FILTER_MAX_HEADER_HANDLERS) {
+		return "A-Select ERROR: Reached max possible HTTP header handlers";
+    }
+    pHeader = &pConfig->pHeaderHandler[pConfig->iHeaderHandlerCount];
+    *pHeader = ap_pstrdup(parms->pool, arg);
+    TRACE2("aselect_filter_add_header_handling:: [%d] %s", pConfig->iHeaderHandlerCount, *pHeader);
+    pConfig->iHeaderHandlerCount++;
+    return NULL;
+}
+
+
+
 //
 // Registered cmds to call from httpd.conf
 //
@@ -2607,6 +2676,12 @@ static const command_rec aselect_filter_cmds[] =
     AP_INIT_TAKE1("aselect_filter_add_app_regexp", aselect_filter_add_app_regexp, NULL, RSRC_CONF,
         "Usage aselect_filter_add_app_regexp < 0 | 1 >"),
 
+    // RH, 20161108, sn
+    AP_INIT_TAKE1("aselect_filter_add_header_handling", aselect_filter_add_header_handling, NULL, RSRC_CONF,
+        "Usage aselect_filter_add_header_handling  <result_code>,<headername>,<headervalue>,<preserve_rfc>, example: aselect_filter_add_header_handling \"401,X-Requested-With,XMLHttpRequest,false\""),
+
+    // RH, 20161108, sn
+    
     { NULL }
 };
 
