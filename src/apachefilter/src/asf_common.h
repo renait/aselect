@@ -82,6 +82,7 @@ typedef apr_table_t     table;
 #define ASELECT_FILTER_MAX_RULES_PER_APP 50         // max authz rules per application
 #define ASELECT_FILTER_TRACE_FILE       "/tmp/aselect_filter.log";
 // 20091227, Previous default: #define ASELECT_FILTER_TRACE_FILE       "/opt/anoigo/am/aselect/log/aselect_filter.log"  // Path to trace file
+#define ASELECT_FILTER_MAX_HEADER_HANDLERS  15         // RH, 20161108: max number of HTTP headers that can be handled differently
 
 /*
  * HTML template for client-side redirect. 
@@ -258,6 +259,9 @@ typedef struct _ASELECT_FILTER_CONFIG
     char    pcAddedSecurity[20];  // can contain a 'c' (cookies)
     char    *pcSpecialSettings;
     char    *pcCookiePath;
+    char    *pHeaderHandler[ASELECT_FILTER_MAX_HEADER_HANDLERS];   // RH, 20161108  // contains per HTTP header definition of handling
+    int     iHeaderHandlerCount;
+
 } ASELECT_FILTER_CONFIG, *PASELECT_FILTER_CONFIG;
 
 /*
@@ -308,6 +312,10 @@ char *timer_usi(pool *pPool, TIMER_DATA *pTimer);
 void timer_resume(TIMER_DATA *pTimer);
 void timer_finish(TIMER_DATA *pTimer);
 char *timer_pack(pool *pPool, TIMER_DATA *pTimer, char *senderId, char *sAppId, int ok);
+
+char *aselect_filter_get_header(pool *pPool, table *headers_in, char *pcHeaderName );// RH, 20161107, n
+
+
 
 #define ASELECT_FILTER_TRACE
 #ifdef NO_TRACE_LOG
