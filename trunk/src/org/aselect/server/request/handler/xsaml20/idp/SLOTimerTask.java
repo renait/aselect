@@ -82,11 +82,16 @@ public class SLOTimerTask extends TimerTask
 		// Check if there are any involved SPs left for this user
 		TGTManager tgtManager = TGTManager.getHandle();
 		HashMap tgtContext = tgtManager.getTGT(tgtId);
-		if (tgtContext == null) {
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "RUN END - requestId=" + requestId
-					+ " NO TGT, no backchannel logout requiered");
-			return;
-		}
+		
+		// RH, 20161218, so
+		////////////////////
+//		if (tgtContext == null) {
+//			_systemLogger.log(Level.INFO, MODULE, sMethod, "RUN END - requestId=" + requestId
+//					+ " NO TGT, no backchannel logout requiered");
+//			return;
+//		}
+		///////////////////////////////
+		// RH, 20161218, eo
 		// Remove the TGT if it's still there
 		try {
 			tgtManager.remove(tgtId);
@@ -94,7 +99,14 @@ public class SLOTimerTask extends TimerTask
 		catch (ASelectStorageException e) {
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "Removing TGT failed " + tgtId + ", continue");
 		}
-		UserSsoSession tgtSso = (UserSsoSession) tgtContext.get("sso_session");
+		// RH, 20161218, sn
+		UserSsoSession tgtSso = null;
+		if (tgtContext != null) {
+			tgtSso = (UserSsoSession) tgtContext.get("sso_session");
+		} else {
+			tgtSso = sso;
+		}
+		// RH, 20161218, en
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "Soap logout to all, using tgt.SSO=" + tgtSso);
 
 		// We have our own version: UserSsoSession sso = (UserSsoSession)tgtContext.get("sso_session");
@@ -149,11 +161,16 @@ public class SLOTimerTask extends TimerTask
 		// of completeness. Plus we get to log it
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "FINAL: LogoutResponse to initiating SP=" + initiatingSP);
 		try {
-			if (initiatingSP != null) {
+//			if (initiatingSP != null) {	// RH, 20161218, o
+			if (initiatingSP != null && tgtContext != null) {	// RH, 20161218, n	// if the tgt is null, response should have been handled
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "Logging out initiator '" + initiatingSP
 						+ "' via backchannel");
 				SoapLogoutResponseSender sender = new SoapLogoutResponseSender();
 				sender.sendSoapLogoutResponse(initiatingSP, issuer, tgtId, StatusCode.SUCCESS_URI, requestId);
+			} else {
+				_systemLogger.log(Level.INFO, MODULE, sMethod, "No need for logging out initiator '" + initiatingSP
+						+ "' logoutresponse already sent");
+				
 			}
 			// Throw the session in the trash can, the TGT was already removed
 			// SSOSessionManager sessionManager = SSOSessionManager.getHandle();

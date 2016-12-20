@@ -604,9 +604,17 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 					_systemLogger.log(Level.FINER, MODULE, sMethod, "TIMER logout for SP=" + serviceProvider);
 					SLOTimer timer = SLOTimer.getHandle(_systemLogger);
 					SLOTimerTask task = new SLOTimerTask(sNameID, originalLogoutRequest.getID(), sso, _sASelectServerUrl);
+					// RH, 20161220, so
 					// schedule it for now. No need to wait
-					_systemLogger.log(Level.FINER, MODULE, sMethod, "Schedule timer now");
-					timer.schedule(task, new Date());
+//					_systemLogger.log(Level.FINER, MODULE, sMethod, "Schedule timer now");
+//					timer.schedule(task, new Date());
+					// RH, 20161220, eo
+					// RH, 20161220, sn
+					// just give the IDP some time to clean up
+					long now = new Date().getTime();
+					_systemLogger.log(Level.FINER, MODULE, sMethod, "Schedule timer +"+3 * 1000);
+					timer.schedule(task, new Date(now + (3 * 1000)));
+					// RH, 20161220, en
 					// Continue with the rest
 				}
 			}

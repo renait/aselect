@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringReader;
 import java.security.GeneralSecurityException;
+import java.security.PublicKey;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.Vector;
@@ -31,6 +32,7 @@ import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.server.config.Version;
 import org.aselect.server.request.HandlerTools;
 import org.aselect.server.request.handler.ProtoRequestHandler;
+import org.aselect.server.request.handler.xsaml20.idp.MetaDataManagerIdp;
 import org.aselect.server.request.handler.xsaml20.sp.MetaDataManagerSp;
 import org.aselect.server.tgt.TGTManager;
 import org.aselect.system.error.Errors;
@@ -41,6 +43,7 @@ import org.aselect.system.exception.ASelectStorageException;
 import org.aselect.system.utils.Utils;
 import org.opensaml.DefaultBootstrap;
 import org.opensaml.common.xml.SAMLConstants;
+import org.opensaml.saml2.core.StatusCode;
 import org.opensaml.saml2.metadata.SingleLogoutService;
 import org.opensaml.xml.ConfigurationException;
 import org.opensaml.xml.XMLObject;
@@ -88,6 +91,9 @@ public abstract class Saml20_BaseHandler extends ProtoRequestHandler
 
 	protected String _sDefaultAddCertificate = null;
 	// RH, 20151016, en
+	
+	protected boolean audiencelogout_required = false;
+
 	
 	/**
 	 * Init for class Saml20_BaseHandler. <br>
@@ -221,6 +227,16 @@ public abstract class Saml20_BaseHandler extends ProtoRequestHandler
 		}
 		// RH, 20151016, en
 
+		// RH, 20161219, sn, audience logout implementation
+		try {
+			String audiencelogout = _configManager.getParam(oHandlerConfig, "audiencelogout");
+			 audiencelogout_required = Boolean.parseBoolean(audiencelogout );
+		}
+		catch (ASelectConfigException e) {
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config item 'audiencelogout' found, normal operation resumes");
+			audiencelogout_required = false;
+		}
+
 	}
 
 	// Unfortunately, sNameID is not equal to our tgtID (it's the Federation's)
@@ -234,10 +250,13 @@ public abstract class Saml20_BaseHandler extends ProtoRequestHandler
 	 * @throws ASelectStorageException
 	 *             the a select storage exception
 	 */
-	protected int removeTgtByNameID(String sNameID)
+//	protected int removeTgtByNameID(String sNameID)	// RH, 20161215, o
+	// Return the deleted tgt or null if not found, caller might need the tgt one last time	// RH, 20161215, n
+	protected HashMap removeTgtByNameID(String sNameID)
 	throws ASelectStorageException
 	{
 		String sMethod = "removeByNameID";
+		HashMap htTGTContext = null;	// RH, 20161215, n
 		TGTManager tgtManager = TGTManager.getHandle();
 		HashMap allTgts = tgtManager.getAll();
 
@@ -248,7 +267,8 @@ public abstract class Saml20_BaseHandler extends ProtoRequestHandler
 			String sKey = (String) s;
 			// for (Enumeration<String> e = allTgts.keys(); e.hasMoreElements();) {
 			// String sKey = e.nextElement();
-			HashMap htTGTContext = (HashMap) tgtManager.get(sKey);
+//			HashMap htTGTContext = (HashMap) tgtManager.get(sKey);	// RH, 20161215, o
+			htTGTContext = (HashMap) tgtManager.get(sKey);	// RH, 20161215, n
 			String tgtNameID = (String) htTGTContext.get("name_id");
 			if (sNameID.equals(tgtNameID)) {
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "Remove TGT=" + Utils.firstPartOf(sKey, 30));
@@ -257,7 +277,14 @@ public abstract class Saml20_BaseHandler extends ProtoRequestHandler
 				break;
 			}
 		}
-		return found;
+		//	return found;	// RH, 20161215, o
+		// RH, 20161215, sn
+		if ( found == 1) {
+			return htTGTContext;
+		} else {
+			 return null;	// RH, 20161215, n
+		}
+		// RH, 20161215, en
 	}
 
 	/**
@@ -508,6 +535,56 @@ public abstract class Saml20_BaseHandler extends ProtoRequestHandler
 		}
 		return authzDecisionQuery;
 	}
+	
+	/**
+	 * Send Logout request to sp audience <br>
+	 * <br>
+	 * <b>Description:</b> <br>
+	 * This method sends a logout request to the sp audience <br>
+	 * .
+	 * 
+	 * @param sNameID
+	 *            String with the NameID
+	 * @param entityID
+	 *            String where to send logout request
+	 * @param reason
+	 *            String reason for logout
+	 *  @return result of logout as StususCode string          
+	 * @throws ASelectException
+	 *             If send request fails.
+	 */
+	protected String sendLogoutRequestToSpAudience(String sNameID, String entityID, String reason)
+	throws ASelectException
+	{
+		String _sMethod = "sendLogoutRequestToSpAudience";
+		String status = null;
+		SoapLogoutRequestSender requestSender = new SoapLogoutRequestSender();
+		MetaDataManagerIdp metadataManager = MetaDataManagerIdp.getHandle();
+		String url = metadataManager.getLocation(entityID, SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME,
+				SAMLConstants.SAML2_SOAP11_BINDING_URI);
+
+		_systemLogger.log(Level.FINEST, MODULE, _sMethod, "Found audience url = " + url);
+
+		PublicKey pkey = null;
+		if (is_bVerifySignature()) {
+			pkey = metadataManager.getSigningKeyFromMetadata(entityID);
+			if (pkey == null || "".equals(pkey)) {
+				_systemLogger.log(Level.SEVERE, MODULE, _sMethod, "No valid public key in metadata");
+				throw new ASelectStorageException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
+			}
+		}
+		try {
+			StatusCode statuscode = requestSender.sendSoapLogoutRequestWithStatus(url, _sServerUrl, sNameID, reason, pkey, null);
+			status = statuscode.getValue();
+		}
+		catch (ASelectException e) {
+			_systemLogger.log(Level.WARNING, MODULE, _sMethod, "IDP - exception trying to send logout request to audience", e);
+			status = StatusCode.PARTIAL_LOGOUT_URI;
+			throw new ASelectStorageException(Errors.ERROR_ASELECT_INTERNAL_ERROR);
+		}
+		return status;
+	}
+
 	
 	/**
 	 * @return the useBackchannelClientcertificate

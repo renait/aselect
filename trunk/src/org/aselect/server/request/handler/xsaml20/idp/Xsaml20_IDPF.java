@@ -19,6 +19,9 @@ import java.net.URL;
 import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.logging.Level;
+import java.util.regex.Matcher;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.http.HttpServletRequest;
@@ -39,7 +42,7 @@ import org.aselect.system.exception.ASelectException;
  * <b>Description:</b><br>
  * This class serves as a an Saml20 IDP first generic request handler 
  *  It handles generic authentication requests
- *  Requests a rid from the aselectserver and sends of the user to authenticate 
+ *  Requests a rid from the aselectserver and sends off the user to authenticate 
  * <br>
  * <b>Concurrency issues:</b> <br>
  * Use one <code>Saml20_IDPF</code> implementation for a single request. <br>
@@ -63,6 +66,12 @@ public class Xsaml20_IDPF extends ProtoRequestHandler
 	private String endpointaddkeyname = null;
 	private String endpointaddcertificate = null;
 	
+	boolean allowrelaystate = true;	// defaults to true
+	boolean DEFAULT_ALLOW_RELAYSTATE = true;
+	// 255 or less, more or less "safe" url characters
+	private static final String DEFAULT_RELAYSTATE_PATTERN = "[\\w\\.\\-!\\*'\\(\\);:@\\&=\\+\\$,/\\?#]{0,255}";
+
+	Pattern relaystatepattern = null;
 
 	/* @param oServletConfig
 	 *            the o servlet config
@@ -190,6 +199,34 @@ public class Xsaml20_IDPF extends ProtoRequestHandler
 				setEndpointaddcertificate("false");	// set default to false
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config item 'applicationendpointaddcertificate' found, using: " + endpointaddcertificate);
 			}
+			
+			try {
+				String sallowrelaystate = _configManager.getParam(oConfig, "allow_relaystate");
+				allowrelaystate = Boolean.parseBoolean(sallowrelaystate);
+			}
+			catch (ASelectConfigException e) {
+				allowrelaystate = DEFAULT_ALLOW_RELAYSTATE;
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "No config item 'allow_relaystate' found, defaults to: " + allowrelaystate);
+			}
+			if (allowrelaystate) {
+				String srelaystatepattern = DEFAULT_RELAYSTATE_PATTERN;
+				Object orelaystate = _configManager.getSimpleSection(oConfig, "allow_relaystate",  false);
+				if (orelaystate != null) {
+					srelaystatepattern = _configManager.getSimpleParam(orelaystate, "regex" , false);
+					if (srelaystatepattern == null) {
+						srelaystatepattern = DEFAULT_RELAYSTATE_PATTERN;
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Parameter 'regex' not found, defaults to pattern: " + srelaystatepattern);
+					}
+				}
+				try {
+					relaystatepattern = Pattern.compile(srelaystatepattern);
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Using RelayState pattern: " + relaystatepattern);
+				} catch (PatternSyntaxException pse) {
+					_systemLogger.log(Level.SEVERE, MODULE, sMethod, 
+							"Error compiling regex:"  + srelaystatepattern );
+					throw new ASelectConfigException("Error compiling regex", pse);
+				}
+			}
 		}
 		catch (ASelectException e) {
 			throw e;
@@ -227,6 +264,19 @@ public class Xsaml20_IDPF extends ProtoRequestHandler
     		_systemLogger.log(Level.INFO, MODULE, sMethod, "Received an authenticate request with sp=: " + consumer);
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "Process an authenticate request for user: " + uid);
 	    	
+			// RH, 20160510, sn
+			String sRelayState = request.getParameter("RelayState");
+			// maybe sanitize RelayState
+			// RH, 20160510, en
+			if (sRelayState != null) {
+				Matcher m = relaystatepattern.matcher(sRelayState);
+				if (!m.matches()) {
+					_systemLogger.log(Level.WARNING, MODULE, sMethod, "Invalid parameter RelayState found in request: " + sRelayState);
+					throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
+				}
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Valid RelayState parameter found in request: " + sRelayState);
+			}
+			
 	    	// RM_46_03
 	    	// authenticate to the aselect server
     		String ridReqURL = aselectServerURL;
@@ -302,7 +352,14 @@ public class Xsaml20_IDPF extends ProtoRequestHandler
 			_htSessionContext.put("sp_addkeyname",getEndpointaddkeyname());	// set sp_addkeyname for keyinfo in signature in samll post
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "set sp_addcertificate: " +getEndpointaddcertificate());
 			_htSessionContext.put("sp_addcertificate",getEndpointaddcertificate());	// set sp_addcertificate for  keyinfo in signature in samll post
-			
+	
+			// RH, 20160510, sn
+			if (sRelayState != null) {
+				_systemLogger.log(Level.INFO, MODULE, sMethod, "set RelayState: " +sRelayState);
+				_htSessionContext.put("RelayState", sRelayState);	// set RelayState for handling by sso handler return
+			}
+			// RH, 20160510, en
+
 			_oSessionManager.updateSession(extractedRid, _htSessionContext);
 			
     		String loginrequest= "login1";
@@ -478,4 +535,5 @@ public class Xsaml20_IDPF extends ProtoRequestHandler
 	{
 		this.endpointaddcertificate = endpointaddcertificate;
 	}
+	
 }

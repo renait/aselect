@@ -13,6 +13,7 @@ package org.aselect.server.request.handler.xsaml20.sp;
 
 import java.io.PrintWriter;
 import java.security.PublicKey;
+import java.util.HashMap;
 import java.util.logging.Level;
 
 import javax.servlet.ServletConfig;
@@ -233,8 +234,10 @@ public class Xsaml20_SLO_Redirect extends Saml20_BaseHandler
 
 		// Destroy the local session
 		String sNameID = logoutRequest.getNameID().getValue();
-		int found = removeTgtByNameID(sNameID);
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "TGT found="+found);
+//		int found = removeTgtByNameID(sNameID);	// RH, 20161215, o
+		HashMap found = removeTgtByNameID(sNameID);// RH, 20161215, o
+//		_systemLogger.log(Level.INFO, MODULE, sMethod, "TGT found="+found);	// RH, 20161215, o
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "TGT removed="+Auxiliary.obfuscate(found));	// RH, 20161215, n
 
 		// Delete the client cookie
 		String sCookieDomain = _configManager.getCookieDomain();
@@ -242,9 +245,31 @@ public class Xsaml20_SLO_Redirect extends Saml20_BaseHandler
 		// path=/ so applications can access it
 		HandlerTools.delCookieValue(httpResponse, "ssoname", sCookieDomain, "/", _systemLogger);
 
+		// RH, 20161215, sn
+		// send logoutrequest to audience
+		String statusCode = StatusCode.SUCCESS_URI;	// assume success
+
+		if (audiencelogout_required && found != null && found.get("sp_audience") != null) {
+			// Send logout to audience as well
+			// Retrieve statuscode of logoutresponse from audience
+			String reason = "urn:oasis:names:tc:SAML:2.0:logout:user";
+//			String reason = "urn:oasis:names:tc:SAML:2.0:logout:admin";	// still to decide user or admin
+			String sp_audience = (String)found.get("sp_audience");
+			try {
+				_systemLogger.log(Level.INFO, MODULE, sMethod, "Logout to audience: " + sp_audience);
+				statusCode = sendLogoutRequestToSpAudience(sNameID, sp_audience, reason);
+			} catch (ASelectException e) {	// we don't want to interrupt the idp logout process
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Logout to audience failed: " + e.getMessage());
+				statusCode = StatusCode.PARTIAL_LOGOUT_URI;
+			}
+		} else {
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "No logout to audience, no audience, not requested or tgt not found");
+		}
+		// RH, 20161215, en
+		
 		// Redirect the user to the federation-idp LogoutService with a LogoutResponse
 		String issuer = logoutRequest.getIssuer().getValue();
-		String statusCode = StatusCode.SUCCESS_URI;
+//		String statusCode = StatusCode.SUCCESS_URI;	// RH, 20161219, o
 		String myEntityId = _sServerUrl;
 
 		MetaDataManagerSp metadataManager = MetaDataManagerSp.getHandle();

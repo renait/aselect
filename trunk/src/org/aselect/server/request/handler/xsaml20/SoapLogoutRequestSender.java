@@ -106,6 +106,34 @@ public class SoapLogoutRequestSender
 		 sendSoapLogoutRequest(serviceProviderUrl, issuerUrl, sNameID, reason, pkey, null);
 	}
 	
+
+	/**
+	 * Send Logout Request. <br>
+	 * 
+	 * @param serviceProviderUrl
+	 *            String with SP url.
+	 * @param issuerUrl
+	 *            String with Issuer url.
+	 * @param sNameID
+	 *            String with NameID.
+	 * @param reason
+	 *            String with logout reason.
+	 * @param pkey
+	 *            Public key to verify SOAP response with, if null do not verify response
+	 * @param  List<String>sessionindexes
+	 * 				optional list of sessionindexes to kill
+	 * @throws ASelectException
+	 *             If sending fails.
+	 *             
+	 * This method is for backward compatibility, better to use sendSoapLogoutRequestWithResult
+	 */
+	public void sendSoapLogoutRequest(String serviceProviderUrl, String issuerUrl, String sNameID, String reason, PublicKey pkey, List<String> sessionindexes)
+	throws ASelectException
+	{
+		 sendSoapLogoutRequestWithStatus(serviceProviderUrl, issuerUrl, sNameID, reason, pkey, sessionindexes);
+	}
+	
+	
 	
 	/**
 	 * Send Logout Request. <br>
@@ -124,11 +152,13 @@ public class SoapLogoutRequestSender
 	 * 				optional list of sessionindexes to kill
 	 * @throws ASelectException
 	 *             If sending fails.
+	 * @return status from the logoutresponse
 	 */
-	public void sendSoapLogoutRequest(String serviceProviderUrl, String issuerUrl, String sNameID, String reason, PublicKey pkey, List<String> sessionindexes)
+	public StatusCode sendSoapLogoutRequestWithStatus(String serviceProviderUrl, String issuerUrl, String sNameID, String reason, PublicKey pkey, List<String> sessionindexes)
 	throws ASelectException
 	{
 		String sMethod = "sendSoapLogoutRequest";
+		StatusCode statusCode = null;
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "Send backchannel LogoutRequest to " + serviceProviderUrl
 				+ " for user: " + sNameID);
 
@@ -190,7 +220,7 @@ public class SoapLogoutRequestSender
 			else {
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "No signature verification required on LogoutResponse");
 			}
-			StatusCode statusCode = logoutResponse.getStatus().getStatusCode();
+			statusCode = logoutResponse.getStatus().getStatusCode();
 			if (!statusCode.getValue().equals(StatusCode.SUCCESS_URI)) {
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Backchannel logout NOT successful. Statuscode="
 						+ statusCode.getValue() + " from " + serviceProviderUrl);
@@ -204,5 +234,6 @@ public class SoapLogoutRequestSender
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Backchannel logout failed", e);
 			throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR, e);
 		}
+		return statusCode;
 	}
 }
