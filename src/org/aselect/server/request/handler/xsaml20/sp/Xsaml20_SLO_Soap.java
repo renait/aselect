@@ -13,6 +13,7 @@ package org.aselect.server.request.handler.xsaml20.sp;
 
 import java.io.StringReader;
 import java.security.PublicKey;
+import java.util.HashMap;
 import java.util.logging.Level;
 
 import javax.servlet.ServletConfig;
@@ -22,11 +23,14 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.aselect.server.request.RequestState;
+import org.aselect.server.request.handler.xsaml20.SoapLogoutRequestSender;
 import org.aselect.server.request.handler.xsaml20.SoapManager;
 import org.aselect.server.request.handler.xsaml20.Saml20_BaseHandler;
 import org.aselect.server.request.handler.xsaml20.SamlTools;
+import org.aselect.server.request.handler.xsaml20.idp.MetaDataManagerIdp;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectException;
+import org.aselect.system.exception.ASelectStorageException;
 import org.aselect.system.utils.Tools;
 import org.aselect.system.utils.Utils;
 import org.aselect.system.utils.crypto.Auxiliary;
@@ -34,6 +38,7 @@ import org.opensaml.common.xml.SAMLConstants;
 import org.opensaml.saml2.core.LogoutRequest;
 import org.opensaml.saml2.core.LogoutResponse;
 import org.opensaml.saml2.core.StatusCode;
+import org.opensaml.saml2.metadata.SingleLogoutService;
 import org.opensaml.ws.soap.soap11.Envelope;
 import org.opensaml.xml.io.Unmarshaller;
 import org.opensaml.xml.io.UnmarshallerFactory;
@@ -186,16 +191,41 @@ public class Xsaml20_SLO_Soap extends Saml20_BaseHandler
 			}
 
 			String sNameID = logoutRequest.getNameID().getValue();
-			int found = removeTgtByNameID(sNameID);
-			if (found == 0) {
+//			int found = removeTgtByNameID(sNameID);	// RH, 20161215, o
+			HashMap found = removeTgtByNameID(sNameID);	// RH, 20161215, n
+			
+//			if (found == 0) {// RH, 20161215, o
+			if (found == null) {// RH, 20161215, n
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "NO TGT FOUND");
 			}
 
+			// RH, 20161215, sn
+			// send logoutrequest to audience
+			String statusCode = StatusCode.SUCCESS_URI;	// assume success
+
+			if (audiencelogout_required && found != null && found.get("sp_audience") != null) {
+				// Send logout to audience as well
+				// Retrieve statuscode of logoutresponse from audience
+//				String reason = "urn:oasis:names:tc:SAML:2.0:logout:user";
+				String reason = "urn:oasis:names:tc:SAML:2.0:logout:admin";	// still to decide user or admin
+				String sp_audience = (String)found.get("sp_audience");
+				try {
+					_systemLogger.log(Level.INFO, MODULE, sMethod, "Logout to audience: " + sp_audience);
+					statusCode = sendLogoutRequestToSpAudience(sNameID, sp_audience, reason);
+				} catch (ASelectException e) {	// we don't want to interrupt the idp logout process
+					_systemLogger.log(Level.WARNING, MODULE, sMethod, "Logout to audience failed: " + e.getMessage());
+					statusCode = StatusCode.PARTIAL_LOGOUT_URI;
+				}
+			} else {
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "No logout to audience, no audience, not requested or tgt not found");
+			}
+			// RH, 20161215, en
+			
 			// Overwriting the client cookie will not work here since the backchannel is used
 
 			// Send a LogoutResponse using SOAP
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "Send Logout Response to: " + logoutRequestIssuer);
-			String statusCode = StatusCode.SUCCESS_URI;
+//			String statusCode = StatusCode.SUCCESS_URI;	// RH, 20161219, o
 			String myEntityId = _sServerUrl;
 			LogoutResponse logoutResponse = SamlTools.buildLogoutResponse(myEntityId, statusCode, logoutRequest.getID());
 
@@ -217,6 +247,7 @@ public class Xsaml20_SLO_Soap extends Saml20_BaseHandler
 			throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR);
 		}
 	}
+
 
 	/* (non-Javadoc)
 	 * @see org.aselect.server.request.handler.xsaml20.Saml20_BaseHandler#destroy()
