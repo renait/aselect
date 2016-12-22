@@ -254,6 +254,8 @@ public class ApplicationAPIHandler extends AbstractAPIRequestHandler
 	protected boolean bUpdateTokenIssueinstant = false;
 	protected Long updateTokenNotBefore = null;
 	protected Long updateTokenNotOnOrAfter = null;
+	protected boolean bUpgradeTGTWithTransient = false;
+	protected String upgradeTGTSharedSecret = null;
 	
 
 	/**
@@ -314,6 +316,21 @@ public class ApplicationAPIHandler extends AbstractAPIRequestHandler
 				if (sNotOnOrAfter != null) {
 					updateTokenNotOnOrAfter = new Long(Long.parseLong(sNotOnOrAfter) * 1000);
 				}
+			}
+		}
+		catch (ASelectConfigException e1) {
+			throw new ASelectCommunicationException(Errors.ERROR_ASELECT_CONFIG_ERROR, e1);
+		}
+		catch (ASelectException e) {
+			throw new ASelectCommunicationException(Errors.ERROR_ASELECT_CONFIG_ERROR, e);
+		}
+
+		try {
+			Object _oAselectSection = ASelectConfigManager.getSimpleSection(null, "aselect", false);
+			if (_oAselectSection != null) {
+				String _sUpgradeTGTWithTransient = ASelectConfigManager.getParamFromSection(_oAselectSection, "upgradetgt", "allow_transient", false);
+				bUpgradeTGTWithTransient = Boolean.parseBoolean(_sUpgradeTGTWithTransient);
+				upgradeTGTSharedSecret = ASelectConfigManager.getParamFromSection(_oAselectSection, "upgradetgt", "shared_secret", false);
 			}
 		}
 		catch (ASelectConfigException e1) {
@@ -627,16 +644,48 @@ public class ApplicationAPIHandler extends AbstractAPIRequestHandler
 		String sASelectServer = null;
 		String sLanguage = null;
 		String sClient_ip = null;
+		String sTgT = null;	// RH, 20161028, n;
+		String sUpgradeTGTSharedSecret = null;	// RH, 20161028, n;
+		
 
-		// Get mandatory parameters
-		try {
-			sEncTGT = oInputMessage.getParam("crypted_credentials");
-			sASelectServer = oInputMessage.getParam("a-select-server");
+		// RH, 20161028, en
+		///////////////////////////////////////////////////////////////
+		if (bUpgradeTGTWithTransient) {
+			try {
+				sTgT = oInputMessage.getParam("transient_id");
+				sASelectServer = oInputMessage.getParam("a-select-server");
+			}
+			catch (ASelectCommunicationException eAC) {
+				_systemLogger.log(Level.FINEST, _sModule, sMethod, "Missing parameter 'transient_id', continuing");
+			}
+//		} else {	// like we used to
 		}
-		catch (ASelectCommunicationException eAC) {
-			_systemLogger.log(Level.WARNING, _sModule, sMethod, "Missing required parameters");
-			throw new ASelectCommunicationException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
+		if (upgradeTGTSharedSecret != null) {
+			// Get mandatory parameters
+			try {
+				sUpgradeTGTSharedSecret = oInputMessage.getParam("shared_secret");
+			}
+			catch (ASelectCommunicationException eAC) {
+				_systemLogger.log(Level.WARNING, _sModule, sMethod, "Missing required parameter 'shared_secret'");
+				throw new ASelectCommunicationException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
+			}
+			if (! upgradeTGTSharedSecret.equals(sUpgradeTGTSharedSecret)) {
+				_systemLogger.log(Level.WARNING, _sModule, sMethod, "Required parameter 'shared_secret' not valid");
+				throw new ASelectCommunicationException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
+			}
 		}
+			// RH, 20161028, en
+		if (sTgT == null) {
+			// Get mandatory parameters
+			try {
+				sEncTGT = oInputMessage.getParam("crypted_credentials");
+				sASelectServer = oInputMessage.getParam("a-select-server");
+			}
+			catch (ASelectCommunicationException eAC) {
+				_systemLogger.log(Level.WARNING, _sModule, sMethod, "Missing required parameters");
+				throw new ASelectCommunicationException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
+			}
+		}	// RH, 20161028, n
 
 		try {
 			sClient_ip = oInputMessage.getParam("ip");
@@ -646,8 +695,13 @@ public class ApplicationAPIHandler extends AbstractAPIRequestHandler
 		}
 		_systemLogger.log(Level.FINER, _sModule, sMethod, "client_ip:" + sClient_ip);
 
-		
-		String sTgT = org.aselect.server.utils.Utils.decodeCredentials(sEncTGT, _systemLogger);
+		// RH, 20161028, sn
+		// Handle upgrade_tgt with encrypted tgt
+		if (sTgT == null) {
+			sTgT = org.aselect.server.utils.Utils.decodeCredentials(sEncTGT, _systemLogger);
+		} //. RH, 20161028, n
+		// RH, 20161028, en
+//		String sTgT = org.aselect.server.utils.Utils.decodeCredentials(sEncTGT, _systemLogger); //. RH, 20161028, o
 		if (sTgT == null) {
 //			_systemLogger.log(Level.INFO, MODULE, sMethod, "Can not decode credentials");
 			_systemLogger.log(Level.INFO, _sModule, sMethod, "Can not decode credentials");
