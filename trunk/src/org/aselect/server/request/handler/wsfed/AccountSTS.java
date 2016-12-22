@@ -633,7 +633,7 @@ public class AccountSTS extends ProtoRequestHandler
 				}
 				sReply = s.toString();
 			}
-			// RH, 20151026, sn
+			// RH, 20151026, en
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "Used " + sWtRealm
 					+ " to find return address, REDIRECT to SP=" + sReply);
 
