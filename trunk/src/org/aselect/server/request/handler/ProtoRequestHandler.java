@@ -81,6 +81,9 @@ public abstract class ProtoRequestHandler extends AbstractRequestHandler
 
 	protected Vector _vIdPUrls;
 	protected HashMap _htIdPs;
+	
+	protected boolean _bCheckClientIP = false;	// RH, 20161101, n
+	
 
 	// The local version of the session,
 	// it functions as a local cache. Updates are done in the local cache,
@@ -111,6 +114,11 @@ public abstract class ProtoRequestHandler extends AbstractRequestHandler
 			_sASelectServerID = ASelectConfigManager.getParamFromSection(null, "aselect", "server_id", true);
 			_sASelectOrganization = ASelectConfigManager.getParamFromSection(null, "aselect", "organization", true);
 			_sFriendlyName = ASelectConfigManager.getParamFromSection(null, "aselect", "organization_friendly_name", true);
+
+			// RH, 20161101, sn
+			String sCheckClientIP = ASelectConfigManager.getParamFromSection(null, "aselect", "check_client_ip", false); 
+			_bCheckClientIP = Boolean.parseBoolean(sCheckClientIP);
+			// RH, 20161101, en
 
 			// Initialize assertion building, if needed
 			if (useConfigToCreateSamlBuilder())
