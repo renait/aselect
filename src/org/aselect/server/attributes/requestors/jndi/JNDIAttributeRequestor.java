@@ -326,7 +326,16 @@ public class JNDIAttributeRequestor extends GenericAttributeRequestor
 				}
 			}
 			// check if at least one resource is configured
-			getConnection();
+//			getConnection();	// RH, 20161223, o
+			// RH, 20161223, sn
+			try {
+				getConnection();
+			} catch (ASelectSAMException se) {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not initialize the Ldap attributes requestor, continuing: " + se.getMessage());
+			} catch (ASelectUDBException ue) {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not initialize the Ldap attributes requestor, continuing: " + ue.getMessage() );
+			}
+			// RH, 20161223, en
 		}
 		catch (Exception e) {
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not initialize the Ldap attributes requestor", e);
