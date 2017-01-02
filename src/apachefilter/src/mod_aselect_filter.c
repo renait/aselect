@@ -724,6 +724,22 @@ static int aselect_filter_handler(request_rec *pRequest)
 
     // Serious action, so use a serious type :-)
     timer_data.td_type = 1;
+    
+    // RH, 20170102, sn
+    // implement request filter_alive here
+    pcRequest = aselect_filter_get_param(pPool, pRequest->args, "request", "&", TRUE);
+    if (pcRequest != NULL && strstr(pcRequest, "filter_alive") != 0) {
+            ap_log_error(APLOG_MARK, APLOG_INFO, 0, pRequest->server,
+                    /*ap_psprintf(pRequest->pool, */"SIAM:: Request filter_alive - %s", pRequest->uri);
+            TRACE1("\"%s\" requested filter_alive", pRequest->uri);
+            // return output
+            pRequest->content_type = "text/html; charset=utf-8";
+            ap_send_http_header(pRequest);
+            ap_rprintf(pRequest, "%s\n", "<html><body>Filter is ALIVE</body></html>");
+            iRet = DONE;
+            goto finish_filter_handler; // we're done
+    }
+    // RH, 20170102, en
 
     // 20091114, Bauke: report application language back to the Server
     // RM_12_01
