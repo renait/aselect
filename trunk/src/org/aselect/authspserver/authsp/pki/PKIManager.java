@@ -239,7 +239,8 @@ public class PKIManager
 			sCrlCheck = _oConfigManager.getParam(oCrlConfig, "enabled");
 		}
 		catch (ASelectConfigException e) {
-			_systemLogger.log(Level.SEVERE, MODULE, sMethod, "No config found for CA: " + sCaAlias, e);
+//			_systemLogger.log(Level.SEVERE, MODULE, sMethod, "No config found for CA: " + sCaAlias, e);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "No config found for CA: " + sCaAlias + ", " + e +":" + e.getMessage());
 			throw e;
 		}
 		if (!sCrlCheck.equalsIgnoreCase("false")) {
