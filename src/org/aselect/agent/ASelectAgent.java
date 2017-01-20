@@ -486,7 +486,7 @@ public class ASelectAgent
 			TicketManager.getHandle().stop();
 			SessionManager.getHandle().stop();
 			ConfigManager.timerSensorStopThread(_timerSensorThread);
-			
+			Auxiliary.teardown();	// RH, 20170120, n
 			_oASelectAgentSystemLogger.log(Level.INFO, MODULE, sMethod, "A-Select Agent stopped.");
 			_oASelectAgentSystemLogger.closeHandlers();
 		}
