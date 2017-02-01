@@ -705,7 +705,49 @@ public class CryptoEngine
 		}
 		return cipherText;
 	}
+
+	/**
+	 * RSA ecncrypt data forwith pubKey <br>
+	 * <br>
+	 * <b>Description:</b> <br>
+	 * This method RSA encrypts  a block of data using the (remote) authsp public key<br>
+	 * 
+	 * @param pubKey
+	 *            The public key to use for encryption
+	 *            keystore.
+	 * @param sData
+	 *            The data to be encrypted
+	 * @param sAlgorithm
+	 *            Which Algorithm to use, e.g. "RSA" or "RSA/ECB/PKCS1Padding"
+	 * @return <code>byte[]</code> if encryption was successful, <code>null</code> otherwise
+	 */
+	public synchronized byte[] RSAEncrypt(PublicKey oPublicKey, byte[] sData, String sAlgorithm)
+	{
+		String sMethod = "RSAEncrypt";
+		
+	    byte[] cipherText = null;
+		if (sAlgorithm == null) {	// defaults to RSA
+			sAlgorithm = "RSA";
+		}
+		try {
+			final Cipher cipher = Cipher.getInstance(sAlgorithm);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "==== ENCRYPT pubKey="+oPublicKey + ", alg=" +sAlgorithm + ", data="+"...");
 	
+				if (oPublicKey != null) {
+					// encrypt the plain text using the public key
+					cipher.init(Cipher.ENCRYPT_MODE, oPublicKey);
+					cipherText = cipher.doFinal(sData);
+				}
+				else {
+					_systemLogger.log(Level.WARNING, MODULE, sMethod, "Provided public key == null");
+				}
+		}
+		catch (Exception e) {
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "could not encrypt data with pubKey: " + oPublicKey, e);
+		}
+		return cipherText;
+	}
+
 	/**
 	 * Generate a 3DES (symmetric) encrypted string using (remote) public key <br>
 	 * <br>
