@@ -3,6 +3,7 @@ package org.aselect.server.utils;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.logging.Level;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 import java.util.regex.PatternSyntaxException;
 
@@ -43,7 +44,7 @@ public class AttributeSetter
 	public boolean isDestTgt() { return bDestTgt; }
 	public boolean isSrcTgt() { return bSrcTgt; }
 
-	public Pattern getMatchinePattern() { return pMatchingPattern; }
+	public Pattern getMatchingPattern() { return pMatchingPattern; }
 	public String getReplacementString() { return sReplacementString; }
 
 
@@ -222,8 +223,19 @@ public class AttributeSetter
 				}
 				
 				// RH, 20160229, sn
-				if (setter.getMatchinePattern() != null) {
-					sValue = setter.getMatchinePattern().matcher(sValue).replaceAll(setter.getReplacementString());
+				if (setter.getMatchingPattern() != null) {
+					sysLog.log(Level.FINEST, MODULE, sMethod, "Using Pattern="+setter.getMatchingPattern() +" with Replacement="+setter.getReplacementString());
+//					sValue = setter.getMatchinePattern().matcher(sValue).replaceAll(setter.getReplacementString());	// RH, 20170331, o
+					// RH, 20170331, sn
+					Matcher m = setter.getMatchingPattern().matcher(sValue);
+					if (m.matches()) {
+						sValue = m.replaceAll(setter.getReplacementString());
+					} else {
+						sysLog.log(Level.FINEST, MODULE, sMethod, "No match found, skipping");
+						continue;
+					}
+					// RH, 20170331, en
+					sysLog.log(Level.FINEST, MODULE, sMethod, "New value="+Auxiliary.obfuscate(sValue));
 				}
 				// RH, 20160229, en
 				
