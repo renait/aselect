@@ -365,6 +365,11 @@ public class Errors
 	public static final String ERROR_ASELECT_CONFIG_ERROR = "4011";
 
 	/**
+	 * Could not find the right config item failed.
+	 */
+	public static final String ERROR_ASELECT_GATHERER_PARAMETER = "4050";
+	
+	/**
 	 * Database initialisation failed
 	 */
 	public static final String ERROR_ASELECT_DATABASE_INIT = "5001";
