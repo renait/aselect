@@ -17,7 +17,6 @@
 package org.aselect.server.request;
 
 import java.io.IOException;
-
 import java.io.PrintWriter;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -267,11 +266,19 @@ public class RequestHandlerFactory
 		// 20100509, Bauke: added, show result page to the user, instead of a blank screen
 		catch (ASelectException e) {
 			_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Processing failed, ASelectException="+e);
+			// remove credential cookie //  RH, 20170307, sn
+			String cookiedomain = _configManager.getCookieDomain();
+			HandlerTools.delCookieValue(response, "aselect_credentials", cookiedomain,  null /* domain from_config */, _systemLogger);
+			// RH, 20170307, en
 			showErrorPage(request, response, e.getMessage()); //Errors.ERROR_ASELECT_INTERNAL_ERROR);
 			throw e;
 		}
 		catch (Exception e) {
 			_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Processing failed, Exception="+e);
+			// remove credential cookie //  RH, 20170307, sn
+			String cookiedomain = _configManager.getCookieDomain();
+			HandlerTools.delCookieValue(response, "aselect_credentials", cookiedomain,  null /* domain from_config */, _systemLogger);
+			// RH, 20170307, en
 			showErrorPage(request, response, Errors.ERROR_ASELECT_INTERNAL_ERROR);
 			throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR, e);
 		}
