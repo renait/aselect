@@ -407,7 +407,7 @@ public class PKI extends AbstractAuthSPProtocolHandler implements IAuthSPProtoco
 			sbTemp = new StringBuffer(sRid);
 			sbTemp.append(sAsUrl).append(sResultCode).append(sAsId);
 
-			_systemLogger.log(Level.INFO, "Coded sSubjectDN=" + sSubjectDN);
+//			_systemLogger.log(Level.INFO, "Coded sSubjectDN=" + sSubjectDN);	//	RH, 20170413, o
 			if (sSubjectDN != null)
 				sbTemp.append(sSubjectDN); // Bauke: added
 			if (sIssuerDN != null)
@@ -416,7 +416,7 @@ public class PKI extends AbstractAuthSPProtocolHandler implements IAuthSPProtoco
 				sbTemp.append(sSubjectId); // Bauke: added
 
 			boolean bVerifies = false;
-			_systemLogger.log(Level.INFO, "Verify[" + sbTemp + "]");
+			_systemLogger.log(Level.INFO, "Verify[" + Auxiliary.obfuscate(sbTemp.toString()) + "]");
 			bVerifies = CryptoEngine.getHandle().verifySignature(_sAuthsp, sbTemp.toString(), sSignature);
 			// bVerifies = CryptoEngine.getHandle().verifySignature(_sAuthsp,
 			// URLDecoder.decode(sbTemp.toString(), "UTF-8"), sSignature);
@@ -454,7 +454,7 @@ public class PKI extends AbstractAuthSPProtocolHandler implements IAuthSPProtoco
 				HashMap hmAttrs = new HashMap();
 				hmResponse.put("rid", sRid);
 				// Bauke: transfer additional attributes to caller
-				_systemLogger.log(Level.INFO, MODULE, sMethod, "to Response: sSubjectId=" + sSubjectId);
+				_systemLogger.log(Level.INFO, MODULE, sMethod, "to Response: sSubjectId=" + Auxiliary.obfuscate(sSubjectId));
 				hmResponse.put("authsp_type", "pki");				
 				if (sSubjectDN != null) {
 					hmResponse.put("pki_subject_dn", sSubjectDN); // Bauke: added
@@ -469,11 +469,11 @@ public class PKI extends AbstractAuthSPProtocolHandler implements IAuthSPProtoco
 					hmAttrs.put("pki_subject_id", sSubjectId); // Bauke: added
 					hmResponse.put("uid", sSubjectId);  // 20120615, Bauke: set default value for uid
 				}
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "hmAttrs="+hmAttrs);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "hmAttrs="+Auxiliary.obfuscate(hmAttrs));
 				
 				HashMap hmWork = new HashMap();
 				HashMap hmNewAttrs = AttributeSetter.attributeProcessing(hmWork/*is empty*/, hmAttrs, attributeSetters, _systemLogger);
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "hmNewAttrs="+hmNewAttrs);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "hmNewAttrs="+Auxiliary.obfuscate(hmNewAttrs));
 				hmResponse.putAll(hmNewAttrs);
 				
 				return hmResponse;
