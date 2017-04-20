@@ -105,5 +105,8 @@ public interface IClientCommunicator
 	public void setUser(String user);
 	public String getPw();
 	public void setPw(String pw);
-	
+
+	public String getBearerToken();
+	public void setBearerToken(String bearerToken);
+
 }

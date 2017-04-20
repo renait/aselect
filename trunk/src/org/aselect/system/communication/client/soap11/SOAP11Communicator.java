@@ -750,4 +750,16 @@ public class SOAP11Communicator implements IClientCommunicator
 		// Not implemented yet
 		
 	}
+	
+	public String getBearerToken()
+	{
+		// Not implemented yet
+		return null;
+	}
+
+	public void setBearerToken(String bearerToken)
+	{
+		// Not implemented yet
+	}
+
 }
