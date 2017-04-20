@@ -15,12 +15,15 @@ import java.io.PrintStream;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectCommunicationException;
 import org.aselect.system.logging.SystemLogger;
 import org.aselect.system.utils.Tools;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * The Class DataCommunicator contains communication utility methods.
@@ -45,6 +48,13 @@ public class DataCommunicator
 
 	RelayState=aWRwPWh0dHBzOi8vc2lhbVjdHNlcnZZXJ2ZXI%3D&SAMLRequest=data&language=nl
 */
+	
+	public static String dataComSend(SystemLogger systemLogger, String sMessage, String sUrl)
+	throws MalformedURLException, ASelectCommunicationException
+	{
+		return dataComSend(systemLogger, sMessage, sUrl, null);
+	}
+	
 	/**
 	 * Send data using a HTTP POST connection
 	 * <br>
@@ -62,7 +72,9 @@ public class DataCommunicator
 	 * @throws ASelectCommunicationException
 	 *             If communication with the server fails.
 	 */
-	public static String dataComSend(SystemLogger systemLogger, String sMessage, String sUrl)
+//	public static String dataComSend(SystemLogger systemLogger, String sMessage, String sUrl)
+//	throws MalformedURLException, ASelectCommunicationException
+	public static String dataComSend(SystemLogger systemLogger, String sMessage, String sUrl, Map<String, String> requestProprties)
 	throws MalformedURLException, ASelectCommunicationException
 	{
 		String sMethod = "dataComSend";
@@ -72,6 +84,7 @@ public class DataCommunicator
 		PrintStream osOutput = null;
 		URL url = new URL(sUrl);
 
+		systemLogger.log(Level.FINEST, MODULE, sMethod, "Sending message: "+Auxiliary.obfuscate(sMessage));
 		systemLogger.log(Level.INFO, MODULE, sMethod, "Send "+sMessage.length()+" bytes to: "+sUrl);
 		try {
 			// open HTTP connection to URL
@@ -80,8 +93,15 @@ public class DataCommunicator
 			connection.setDoOutput(true);
 
 			// set mime headers
-			connection.setRequestProperty("Content-Type", CONTENT_TYPE);
-			connection.setRequestProperty("Accept", CONTENT_TYPE);
+			if (requestProprties != null) {
+				Set<String> keySet = requestProprties.keySet();
+				for (String key : keySet) {
+					connection.setRequestProperty(key, requestProprties.get(key));
+				}
+			} else {	// backwards compatibility
+				connection.setRequestProperty("Content-Type", CONTENT_TYPE);
+				connection.setRequestProperty("Accept", CONTENT_TYPE);
+			}
 			// write message to output
 			osOutput = new PrintStream(connection.getOutputStream());
 			osOutput.println(sMessage);
