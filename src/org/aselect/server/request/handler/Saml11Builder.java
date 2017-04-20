@@ -332,17 +332,18 @@ public class Saml11Builder
 			Set keys = htAttributes.keySet();
 			for (Object s : keys) {
 				String sKey = (String) s;
-
-				// Enumeration enumAttributeNames = htAttributes.keys();
-				// while (enumAttributeNames.hasMoreElements())
-				// {
-				// String sKey = (String)enumAttributeNames.nextElement();
-				Object oValue = htAttributes.get(sKey);
-				oSAMLAttribute = createSAMLAttribute(sKey, oValue, _sAttributeNamespace);
-//				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Attr Key=" + sKey + ", oValue=" + oValue); // +", oSAMLAttribute="+oSAMLAttribute);
-				// RM_37_01
-				if (!sKey.equals("DiscoveryResourceOffering"))
-					vAttributes.add(oSAMLAttribute);
+				if (sKey != null && sKey.length() > 0) {	// RH, 20170316, n, cannot create empty attribute name
+					// Enumeration enumAttributeNames = htAttributes.keys();
+					// while (enumAttributeNames.hasMoreElements())
+					// {
+					// String sKey = (String)enumAttributeNames.nextElement();
+					Object oValue = htAttributes.get(sKey);
+					oSAMLAttribute = createSAMLAttribute(sKey, oValue, _sAttributeNamespace);
+	//				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Attr Key=" + sKey + ", oValue=" + oValue); // +", oSAMLAttribute="+oSAMLAttribute);
+					// RM_37_01
+					if (!sKey.equals("DiscoveryResourceOffering"))
+						vAttributes.add(oSAMLAttribute);
+				} 	// RH, 20170316, n
 			}
 			// Make ADFS happy?
 			oSAMLAttribute = createSAMLAttribute("Group", "ClaimAppMapping", "http://schemas.xmlsoap.org/claims");
@@ -467,7 +468,7 @@ public class Saml11Builder
 	private SAMLAttribute createSAMLAttribute(String sName, Object oValue, String sNameSpace)
 	throws ASelectException
 	{
-		String sMethod = "generateSAMLAttribute";
+		String sMethod = "createSAMLAttribute";
 		SAMLAttribute oSAMLAttribute = new SAMLAttribute();
 
 		try {
