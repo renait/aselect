@@ -18,6 +18,7 @@ import java.net.Authenticator;
 import java.net.MalformedURLException;
 import java.net.PasswordAuthentication;
 import java.net.URL;
+import java.net.URLConnection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -51,6 +52,10 @@ public class JSONCommunicator implements IClientCommunicator
 	private String user= null;
 	private String pw = null;
 
+	private String bearerToken = null;
+	
+	private String method = null;
+
 
 
 	/**
@@ -67,6 +72,12 @@ public class JSONCommunicator implements IClientCommunicator
 	 */
 	public JSONCommunicator(SystemLogger systemLogger) {
 		_systemLogger = systemLogger;
+	}
+
+	public JSONCommunicator(SystemLogger systemLogger, String method) {
+		_systemLogger = systemLogger;
+		this.method = method;
+		
 	}
 
 	/**
@@ -117,8 +128,15 @@ public class JSONCommunicator implements IClientCommunicator
 		
 		_systemLogger.log( Level.FINEST, MODULE, sMethod, "sending message():" + Auxiliary.obfuscate(sRequest.toString()) );
 		
+		String sResponse = null;
 		// Send request to server
-		String sResponse = sendRequestToAnotherServer(target, sRequest.toString());
+		if ("POST".equalsIgnoreCase(method)) {
+			_systemLogger.log( Level.FINEST, MODULE, sMethod, "Using: " +method );
+			sResponse = sendStringMessage(sRequest.toString(), target);	// does a POST
+		} else {	// like we used to
+			sResponse = sendRequestToAnotherServer(target, sRequest.toString());		 // does a GET
+		}
+//		String sResponse = sendRequestToAnotherServer(target, sRequest.toString());
 		_systemLogger.log( Level.FINEST, MODULE, sMethod, "received sResponse:" + Auxiliary.obfuscate(sResponse) );
 		// Convert response to HashMap
 		if (sResponse != null) {
@@ -154,7 +172,12 @@ public class JSONCommunicator implements IClientCommunicator
 
 		try {  // Send the message
 			if ( getUser() != null ) _systemLogger.log(Level.WARNING, MODULE, sMethod, "Authentication not implemented for DataCommunicator (yet)");
-			sResponse = DataCommunicator.dataComSend(_systemLogger, sMessage, sTarget);
+			HashMap<String,String> reqProps = new HashMap<String, String>();
+//			connection.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");
+//			connection.setRequestProperty("Accept", "*/*");
+			reqProps.put("Content-Type", "application/x-www-form-urlencoded");
+			reqProps.put("Accept", "*/*");
+			sResponse = DataCommunicator.dataComSend(_systemLogger, sMessage, sTarget, reqProps);
 		}
 		catch (java.net.MalformedURLException eMU) {
 			StringBuffer sbBuffer = new StringBuffer("Invalid URL: ");
@@ -223,9 +246,23 @@ public class JSONCommunicator implements IClientCommunicator
 				});
 			}
 			// RH, 20151001, en
+
+			// RH, 20170221, sn
+			if ( bearerToken != null ) {
+				_systemLogger.log(Level.INFO, MODULE, sMethod, "Using Bearer Token Authentication");
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Bearer Token =" + Auxiliary.obfuscate(bearerToken));
+				URLConnection connectionurl = new URL(sbBuffer.toString()).openConnection();
+				connectionurl.setRequestProperty("Authorization", "Bearer " + bearerToken);
+				connectionurl.setRequestProperty("Accept", "application/json");
+				
+				brInput = new BufferedReader(new InputStreamReader(connectionurl.getInputStream()), 16000);
+			} else {	// backwards compatibility
+				// RH, 20170221, en
+				urlSomeServer = new URL(sbBuffer.toString());
+				brInput = new BufferedReader(new InputStreamReader(urlSomeServer.openStream()), 16000);
+			}				// RH, 20170221, n
+
 			
-			urlSomeServer = new URL(sbBuffer.toString());
-			brInput = new BufferedReader(new InputStreamReader(urlSomeServer.openStream()), 16000);
 			String s = null;
 			while ( (s = brInput.readLine()) != null) {
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Input from the other server=" +Auxiliary.obfuscate(s));
@@ -283,6 +320,16 @@ public class JSONCommunicator implements IClientCommunicator
 	public void setPw(String pw)
 	{
 		this.pw = pw;
+	}
+
+	public String getBearerToken()
+	{
+		return bearerToken;
+	}
+
+	public void setBearerToken(String bearerToken)
+	{
+		this.bearerToken = bearerToken;
 	}
 
 	

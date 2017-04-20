@@ -135,6 +135,8 @@ public class RawCommunicator implements IClientCommunicator
 	private String user = null;
 	private String pw = null;
 
+	private String bearerToken;	// not implemented yet for RawCommunicator
+
 
 	/**
 	 * Creates a new <code>RawCommunicator</code>. <br>
@@ -488,4 +490,15 @@ public class RawCommunicator implements IClientCommunicator
 	{
 		this.pw = pw;
 	}
+	
+	public String getBearerToken()
+	{
+		return bearerToken;
+	}
+
+	public void setBearerToken(String bearerToken)
+	{
+		this.bearerToken = bearerToken;
+	}
+
 }
