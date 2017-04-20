@@ -309,7 +309,7 @@ public  final class Auxiliary
 		Map obfuscated = null;
 		if (original != null) {
 			if ("BLANK".equals(DIGEST_ALG)) {
-				obfuscated = new HashMap<>();	// return empty Map
+				obfuscated = new HashMap();	// return empty Map
 			} else 	if (!"NONE".equals(DIGEST_ALG)) {	// obfuscating is expensive, so be sure you have to.
 		//		Map obfuscated = new HashMap();
 		//		obfuscated.putAll(original);	// no deep clone
@@ -821,5 +821,118 @@ public  final class Auxiliary
 		}
 	}
 	*/
+	/*
+	public static void main(String[] args)	// for testing
+	{
+		String certificateAsString = "-----BEGIN CERTIFICATE-----\n" + 
+				"MIIHqDCCBZCgAwIBAgIUESCpFlJRCRjMUdKYM98EtPNxt8owDQYJKoZIhvcNAQEL\n" + 
+				"BQAwgYUxCzAJBgNVBAYTAk5MMR4wHAYDVQQKDBVRdW9WYWRpcyBUcnVzdGxpbmsg\n" + 
+				"QlYxKDAmBgNVBAsMH0lzc3VpbmcgQ2VydGlmaWNhdGlvbiBBdXRob3JpdHkxLDAq\n" + 
+				"BgNVBAMMI1F1b1ZhZGlzIENTUCAtIFBLSSBPdmVyaGVpZCBDQSAtIEcyMB4XDTE0\n" + 
+				"MTExODEwNDUzM1oXDTE1MTExODEwNDUzMlowgb8xHTAbBgNVBAUTFDAwMDAwMDAx\n" + 
+				"MDAzMTY2OTQ2MDAwMQswCQYDVQQGEwJOTDEVMBMGA1UECBMMWnVpZC1Ib2xsYW5k\n" + 
+				"MRYwFAYDVQQHEw0ncy1HcmF2ZW5oYWdlMSkwJwYDVQQKEyBNaW5pc3RlcmllIHZh\n" + 
+				"biBFY29ub21pc2NoZSBaYWtlbjEOMAwGA1UECxMFRGljdHUxJzAlBgNVBAMTHnd3\n" + 
+				"dy5taWpub25kZXJuZW1pbmdzZG9zc2llci5ubDCCASIwDQYJKoZIhvcNAQEBBQAD\n" + 
+				"ggEPADCCAQoCggEBANbeYKr6sVzE2PX0kD6mAK89WFTpyvYACUBo12BML/sciT0R\n" + 
+				"gxdEInIAAib3rtLRpfIKrCtgzh9u/SGjlOw95A2jEbIuvQgRJIDnTu4NMcENHlGb\n" + 
+				"Jkbo36TC+O3eVLbUUdR7HE2oLbFzkOBvG/3MuFQPC+h4H5e1tGMNCaP6R6fYwMcs\n" + 
+				"u1l0kSHR0MafZk3X8FUaaHyUyRavobpoSUHQUFPRkKlAXdqTycwVJxjb2harfMys\n" + 
+				"daO3Bqb40wNet9acyRQQPqg9PywZ0jRwj655QqPv1039jIF5Z4oBnfMTT2J/UteZ\n" + 
+				"snFYqybQo8uEilyGb30jImq9Qjck2vcDSxHupT0CAwEAAaOCAtIwggLOMAwGA1Ud\n" + 
+				"EwEB/wQCMAAwggExBgNVHSAEggEoMIIBJDCCASAGCmCEEAGHawECBQYwggEQMIHX\n" + 
+				"BggrBgEFBQcCAjCByhqBx1JlbGlhbmNlIG9uIHRoaXMgY2VydGlmaWNhdGUgYnkg\n" + 
+				"YW55IHBhcnR5IGFzc3VtZXMgYWNjZXB0YW5jZSBvZiB0aGUgcmVsZXZhbnQgUXVv\n" + 
+				"VmFkaXMgQ2VydGlmaWNhdGlvbiBQcmFjdGljZSBTdGF0ZW1lbnQgYW5kIG90aGVy\n" + 
+				"IGRvY3VtZW50cyBpbiB0aGUgUXVvVmFkaXMgcmVwb3NpdG9yeSAgKGh0dHA6Ly93\n" + 
+				"d3cucXVvdmFkaXNnbG9iYWwuY29tKS4wNAYIKwYBBQUHAgEWKGh0dHA6Ly93d3cu\n" + 
+				"cXVvdmFkaXNnbG9iYWwuY29tL3JlcG9zaXRvcnkwaQYDVR0RBGIwYKA+BgorBgEE\n" + 
+				"AYI3FAIDoDAMLjIuMTYuNTI4LjEuMTAwMy4xLjMuNS4yLjEtMDAwMDAwMDEwMDMx\n" + 
+				"NjY5NDYwMDCCHnd3dy5taWpub25kZXJuZW1pbmdzZG9zc2llci5ubDBzBggrBgEF\n" + 
+				"BQcBAQRnMGUwKgYIKwYBBQUHMAGGHmh0dHA6Ly9vY3NwLnF1b3ZhZGlzZ2xvYmFs\n" + 
+				"LmNvbTA3BggrBgEFBQcwAoYraHR0cDovL3RydXN0LnF1b3ZhZGlzZ2xvYmFsLmNv\n" + 
+				"bS9xdm9jYWcyLmNydDAOBgNVHQ8BAf8EBAMCA6gwHQYDVR0lBBYwFAYIKwYBBQUH\n" + 
+				"AwEGCCsGAQUFBwMCMB8GA1UdIwQYMBaAFGnLf1B2AIZTlXkSwVh2HxPv8k2jMDoG\n" + 
+				"A1UdHwQzMDEwL6AtoCuGKWh0dHA6Ly9jcmwucXVvdmFkaXNnbG9iYWwuY29tL3F2\n" + 
+				"b2NhZzIuY3JsMB0GA1UdDgQWBBQDk0P/als3z+/ta/HqxZqSMQv1GTANBgkqhkiG\n" + 
+				"9w0BAQsFAAOCAgEAP6D8v4Em6hLx3FXgd9DOm3ix+j5vMH8uN7E9M1mZoXBwOe3f\n" + 
+				"88Fs4OtdynnN642eqKMKLvJOtp8tUrH3L0z/ncJEHG49SGw201ZHoJNZY5umOzO1\n" + 
+				"1G0QyXC8aqgGbdAvzXe8OrEcOYZ8DSBI/qDegAM2z/byAIK4Nf2IJTRT9ADRMDkA\n" + 
+				"901MKQ3nr7fX4CplfYGbuRNgQm1w5gTepZg82m2mjaHnk3VoGPWWtHv3qW+A867D\n" + 
+				"gZkwk1d2yxS6kM44kmDyjhfS1PLWLNsF7Qs7KKGyRC518Tro+jjg+VTnZn7aGIP6\n" + 
+				"2VEVuHqKhmtCMGKfzz03Mly2FNoLjeaCtZHUu+GzvYRFL6RUB1hR9wuN42+OF1br\n" + 
+				"zM1oSa/rDNRgQgoxGOBa4v1Ahhkmqfc4ezVYGCmGSexgYc6dPuPNJiu7MeC130CV\n" + 
+				"GJYYUMQfnt7fnaxnbxlHDoEm0sceLD8727/Pmth9LdCuiaJ5Zq76h86TQ7rLw9gO\n" + 
+				"i0HI3B+WLS1mfibzalQBs8cKiqvZmuGr+QauL90kfJDIU7SjNucW6kDxwa6s2ot5\n" + 
+				"UaYL4u8Tg+w+mW96A8OOAVUiiKVOeLq0L6v8aIvjDwIFgb3CX1u4zlshqmR1W9kJ\n" + 
+				"utqihtsVcVwQKi03s+WoXX4FYJ0f+J8wroAh0PqzIue/90/iBG/zfe2qwRU=\n" + 
+				"-----END CERTIFICATE-----";
+		try {
+//			parseCertificate(certificateAsString);
+			 List<X509Certificate> l = parseCertificates(certificateAsString);
+			 for (X509Certificate c : l) {
+				 System.out.println(c.getSubjectDN().getName());
+			 }
+		}
+		catch (CertificateException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
 	
+	}
+	*/
+	
+	/*
+	public static void main(String[] args)	// for testing
+	{
+		HashMap outermap = new HashMap();
+		HashMap innermap = new HashMap();
+		
+		innermap.put("naam", "jan");
+		innermap.put("adres", "adresvanjan");
+		innermap.put("uid", "900123");
+		innermap.put("url", "https://www.ergens.nl");
+		innermap.put("uID", "900456");
+		innermap.put("BSN", "900456");
+
+		String[] sArray = { "Jantje", "09000293890", "Pietje"};
+		List l = Arrays.asList(sArray);
+		innermap.put("list", l);
+		
+		Vector v = new Vector();
+		v.add("Keesje");
+		v.add("Kareltje");
+		v.add("900029389");
+		innermap.put("vector", v);
+		
+		outermap.put("UID", "20151130134900");
+		outermap.put("content", innermap);
+		outermap.put("uID", innermap);
+
+		
+		System.out.println("innermap:" + innermap);
+
+		System.out.println("outermap:" + outermap);
+		
+		System.out.println("obfuscated outermap:" + obfuscate(outermap));
+		
+		System.out.println("original outermap after obfuscation:" + outermap);
+		
+		String originalString =  "Hello 900029389 world. Hello900029389world, 09000293890 >900029389< uid=900029389" +
+		"&ticket_exp_time=1449238721723&uid=900029389&organization=https%3A%2F%2F";
+		System.out.println("original string:" + originalString);
+		System.out.println("obfuscated string:" + obfuscate(originalString));
+
+//		String simpleString = "123456789 900029389 987654321 900029389987611111";
+		String simpleString = "123456789 900029389 987654321 90002938998761111 900029389";
+//		String simpleString = "123456789";
+		System.out.println("original simpleString:" + simpleString);
+		System.out.println("obfuscated simpleString:" + obfuscate(simpleString));
+	}
+	*/
+
 }
