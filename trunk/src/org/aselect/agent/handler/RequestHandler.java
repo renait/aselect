@@ -130,6 +130,7 @@ import java.util.Iterator;
 import java.util.TreeSet;
 import java.util.Vector;
 import java.util.logging.Level;
+import java.util.regex.Pattern;
 
 import org.aselect.agent.authorization.AuthorizationEngine;
 import org.aselect.agent.config.ASelectAgentConfigManager;
@@ -229,6 +230,12 @@ public class RequestHandler extends Thread
 
 	// Store timing data
 	private TimerSensor timerSensor;
+	
+	private static final String DEFAULT_LANGUAGE_PATTERN_STRING = "[\\w_]{0,5}";	// max five word characters + _
+	private static final String DEFAULT_COUNTRY_PATTERN_STRING = "[\\w_]{0,5}";	// max five word characters + _
+	
+	private static final Pattern DEFAULT_LANGUAGE_PATTERN = Pattern.compile(DEFAULT_LANGUAGE_PATTERN_STRING);
+	private static final Pattern DEFAULT_COUNTRY_PATTERN = Pattern.compile(DEFAULT_COUNTRY_PATTERN_STRING);
 
 	/**
 	 * Initializes instance variables. <br>
@@ -741,8 +748,13 @@ public class RequestHandler extends Thread
 			String sCountry = null;
 			try {
 				sCountry = oInputMessage.getParam("country");
-				if (sCountry.trim().length() > 0)
+				if (sCountry.trim().length() > 0 && DEFAULT_COUNTRY_PATTERN.matcher(sCountry).matches()) {
 					htRequest.put("country", sCountry);
+				} else {
+					_systemLogger.log(Level.WARNING, MODULE, sMethod, "invalid 'country' parameter");
+					_sErrorCode = Errors.ERROR_ASELECT_AGENT_INVALID_REQUEST;
+					return;
+				}
 			}
 			catch (ASelectCommunicationException e) {
 				sCountry = null;
@@ -751,8 +763,13 @@ public class RequestHandler extends Thread
 			String sLanguage = null;
 			try {
 				sLanguage = oInputMessage.getParam("language");
-				if (sLanguage.trim().length() > 0)
+				if (sLanguage.trim().length() > 0 && DEFAULT_LANGUAGE_PATTERN.matcher(sLanguage).matches()) {
 					htRequest.put("language", sLanguage);
+				} else {
+					_systemLogger.log(Level.WARNING, MODULE, sMethod, "invalid 'language' parameter");
+					_sErrorCode = Errors.ERROR_ASELECT_AGENT_INVALID_REQUEST;
+					
+				}
 			}
 			catch (ASelectCommunicationException e) {
 				sLanguage = null;
