@@ -234,10 +234,12 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 		boolean checkAssertionSigning = false;
 		Object samlResponseObject = null;
 		String auth_proof = null;
-		PrintWriter pwOut = null;
+//		PrintWriter pwOut = null;
 
 		try {
-			pwOut = Utils.prepareForHtmlOutput(servletRequest, servletResponse);
+			
+//			pwOut = Utils.prepareForHtmlOutput(servletRequest, servletResponse);
+			PrintWriter pwOut = Utils.prepareForHtmlOutput(servletRequest, servletResponse);
 
 			String sReceivedArtifact = servletRequest.getParameter("SAMLart");
 			String sReceivedResponse = servletRequest.getParameter("SAMLResponse");
@@ -940,6 +942,9 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 				_systemLogger.log(Level.WARNING, "Unexpected SAMLObject type: " + samlResponseObject.getClass());
 				throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR);
 			}
+			// all has been handled. We'll just flush data and let the container handle the close. Exceptions will close the stream themselves
+			if (pwOut != null)
+				pwOut.flush();
 		}
 		catch (ASelectException e) {
 			throw e;
@@ -949,8 +954,10 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 			throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR, e);
 		}
 		finally {
-			if (pwOut != null)
-				pwOut.close();
+			// This will close the output stream before exception handling has been able to send an error page
+			// we'll let the container close the stream
+//			if (pwOut != null)
+//				pwOut.close();
 			
 			// 20130821, Bauke: save friendly name after session is gone
 			if (_htSessionContext != null) {
