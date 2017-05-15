@@ -233,10 +233,18 @@ public class PKIManager
 		Object oCaConfig;
 		Object oCrlConfig;
 		String sCrlCheck;
+		String sCrlValidated = "true";
 		try {
 			oCaConfig = _oConfigManager.getSection(_oConfig, "ca", "alias=" + sCaAlias);
 			oCrlConfig = _oConfigManager.getSection(oCaConfig, "crl_check");
 			sCrlCheck = _oConfigManager.getParam(oCrlConfig, "enabled");
+			// RH, 20170512, sn
+			try {
+				sCrlValidated = _oConfigManager.getParam(oCrlConfig, "validated");
+			} catch (ASelectConfigException ece) {
+				// ignore for backwards compatibility
+			}
+			// RH, 20170512, en
 		}
 		catch (ASelectConfigException e) {
 //			_systemLogger.log(Level.SEVERE, MODULE, sMethod, "No config found for CA: " + sCaAlias, e);
@@ -261,7 +269,8 @@ public class PKIManager
 				String sUrl = (String) vCrlUrls.get(i);
 				X509CRL oTmpCrl = getCRL((sUrl));
 				if (oTmpCrl != null) {
-					if (validateCrl(oTmpCrl, oCaCert)) {
+					// For testing we'd like to have an option to not validate the crl	// RH, 20170512
+					if ("false".equalsIgnoreCase(sCrlValidated)  ||  validateCrl(oTmpCrl, oCaCert)) {	// RH, 20170512, n
 						oCrl = oTmpCrl;
 						bFoundCrl = true;
 					}
