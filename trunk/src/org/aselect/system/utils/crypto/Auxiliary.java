@@ -468,10 +468,6 @@ public  final class Auxiliary
 	}
 
 	
-	public static byte[] PBKDF2(char[] password,
-		    byte[] salt, int noIterations) throws NoSuchAlgorithmException, InvalidKeySpecException {
-		return PBKDF2(password, salt, noIterations, DEFAULT_PBKDF2_KEYLENGTH);
-	}
 
 	/**
 	 * 		Rfc2898DeriveBytes 
@@ -484,20 +480,33 @@ public  final class Auxiliary
 	 * @throws NoSuchAlgorithmException 
 	 * @throws InvalidKeySpecException 
 	 */
-	public static byte[] PBKDF2(char[] password,
+//	public static byte[] PBKDF2(char[] password,
+	public static SecretKey PBKDF2Key(char[] password,
 		    byte[] salt, int noIterations, int keyLength) throws NoSuchAlgorithmException, InvalidKeySpecException {
 		  String ALGORITHM = "PBKDF2WithHmacSHA1";
 //		  String ALGORITHM = "PBKDF2WithHmacSHA256";	// unfortunately we need java8 for this
 		  
-		  byte[] hash = null;
+//		  byte[] hash = null;
+		  SecretKey key = null;		
 		  
 	      PBEKeySpec spec = new PBEKeySpec(password, salt, noIterations, keyLength);
 	      SecretKeyFactory factory;
 	      factory = SecretKeyFactory.getInstance(ALGORITHM);
-	      hash =  factory.generateSecret(spec).getEncoded();
-	      return hash;
+//	      hash =  factory.generateSecret(spec).getEncoded();
+	      key =  factory.generateSecret(spec);
+	      return key;
 		}
 
+	public static byte[] PBKDF2(char[] password,
+		    byte[] salt, int noIterations) throws NoSuchAlgorithmException, InvalidKeySpecException {
+		return PBKDF2(password, salt, noIterations, DEFAULT_PBKDF2_KEYLENGTH);
+	}
+
+	public static byte[] PBKDF2(char[] password,
+		    byte[] salt, int noIterations, int keyLength) throws NoSuchAlgorithmException, InvalidKeySpecException {
+		return PBKDF2Key(password, salt, noIterations, keyLength).getEncoded();
+	}	
+	
 	
 	public static String certToString(X509Certificate cert) {
 	    StringWriter sw = new StringWriter();
@@ -597,6 +606,29 @@ public  final class Auxiliary
 		
 		return pubKeys;
 	}
+	
+	// Experimental
+	public static PublicKey parsePubKey(byte[] pubKeyBytes) throws  IOException{
+		
+		X509EncodedKeySpec mySidePubKeySpec = new X509EncodedKeySpec(pubKeyBytes);
+		 KeyFactory keyFactory = null;
+		 PublicKey mySidePubKey = null;
+		try {
+			keyFactory = KeyFactory.getInstance("RSA");
+			mySidePubKey = keyFactory.generatePublic(mySidePubKeySpec);
+		}
+		catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		catch (InvalidKeySpecException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
+		return mySidePubKey;
+	}
+
 	
 	
 	// no lambdas yet so use simple wrapper
@@ -758,10 +790,11 @@ public  final class Auxiliary
 
 	
 	public static final String AES_CIPHER_ALGORITHM = "AES";
-	public byte[] EncryptAESData(SecretKey key, byte[] data,  String cipherAlg) {
+	public static byte[] EncryptAESData(SecretKey key, byte[] data,  String cipherAlg) {
 		try {
 			// get an RSA cipher object and print the provider
-			Cipher cipher = Cipher.getInstance(AES_CIPHER_ALGORITHM);
+			if (cipherAlg == null)  cipherAlg = AES_CIPHER_ALGORITHM;
+			Cipher cipher = Cipher.getInstance(cipherAlg);
 			//mLog.wtf("RSA Cipher provider used is: ", cipher.getProvider().toString());
 			//encrypt the plain text using the key
 			cipher.init(Cipher.ENCRYPT_MODE, key);
@@ -780,10 +813,11 @@ public  final class Auxiliary
 		return null;
 	}
 
-	public byte[] DecryptAESData(SecretKey key, byte[] data) {
+	public static byte[] DecryptAESData(SecretKey key, byte[] data, String cipherAlg) {
 		try {
 			// get an RSA cipher object and print the provider
-			Cipher cipher = Cipher.getInstance(AES_CIPHER_ALGORITHM);
+			if (cipherAlg == null)  cipherAlg = AES_CIPHER_ALGORITHM;
+			Cipher cipher = Cipher.getInstance(cipherAlg);
 			//mLog.wtf("RSA Cipher provider used is: ", cipher.getProvider().toString());
 			//encrypt the plain text using the key
 			cipher.init(Cipher.DECRYPT_MODE, key);
