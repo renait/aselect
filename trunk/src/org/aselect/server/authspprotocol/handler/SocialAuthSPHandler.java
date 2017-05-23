@@ -26,6 +26,7 @@ import org.aselect.server.session.SessionManager;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectAuthSPException;
 import org.aselect.system.exception.ASelectConfigException;
+import org.aselect.system.utils.BASE64Decoder;
 import org.aselect.system.utils.Utils;
 import org.aselect.system.utils.crypto.Auxiliary;
 
@@ -238,6 +239,12 @@ public class SocialAuthSPHandler extends AbstractAuthSPProtocolHandler implement
 			String sResultCode = (String) htAuthspResponse.get("result_code");
 			String sAsServer = (String) htAuthspResponse.get("a-select-server");
 			String sUid = (String) htAuthspResponse.get("uid");
+
+			// RH, 20170413, sn
+			String providerId = (String) htAuthspResponse.get("providerid"); 
+			String validatedId = (String) htAuthspResponse.get("validatedid");
+			// RH, 20170413, en
+			
 			String sSignature = (String) htAuthspResponse.get("signature");
 
 			if ((sRid == null) || (sResultCode == null) || (sSignature == null) || (sAsServer == null)) {
@@ -258,12 +265,27 @@ public class SocialAuthSPHandler extends AbstractAuthSPProtocolHandler implement
 			if (sUid != null)
 				sbTemp.append(sUid);
 			
+			// RH, 20170413, sn
+			if (providerId != null)
+				sbTemp.append(providerId);
+			if (validatedId != null)
+				sbTemp.append(validatedId);
+			// RH, 20170413, en
+			
 			boolean bVerifies = CryptoEngine.getHandle().verifySignature(_sAuthsp, sbTemp.toString(), sSignature);
 			if (!bVerifies) {
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Invalid signature in response from AuthSP:" + _sAuthsp);
 				htResponse.put("result", Errors.ERROR_ASELECT_AUTHSP_INVALID_RESPONSE);
 				return htResponse;
 			}
+
+			// RH, 20170413, sn
+			BASE64Decoder base64Decoder = new BASE64Decoder();
+			if (providerId != null)
+				providerId = new String(base64Decoder.decodeBuffer(providerId));
+			if (validatedId != null)
+				validatedId = new String(base64Decoder.decodeBuffer(validatedId));
+			// RH, 20170413, en
 
 			// 20120403, Bauke: session is available as a parameter
 			String sOrg = (String) htSessionContext.get("organization");
@@ -275,6 +297,16 @@ public class SocialAuthSPHandler extends AbstractAuthSPProtocolHandler implement
 				});
 				htResponse.put("rid", sRid);
 				htResponse.put("uid", sUid);  // NOTE: this actually is the user's email address
+				
+				// RH, 20170413, sn
+				if (providerId != null) {
+					htResponse.put("authsp_providerid", providerId);
+				}
+				if (validatedId != null) {
+					htResponse.put("authsp_validatedid", validatedId);
+				}
+				// RH, 20170413, en
+				
 				htResponse.put("result",  Errors.ERROR_ASELECT_SUCCESS);				
 				return htResponse;
 			}
