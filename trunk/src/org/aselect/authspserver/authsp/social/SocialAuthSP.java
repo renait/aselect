@@ -24,6 +24,7 @@ import org.brickred.socialauth.Permission;
 import org.brickred.socialauth.Profile;
 import org.brickred.socialauth.SocialAuthConfig;
 import org.brickred.socialauth.SocialAuthManager;
+import org.brickred.socialauth.util.AccessGrant;
 import org.brickred.socialauth.util.SocialAuthUtil;
 
 /*
@@ -169,7 +170,9 @@ public class SocialAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 			String sSignature = (String)htServiceRequest.get("signature");
 			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Signature="+sSignature);
 			// Fields have been URL decoded
-			
+
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "social_login="+sSocialLogin);
+
 			StringBuffer sbTemp = new StringBuffer(sAsUrl).append(sRid).append(sAppId).append(sServerId).append(sSocialLogin);
 			if (sLanguage != null) sbTemp.append(sLanguage);
 			if (sCountry != null) sbTemp.append(sCountry);
@@ -189,10 +192,10 @@ public class SocialAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 			//Create an instance of SocialAuthConfig object
 			SocialAuthConfig config = SocialAuthConfig.getDefault();
 	
-			_systemLogger.log(Level.FINE, MODULE, sMethod, "config="+config);
 			// Load configuration. By default load the configuration from oauth_consumer.properties. 
 			// You can also pass input stream, properties object or properties file name.
 			config.load();
+//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "config getApplicationProperties="+config.getApplicationProperties());
 	
 			// Create an instance of SocialAuthManager and set config
 			SocialAuthManager socialAuthspManager = new SocialAuthManager();
@@ -226,13 +229,29 @@ public class SocialAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 			
 			// GooglePlus must be tricked
 			BASE64Encoder base64Enc = new BASE64Encoder();
-			String sReturnUrl = sMyUrl + ("googleplus".equals(sSocialLogin)? "?state=googleplus_": "?state=") + base64Enc.encode(sData.getBytes("UTF-8"));
+			String sReturnUrl = null;
+//			if ( "azure".equals(sSocialLogin) ) {
+			if ( sSocialLogin.toLowerCase().startsWith("azure") ) {
+				sReturnUrl = sMyUrl ;
+			} else {
+				sReturnUrl = sMyUrl + ("googleplus".equals(sSocialLogin)? "?state=googleplus_": "?state=") + base64Enc.encode(sData.getBytes("UTF-8"));
+			}
+//			String sReturnUrl = sMyUrl + ("googleplus".equals(sSocialLogin)? "?state=googleplus_": "?state=") + base64Enc.encode(sData.getBytes("UTF-8"));
 			_systemLogger.log(Level.FINEST, MODULE, sMethod, "sReturnUrl="+sReturnUrl);
 
 			//String sUrl = socialAuthspManager.getAuthenticationUrl(sSocialLogin, sReturnUrl, Permission.AUTHENTICATE_ONLY); 
 			String sUrl = socialAuthspManager.getAuthenticationUrl(sSocialLogin, sReturnUrl, Permission.AUTHENTICATE_ONLY);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "getAuthenticationUrl="+sUrl);
 			// The complete value of sUrl is URL encoded now
 			// Store in session
+			String nonce = newToken();
+//			if ( "azure".equals(sSocialLogin) ) {
+			if ( sSocialLogin.toLowerCase().startsWith("azure") ) {
+				sUrl += "&state=" + URLEncoder.encode( base64Enc.encode(sData.getBytes("UTF-8")), "UTF-8");
+//				sUrl = sUrl.replace("response_type=code", "response_type=code+id_token&scope=openid&response_mode=query&nonce=12345");
+				sUrl += "&scope=openid%20offline_access&response_mode=query&nonce=" + nonce;
+			}
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "authenticationUrl after manipulation="+sUrl);
 			String sFabricatedRid = sRid + RID_POSTFIX;
 			try {
 				htSessionContext = _sessionManager.getSessionContext(sFabricatedRid);
@@ -248,6 +267,8 @@ public class SocialAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 			htSessionContext.put("social_authsp_manager", socialAuthspManager);
 			//_socialAuthManager = socialAuthspManager;
 			htSessionContext.put("social_login", sSocialLogin);
+			htSessionContext.put("nonce", nonce);
+			
 			Utils.copyHashmapValue("language", htSessionContext, htServiceRequest);
 			Utils.copyHashmapValue("country", htSessionContext, htServiceRequest);
 			Utils.copyHashmapValue("as_url", htSessionContext, htServiceRequest);
@@ -362,33 +383,50 @@ public class SocialAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 			Map<String, String> paramsMap = SocialAuthUtil.getRequestParametersMap(servletRequest); 
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "connect");
 			AuthProvider provider = socialAuthManager.connect(paramsMap);
-			
+
 			// Get the user profile
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "getUserProfile");
 			Profile p = provider.getUserProfile();
-			
+
 			// You can obtain profile information
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "Result: First="+Auxiliary.obfuscate(p.getFirstName())+" Last="+Auxiliary.obfuscate(p.getLastName())+
 					" Display="+Auxiliary.obfuscate(p.getDisplayName())+" Email="+Auxiliary.obfuscate(p.getEmail())+" ValidId="+Auxiliary.obfuscate(p.getValidatedId())+
 					" ProviderId="+Auxiliary.obfuscate(p.getProviderId()));
-			
+
+			String sSocialLogin = (String)htSessionContext.get("social_login");
+//			if ("azure".equalsIgnoreCase(sSocialLogin)) {
+			if ("azure".equalsIgnoreCase(sSocialLogin)) {
+				// verify the nonce
+				String orig_nonce = (String)htSessionContext.get("nonce");
+				AccessGrant grant = provider.getAccessGrant();
+				String nonce = (String)grant.getAttribute("nonce");
+				if (!orig_nonce.equals(nonce)) {
+					_systemLogger.log(Level.WARNING, MODULE, sMethod, "Nonces not equal, id_token may be tempered with!");
+					throw new ASelectException(Errors.ERROR_SOCIAL_COULD_NOT_AUTHENTICATE_USER);
+				}
+			}
 			// We're using the email address as 'uid'
 			sUid = p.getEmail();
 			if (!Utils.hasValue(sUid)) {
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "No email address returned");
 				throw new ASelectException(Errors.ERROR_SOCIAL_COULD_NOT_AUTHENTICATE_USER);
 			}
+
 			
-			// OR also obtain list of contacts
-			// List<Contact> contactsList = provider.getContactList();
-			// _systemLogger.log(Level.INFO, MODULE, sMethod, "Contacts="+contactsList);
-			provider.getAccessGrant();
-			
-			String sSocialLogin = "google"; //= (String)htSessionContext.get("social_login");
+//			if (!"azure".equalsIgnoreCase(sSocialLogin)) {	// backwards compatibility
+			if ("azure".equalsIgnoreCase(sSocialLogin)) {
+				sSocialLogin = "google"; //= (String)htSessionContext.get("social_login");
+			}
+//			String sSocialLogin = "google"; //= (String)htSessionContext.get("social_login");
 			_authenticationLogger.log(new Object[] {
 				MODULE, Auxiliary.obfuscate(sUid), servletRequest.getRemoteAddr(), Auxiliary.obfuscate(p.getEmail()), "granted,"+sSocialLogin
 			});
-			handleResult(htSessionContext, servletResponse, pwOut, Errors.ERROR_SOCIAL_SUCCESS, sLanguage, sUid);
+			
+			// We'd like to give some more info back to the server.
+			// The only more or less stable populated elements seem to be getEmail(), getValidatedId() and getProviderId()
+			// Latest of which might be important to the server
+//			handleResult(htSessionContext, servletResponse, pwOut, Errors.ERROR_SOCIAL_SUCCESS, sLanguage, sUid);	// RH, 20170413, o
+			handleResult(htSessionContext, servletResponse, pwOut, Errors.ERROR_SOCIAL_SUCCESS, sLanguage, sUid, p.getProviderId(), p.getValidatedId());	// RH, 20170413, n
 		}
 		catch (ASelectException eAS) {
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Sending error to client "+eAS.getMessage());
@@ -443,6 +481,12 @@ public class SocialAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 		return false;
 	}
 	
+	private void handleResult(HashMap<String, Object> htSessionContext, HttpServletResponse servletResponse,
+			PrintWriter pwOut, String sResultCode, String sLanguage, String sUid)
+	{
+		handleResult(htSessionContext, servletResponse, pwOut,  sResultCode,  sLanguage, sUid, null, null);
+	}	
+	
 	/**
 	 * Handle result.
 	 * 
@@ -457,8 +501,10 @@ public class SocialAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 	 * @param sResultCode
 	 *            the uid retrieved user identity
 	 */
+//	private void handleResult(HashMap<String, Object> htSessionContext, HttpServletResponse servletResponse,
+//			PrintWriter pwOut, String sResultCode, String sLanguage, String sUid)
 	private void handleResult(HashMap<String, Object> htSessionContext, HttpServletResponse servletResponse,
-			PrintWriter pwOut, String sResultCode, String sLanguage, String sUid)
+					PrintWriter pwOut, String sResultCode, String sLanguage, String sUid, String providerId, String validatedId)
 	{
 		String sMethod = "handleResult";
 		StringBuffer sbTemp = null;
@@ -478,6 +524,19 @@ public class SocialAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 					if (sUid != null) {
 						sbTemp.append(sUid);
 					}
+
+					// RH, 20170413, sn
+					BASE64Encoder base64Encoder = new BASE64Encoder();
+					if (providerId != null) {
+						providerId = base64Encoder.encode(providerId.getBytes("UTF-8"));
+						sbTemp.append(providerId);
+					}
+					if (validatedId != null) {
+						validatedId = base64Encoder.encode(validatedId.getBytes("UTF-8"));
+						sbTemp.append(validatedId);
+					}
+					// RH, 20170413, en
+					
 					String sSignature = _cryptoEngine.generateSignature(sbTemp.toString());
 					sbTemp = new StringBuffer(sAsUrl);  // do not encode the URL please
 					sbTemp.append("&rid=").append(sRid);
@@ -486,6 +545,14 @@ public class SocialAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 					if (sUid != null) {
 						sbTemp.append("&uid=").append(URLEncoder.encode(sUid, "UTF-8"));
 					}
+					
+					// RH, 20170413, sn
+					if (providerId != null)
+						sbTemp.append("&providerid=").append(providerId);
+					if (validatedId != null)
+						sbTemp.append("&validatedid=").append(validatedId); // Bauke: added
+					// RH, 20170413, en
+
 					sbTemp.append("&signature=").append(URLEncoder.encode(sSignature, "UTF-8"));
 
 //					_systemLogger.log(Level.FINEST, MODULE, sMethod, "REDIRECT TO: "+sbTemp.toString());
