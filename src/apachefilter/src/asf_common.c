@@ -72,6 +72,31 @@
 //       
 static char *LogfileName = ASELECT_FILTER_TRACE_FILE;
 
+static void aselect_filter_removeUnwantedCharacters2(char *args)
+{
+    int stop, len;
+    char *p, *q;
+
+    for (stop=0 ; !stop; ) {
+		len = strlen(args);
+		aselect_filter_url_decode(args);
+		TRACE1("Loop: %s", (args)? args: "NULL");
+		if (len == strlen(args)) {
+			for (p = q = args; *q; ) {
+				// 20100521, Bauke: " added to the list below
+				if (*q == '\r' || *q == '\n' || *q == '>' || *q == '<' || *q == '"')
+					q++;
+				else
+					*p++ = *q++;
+			}
+			*p++ = '\0';
+			stop = 1;
+		}
+    }
+}
+
+
+
 void aselect_filter_trace_logfilename(char *filename)
 {
     if (filename)
@@ -759,6 +784,8 @@ int aselect_filter_gen_authcomplete_redirect(pool * pPool, request_rec *pRequest
     }
 
     //if (!bFrameHtml) {
+    TRACE("aselect_filter_removeUnwantedCharacters2");
+    aselect_filter_removeUnwantedCharacters2(pcRedirectURL);
     TRACE1("aselect_filter_gen_authcomplete_redirect:: redirecting to: %s", pcRedirectURL);
     ap_rprintf(pRequest, ASELECT_FILTER_CLIENT_REDIRECT, pcRedirectURL, pcRedirectURL);
     //}
@@ -1274,3 +1301,4 @@ char *timer_pack(pool *pPool, TIMER_DATA *pTimer, char *senderId, char *sAppId, 
 		    getpid()/*thread*/, buf1, buf2, buf3, ok? "true": "false");
     return result;
 }
+
