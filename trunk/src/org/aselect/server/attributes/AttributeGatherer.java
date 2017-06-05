@@ -120,6 +120,8 @@ import java.util.StringTokenizer;
 import java.util.TreeSet;
 import java.util.Vector;
 import java.util.logging.Level;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import org.aselect.server.application.ApplicationManager;
 import org.aselect.server.attributes.requestors.IAttributeRequestor;
@@ -177,6 +179,11 @@ public class AttributeGatherer
 	private HashMap _htReleasePolicies;
 
 	/**
+	 * Contains the set of mandatory attributes to comply to a given regex
+	 */
+	private HashMap<String, HashMap<String, Pattern>> _htManAttributes;
+
+	/**
 	 * Contains the set of release policies that merges attributes if they already exist
 	 */
 	private HashMap _htDuplicatePolicies;
@@ -184,6 +191,12 @@ public class AttributeGatherer
 	/**
 	 * Use Vector for determining order of policies
 	 */
+
+	/**
+	 * Contains the set of policies that determine whether to skip the requestor
+	 */
+	private HashMap<String, HashMap<String, HashMap<String, Pattern>>> _htSkippPolicies;
+	
 
 	private Vector _vReleasePolicies;
 
@@ -257,7 +270,9 @@ public class AttributeGatherer
 
 		_configManager = ASelectConfigManager.getHandle();
 		_systemLogger = ASelectSystemLogger.getHandle();
-		
+
+		_htSkippPolicies = null;
+
 		try {
 			try {
 				oAttributeGatheringConfig = _configManager.getSection(null, "attribute_gathering");
@@ -272,7 +287,7 @@ public class AttributeGatherer
 				try {
 					_iGathererVersion = Integer.valueOf(sVersion);
 				} catch(Exception e) { }
-				
+
 				oRequestorsSection = _configManager.getSection(oAttributeGatheringConfig, sConfigItem = "attribute_requestors");
 				_htRequestors = new HashMap();
 				Object oRequestorConfig = null;
@@ -338,6 +353,10 @@ public class AttributeGatherer
 
 				Object oReleasePolicyConfig = null;
 				_htReleasePolicies = new HashMap();
+
+				_htManAttributes = new HashMap();
+				_htSkippPolicies = new HashMap();
+
 				_vReleasePolicies = new Vector();
 				try {
 					oReleasePolicyConfig = _configManager.getSection(oReleasePoliciesSection, "release_policy");
@@ -371,6 +390,71 @@ public class AttributeGatherer
 						}
 					}
 					_htReleasePolicies.put(sID, htAttributes);
+					
+					
+					try {
+						Object oManAttribute = _configManager.getSection(oReleasePolicyConfig, sConfigItem = "mandatory_attribute");
+						HashMap<String, Pattern> htManAttributes = new HashMap<String, Pattern>();
+						while (oManAttribute != null) {
+							String sAttribute = _configManager.getParam(oManAttribute, sConfigItem = "id");
+							String sRegex = _configManager.getParam(oManAttribute, sConfigItem = "regex");
+
+							try {
+								Pattern pattern = Pattern.compile(sRegex);
+								htManAttributes.put(sAttribute, pattern);
+								_systemLogger.log(Level.INFO, _MODULE, sMethod, "mandatory_attribute found with regexpattern: " + sAttribute + " / " + pattern);
+							} catch (PatternSyntaxException pse) {
+								_systemLogger.log(Level.SEVERE, _MODULE, sMethod, 
+										"Error compiling regex:"  + sRegex + " for attribute with name: " + sAttribute);
+								throw new ASelectConfigException("Error compiling regex", pse);
+							}
+							try {
+								oManAttribute = _configManager.getNextSection(oManAttribute);
+							}
+							catch (ASelectConfigException e) {
+							}
+						}
+						_htManAttributes.put(sID, htManAttributes);
+					} catch (ASelectConfigException ece) {
+						_systemLogger.log(Level.FINER, _MODULE, sMethod, "No section mandatory_attribute found in: " + sID);
+					}
+
+					// reading skip policies
+					try {
+						Object oSkipPolicy = _configManager.getSection(oReleasePolicyConfig, sConfigItem = "skip_policy");
+						HashMap<String, HashMap<String, Pattern>> htSkip = new HashMap<String, HashMap<String, Pattern>>();
+						HashMap<String, Pattern> htPolicyPattern = null;
+						while (oSkipPolicy != null) {
+							String sAttribute = _configManager.getParam(oSkipPolicy, sConfigItem = "tgt_src");
+							String sRegex = _configManager.getParam(oSkipPolicy, sConfigItem = "value");	// should be valid  regex
+							String sReq = _configManager.getParam(oSkipPolicy, sConfigItem = "requestor");
+							if ( (htPolicyPattern = htSkip.get(sReq)) == null) {
+								htPolicyPattern = new HashMap<String, Pattern>();
+							}
+							try {
+								Pattern pattern = Pattern.compile(sRegex);
+								htPolicyPattern.put(sAttribute, pattern);
+								_systemLogger.log(Level.FINER, _MODULE, sMethod, "skip policy tgt_src found for requestor with regexpattern: " + sAttribute + " / " + sReq + " / "+ pattern);
+								htSkip.put(sReq, htPolicyPattern);
+							} catch (PatternSyntaxException pse) {
+								_systemLogger.log(Level.SEVERE, _MODULE, sMethod, 
+										"Error compiling regex:"  + sRegex + " for attribute with name: " + sAttribute);
+								throw new ASelectConfigException("Error compiling regex", pse);
+							}
+							try {
+								oSkipPolicy = _configManager.getNextSection(oSkipPolicy);
+							}
+							catch (ASelectConfigException e) {
+							}
+						}
+						_htSkippPolicies.put(sID, htSkip);
+						_systemLogger.log(Level.INFO, _MODULE, sMethod, "skip policies after scaning releasepolicy: " + sID + " / " + _htSkippPolicies);
+					} catch (ASelectConfigException ece) {
+						_systemLogger.log(Level.FINER, _MODULE, sMethod, "No section skip_policy found in: " + sID);
+					}
+					
+
+					
 					_vReleasePolicies.add(sID);
 
 					try {
@@ -557,6 +641,42 @@ public class AttributeGatherer
 				//for (Object s : keys) {
 				for (Object s : (_iGathererVersion>=2)?_sortedRequestors: keys) {
 					String sRequestorID = (_iGathererVersion>=2)? ((String)s).substring(4): (String)s;
+
+					boolean skipRequestor = false;
+					if (_htSkippPolicies != null) {
+						_systemLogger.log(Level.FINEST, _MODULE, sMethod, "GATHER using _htSkippPolicies= "+_htSkippPolicies);
+						HashMap<String, HashMap<String, Pattern>> htSkip = _htSkippPolicies.get(sReleasePolicy);
+						_systemLogger.log(Level.FINEST, _MODULE, sMethod, "GATHER using htSkip= "+htSkip);
+						if (htSkip != null) {
+							HashMap<String, Pattern> htPolicyPattern = htSkip.get(sRequestorID);
+							_systemLogger.log(Level.FINEST, _MODULE, sMethod, "GATHER using htPolicyPattern="+htPolicyPattern);
+							if (htPolicyPattern != null) {
+								Set<String> patternKeys = htPolicyPattern.keySet();
+								_systemLogger.log(Level.FINEST, _MODULE, sMethod, "GATHER using patternKeys="+patternKeys);
+								for (String patternKey : patternKeys) {
+									String value = (String) htTGTContext.get(patternKey);	// must return string, other attributes not supported yet
+									_systemLogger.log(Level.FINEST, _MODULE, sMethod, "GATHER found value in tgt="+value);
+									if (value != null ) {
+										if ( htPolicyPattern.get(patternKey).matcher(value).matches() ) {	// we need to skip this requestor
+											_systemLogger.log(Level.FINER, _MODULE, sMethod, "GATHER found skip condition: "+patternKey + " = " + value + ", skipping requestor: " + sRequestorID);
+											skipRequestor = true;
+											break;
+										} else {
+											_systemLogger.log(Level.FINER, _MODULE, sMethod, "GATHER pattern did not match value, try possible next");
+										}
+									} else {
+										_systemLogger.log(Level.FINEST, _MODULE, sMethod, "GATHER did not find value in tgt="+value);
+									}
+								}
+							} else {
+							}
+						} else {
+						}
+					} else {
+						_systemLogger.log(Level.FINEST, _MODULE, sMethod, "no skip policies found, continuing");
+					}
+					if 	(skipRequestor) continue;	// skip this requesor
+					
 					Vector vAttributes = (Vector) htReleasePolicy.get(sRequestorID);
 					_systemLogger.log(Level.FINEST, _MODULE, sMethod, "GATHER << Requestor=" + sRequestorID+" release="+vAttributes);
 					//	RH, 20161010, sn
@@ -717,6 +837,21 @@ public class AttributeGatherer
 		}
 
 		_systemLogger.log(Level.FINEST, _MODULE, sMethod, "GATHER END htAttributes=" + Auxiliary.obfuscate(htAttributes));
+
+		HashMap<String, Pattern> manAttrributes = _htManAttributes.get(sReleasePolicy);
+		if ( manAttrributes != null ) {
+			for (String key : manAttrributes.keySet()) {
+				if ( htAttributes.get(key) != null && manAttrributes.get(key).matcher((String)htAttributes.get(key)).matches() ) {
+					_systemLogger.log(Level.INFO, _MODULE, sMethod, "Gatherer matches mandatory parameter: " + key);
+				} else {
+					_systemLogger.log(Level.WARNING, _MODULE, sMethod, Errors.ERROR_ASELECT_GATHERER_PARAMETER + ": Gatherer failed to match required parameter: " + key);
+					htTGTContext.put("result_code", Errors.ERROR_ASELECT_GATHERER_PARAMETER);
+					throw new ASelectException(Errors.ERROR_ASELECT_GATHERER_PARAMETER);
+				}
+			}
+		} else {
+			_systemLogger.log(Level.FINEST, _MODULE, sMethod, "Releasepolicy has no mandatory attributes: " + sReleasePolicy);
+		}
 		return htAttributes;
 	}
 
@@ -735,8 +870,6 @@ public class AttributeGatherer
 		String sToken;
 		int idx;
 		if (sSubjectDN != null) {
-			// Subject: C=NL, O=Test-academisch ziekenhuis, CN=Agnes.
-			// Testzorgverlener-14, SERIALNUMBER=000001788, T=Cardioloog
 			htAttributes.put("pki_subject_dn", sSubjectDN);
 			StringTokenizer st = new StringTokenizer(sSubjectDN, ",");
 			_systemLogger.log(Level.INFO, _MODULE, sMethod, "Tokens=" + st.countTokens() + " sSubjectDN=" + Auxiliary.obfuscate(sSubjectDN));
