@@ -45,8 +45,10 @@ public class JSONAPIAttributeRequestor extends APIAttributeRequestor {
 
 			// Get communicator
 			String sProtocol = null;
+			String method = null;
 			try {
 				sProtocol = _configManager.getParam(oMainConfiguration, "transferprotocol");
+				method = _configManager.getSimpleParam(oMainConfiguration, "method", false);
 			}
 			catch (ASelectConfigException eAC) {
 				_systemLogger.log(Level.CONFIG, MODULE, sMethod,
@@ -59,7 +61,12 @@ public class JSONAPIAttributeRequestor extends APIAttributeRequestor {
 			_systemLogger.log(Level.FINEST, MODULE, sMethod, "communicator="+sProtocol);
 			if (sProtocol.equalsIgnoreCase("json")) {
 //				retrieveSOAPMethodFromConfig(oMainConfiguration);	// Maybe provide for POST here
-				_communicator = new JSONCommunicator(_systemLogger);
+				if (method != null) {
+					_communicator = new JSONCommunicator(_systemLogger, method);
+				} else {
+					_communicator = new JSONCommunicator(_systemLogger);
+				}
+//				_communicator = new JSONCommunicator(_systemLogger);
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "communicator= 'json' loaded");
 			} else {
 				// raw communication is specified or something unreadable
@@ -68,12 +75,15 @@ public class JSONAPIAttributeRequestor extends APIAttributeRequestor {
 			}
 
 			try {
-				jsonkey = ASelectConfigManager.getParamFromSection(oConfig, "attribute_mapping", "id", true);
+//				jsonkey = ASelectConfigManager.getParamFromSection(oConfig, "attribute_mapping", "id", true);
+				jsonkey = ASelectConfigManager.getParamFromSection(oConfig, "attribute_mapping", "id", false);
 			}			
 			catch (ASelectConfigException eAC) {	// maybe provide some default here
-				_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Could not retrieve 'id' in attribute_mapping section",
+//				_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Could not retrieve 'id' in attribute_mapping section",
+//						eAC);
+//				throw new ASelectAttributesException(Errors.ERROR_ASELECT_INIT_ERROR, eAC);
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not retrieve 'id' in attribute_mapping section, no mapping will be done",
 						eAC);
-				throw new ASelectAttributesException(Errors.ERROR_ASELECT_INIT_ERROR, eAC);
 			}
 
 		}
@@ -154,10 +164,13 @@ public class JSONAPIAttributeRequestor extends APIAttributeRequestor {
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "json requestpairs:" + htRequestpairs);
 
 				HashMap jsonrequest = new HashMap();
-				jsonrequest.put(jsonkey, htRequestpairs);
+//				jsonrequest.put(jsonkey, htRequestpairs);
 //				// set Configuration parameters
 				htRequest.putAll(_htConfigParameters);
-				htRequest.put(_sAttributesName, jsonrequest);
+				if (jsonkey != null) {
+					jsonrequest.put(jsonkey, htRequestpairs);
+					htRequest.put(_sAttributesName, jsonrequest);
+				}
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "request:" + htRequest);
 				
 				// do Authentication if needed

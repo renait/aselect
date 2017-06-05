@@ -28,11 +28,13 @@ package org.aselect.server.attributes.requestors.api;
 
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.LinkedList;
 import java.util.Vector;
 import java.util.logging.Level;
 
 import org.aselect.server.attributes.requestors.GenericAttributeRequestor;
 import org.aselect.server.attributes.requestors.IAttributeRequestor;
+import org.aselect.server.utils.AttributeSetter;
 import org.aselect.system.communication.client.IClientCommunicator;
 import org.aselect.system.communication.client.raw.RawCommunicator;
 import org.aselect.system.communication.client.soap11.SOAP11Communicator;
@@ -85,7 +87,9 @@ public class APIAttributeRequestor extends GenericAttributeRequestor implements 
 	/** for (basic authentication */
 	private String _user = null;
 	private String _pw = null;
+	private String _bearerToken_attribute = null;
 	
+	protected LinkedList<AttributeSetter> attributeSetters = new LinkedList<AttributeSetter>();
 
 	/**
 	 * Create a new <code>APIAttributeRequestor</code>. <br>
@@ -240,9 +244,12 @@ public class APIAttributeRequestor extends GenericAttributeRequestor implements 
 				throw new ASelectAttributesException(Errors.ERROR_ASELECT_INIT_ERROR, eAC);
 			}
 
+			// maybe get this from session/tgt
 			_user = _configManager.getSimpleParam(oConfig,  "user", false);
 			_pw = _configManager.getSimpleParam(oConfig,  "pw", false);
 
+//			_bearerToken = _configManager.getSimpleParam(oConfig,  "bearertoken", false);	// for testing with fixed token
+			_bearerToken_attribute = _configManager.getSimpleParam(oConfig,  "bearertoken_attribute", false);
 				
 			// Get configured attributes from configuration
 			_vAllAttributes = new Vector();
@@ -289,6 +296,10 @@ public class APIAttributeRequestor extends GenericAttributeRequestor implements 
 					oAttribute = _configManager.getNextSection(oAttribute);
 				}
 			}
+
+			AttributeSetter.initAttributesConfig(_configManager, oConfig, attributeSetters, _systemLogger);
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "size="+attributeSetters.size());
+
 		}
 		catch (ASelectException eAS) {
 			throw eAS;
@@ -513,5 +524,11 @@ public class APIAttributeRequestor extends GenericAttributeRequestor implements 
 	public String getPw()
 	{
 		return _pw;
+	}
+
+
+	public synchronized String get_bearerToken_attribute()
+	{
+		return _bearerToken_attribute;
 	}
 }
