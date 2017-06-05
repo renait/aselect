@@ -1,12 +1,25 @@
 package org.aselect.server.attributes.requestors.api;
 
+import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
+import java.util.Map;
+import java.util.Set;
 import java.util.Vector;
 import java.util.logging.Level;
 
+import net.sf.ezmorph.Morpher;
+import net.sf.ezmorph.MorpherRegistry;
+import net.sf.ezmorph.bean.BeanMorpher;
+import net.sf.json.util.JSONUtils;
+
+import org.apache.commons.beanutils.DynaBean;
+import org.apache.commons.beanutils.DynaClass;
+import org.apache.commons.beanutils.DynaProperty;
 import org.aselect.server.config.ASelectConfigManager;
+import org.aselect.server.utils.AttributeSetter;
 import org.aselect.system.communication.client.json.JSONCommunicator;
 import org.aselect.system.communication.client.raw.RawCommunicator;
 import org.aselect.system.communication.client.soap11.SOAP11Communicator;
@@ -22,7 +35,6 @@ public class RESTAPIAttributeRequestor extends APIAttributeRequestor {
 
 	/** The module name. */
 	private final String MODULE = "RESTAPIAttributeRequestor";
-	private String jsonkey = null;
 
 	
 	public void init(Object oConfig)
@@ -67,16 +79,6 @@ public class RESTAPIAttributeRequestor extends APIAttributeRequestor {
 				throw new ASelectAttributesException(Errors.ERROR_ASELECT_INIT_ERROR);
 			}
 
-			try {
-				jsonkey = ASelectConfigManager.getParamFromSection(oConfig, "attribute_mapping", "id", true);
-				// MUST be GET | POST | PUT | DELETE 
-				
-			}			
-			catch (ASelectConfigException eAC) {	// maybe provide some default here
-				_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Could not retrieve 'id' in attribute_mapping section",
-						eAC);
-				throw new ASelectAttributesException(Errors.ERROR_ASELECT_INIT_ERROR, eAC);
-			}
 
 		}
 		catch (ASelectException eAS) {
@@ -126,7 +128,7 @@ public class RESTAPIAttributeRequestor extends APIAttributeRequestor {
 				}
 				// create request/response
 				HashMap htRequest = new HashMap();
-				HashMap htRequestpairs = new HashMap();
+//				HashMap htRequestpairs = new HashMap();
 				HashMap htResponse = new HashMap();
 				// set TGT parameters
 				Enumeration e = _vTGTParameters.elements();
@@ -141,50 +143,110 @@ public class RESTAPIAttributeRequestor extends APIAttributeRequestor {
 						throw new ASelectAttributesException(Errors.ERROR_ASELECT_CONFIG_ERROR);
 					}
 					requestURL = requestURL.replaceAll("\\{" + sName + "\\}", sValue);
-					int iIndex = _vAllAttributes.indexOf(sName);
-					if (iIndex >= 0 && iIndex <_vAllAttributesMappings.size()) { // mapping available
-						sName = (String) _vAllAttributesMappings.get(iIndex);
-						htRequestpairs.put(sName, sValue);
-					}
+
 				}
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "request url after parsing:" + requestURL);
 
-				Iterator itr = _htConfigParameters.keySet().iterator();
-				while (itr.hasNext()) {
-					String sName = (String)itr.next();
-					int iIndex = _vAllAttributes.indexOf(sName);
-					if (iIndex >= 0 && iIndex <_vAllAttributesMappings.size()) { // mapping available
-						sName = (String) _vAllAttributesMappings.get(iIndex);
-						htRequestpairs.put(sName, _htConfigParameters.get(sName));
-					}
-					
-				}
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "json requestpairs:" + htRequestpairs);
-
-				// for now we only implement GET with no parameters
-				// for POST | PUT | DELETE we need aother communicator
-				
-//				HashMap jsonrequest = new HashMap();
-//				jsonrequest.put(jsonkey, htRequestpairs);
-////				// set Configuration parameters
-//				htRequest.putAll(_htConfigParameters);
-//				htRequest.put(_sAttributesName, jsonrequest);
-//				htRequest.put("relaystate", "myrelaydata");
-				// Just send an empty htRequest
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "request:" + htRequest);
 				
 				// do Authentication if needed
 				_communicator.setUser(getUser());
 				_communicator.setPw(getPw());
 				
+
+				if (get_bearerToken_attribute() != null) {
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Looking for  bearer_token in TGT attribute: " + get_bearerToken_attribute());
+					String bearer_token =  (String)htTGTContext.get(get_bearerToken_attribute());
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Located  bearer_token in TGT: " + bearer_token);
+					if (bearer_token != null) {
+						_communicator.setBearerToken(bearer_token);
+					}
+				}
+				
 				// send message
 				htResponse = _communicator.sendMessage(htRequest, requestURL);
-				
-				htAttributes = htResponse;
+				HashMap newAttr = new HashMap();
+
+				if (attributeSetters != null && !attributeSetters.isEmpty()) {
+				Set<String> keys = htResponse.keySet();
+				for (String key : keys) {
+//				Object oNested = htResponse.get("value");
+//					_systemLogger.log(Level.FINEST, MODULE, sMethod, "retrieved claim key= " + key );
+//				_systemLogger.log(Level.FINEST, MODULE, sMethod, "retrieved claim value= " + htResponse.get(key) );
+//				if (oNested instanceof net.sf.ezmorph.bean.MorphDynaBean[]) {
+					if ( htResponse.get(key) != null) {
+//						Object[] oNested = (Object[]) htResponse.get("value");
+					if ( htResponse.get(key)  instanceof ArrayList) {
+						
+						
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Found nested attributes");
+					ArrayList val = (ArrayList)htResponse.get(key);
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Found ArrayList: " +val );
+					Iterator iter = val.iterator();
+					while ( iter.hasNext()) {
+						DynaBean bean = (DynaBean) iter.next();
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Found next bean: " +bean );
+						DynaClass properties = bean.getDynaClass();
+						DynaProperty[] pdprops = properties.getDynaProperties();
+						if (pdprops != null) {
+							HashMap retrievedClaims = new HashMap();
+							for (int i= 0 ; i <pdprops.length ; i++ ){
+//						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Found DynaProperty for  Name: " +pdprops[i].getName() );
+//						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Found next value: " +bean.get(pdprops[i].getName()) );
+						// pdprops[i].getName() should not be null, value might just be
+						if (pdprops[i].getName() != null && bean.get(pdprops[i].getName()) != null) {	// beware of null pointer
+							String membervalue = (bean.get(pdprops[i].getName())).toString();	// see it as a String, 
+							retrievedClaims.put(pdprops[i].getName(), membervalue);
+							}
+						
+							}
+							_systemLogger.log(Level.FINEST, MODULE, sMethod, "Start processing claims: " +retrievedClaims );
+							HashMap processedClaims = AttributeSetter.attributeProcessing(new HashMap(), retrievedClaims, attributeSetters, _systemLogger);
+							_systemLogger.log(Level.FINEST, MODULE, sMethod, "Processed claims: " +processedClaims );
+							if (processedClaims != null && !processedClaims.isEmpty()) {
+								// add processed claims to htAttributes
+								Set<String> claimsKeys = processedClaims.keySet();
+								for (String claimsKey : claimsKeys) {
+									String oldValue = (String)newAttr.get(claimsKey);
+									newAttr.put(claimsKey, oldValue == null ? ("" + processedClaims.get(claimsKey)) : oldValue + processedClaims.get(claimsKey)  );
+									_systemLogger.log(Level.FINEST, MODULE, sMethod, "htAttributes so far: " +newAttr );
+								}
+							}
+						} else {
+							_systemLogger.log(Level.FINEST, MODULE, sMethod, "no DynaProperty[] "  );
+						}
+					}
+					} else {	// single claim
+//						htAttributes = htResponse; // like we used to
+						// RH, 20170411, sn
+						HashMap retrievedClaims = new HashMap();
+						retrievedClaims.put(key, htResponse.get(key));
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Start processing claims: " +retrievedClaims );
+						HashMap processedClaims = AttributeSetter.attributeProcessing(new HashMap(), retrievedClaims, attributeSetters, _systemLogger);
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Processed claims: " +processedClaims );
+						if (processedClaims != null && !processedClaims.isEmpty()) {
+							// add processed claims to htAttributes
+							Set<String> claimsKeys = processedClaims.keySet();
+							for (String claimsKey : claimsKeys) {
+								String oldValue = (String)newAttr.get(claimsKey);
+								newAttr.put(claimsKey, oldValue == null ? ("" + processedClaims.get(claimsKey)) : oldValue + processedClaims.get(claimsKey)  );
+								_systemLogger.log(Level.FINEST, MODULE, sMethod, "htAttributes so far: " +newAttr );
+							}
+						}
+						// RH, 20170411, en
+
+					}
+				} else { // skip
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Null attribute found");
+				}
+				} // end for
+					htAttributes = newAttr;
+				} else {
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "No attributes found to be processed, continuing");
+					// Do not change anything
+					htAttributes = htResponse;
+				}
 				// retrieve response and forward 1-on-1
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "retrieved attributes:" + htAttributes);
-				
-				// TODO map back, may contain nested json
 			}
 		}
 		catch (ASelectCommunicationException eAC) {
