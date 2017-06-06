@@ -284,6 +284,11 @@ public class TGTIssuer
 			Utils.copyHashmapValue("redirect_ists_url", htTGTContext, htSessionContext);
 			Utils.copyHashmapValue("redirect_post_form", htTGTContext, htSessionContext);
 			
+			// 20170606, RH: for Oauth2
+			Utils.copyHashmapValue("oauthsessionid", htTGTContext, htSessionContext);
+			Utils.copyHashmapValue("oauthsessionstate", htTGTContext, htSessionContext);
+			Utils.copyHashmapValue("oauthsessionredirect_uri", htTGTContext, htSessionContext);
+
 			// RH, 20160627, sn
 			// copy parameters2forward to tgt, 	// htTGTContext != null
 			if (_configManager.getParameters2forward() != null && !_configManager.getParameters2forward().isEmpty()) {	// avoid unnecessary work
@@ -652,6 +657,12 @@ public class TGTIssuer
 			Utils.copyHashmapValue("redirect_sync_time", htTGTContext, htSessionContext);
 			Utils.copyHashmapValue("redirect_ists_url", htTGTContext, htSessionContext);
 			Utils.copyHashmapValue("redirect_post_form", htTGTContext, htSessionContext);
+
+			// 20170606, RH: for Oauth2
+			Utils.copyHashmapValue("oauthsessionid", htTGTContext, htSessionContext);
+			Utils.copyHashmapValue("oauthsessionstate", htTGTContext, htSessionContext);
+			Utils.copyHashmapValue("oauthsessionredirect_uri", htTGTContext, htSessionContext);
+
 			
 			// RH, 20160627, sn
 			// copy parameters2forward to tgt, 	// htTGTContext != null

@@ -43,7 +43,6 @@ import org.aselect.system.exception.ASelectException;
 import org.aselect.system.exception.ASelectStorageException;
 import org.aselect.system.utils.BASE64Decoder;
 import org.aselect.system.utils.BASE64Encoder;
-import org.aselect.system.utils.Base64Codec;
 import org.aselect.system.utils.Utils;
 import org.aselect.system.utils.crypto.Auxiliary;
 
@@ -333,7 +332,7 @@ public class AuthorizationHandler extends ProtoRequestHandler
 			   			return_parameters.put("expires_in", DEFAULT_EXPIRES_IN );
 			   			return_status = 200; // all well
 			   			try {
-			   				history.remove(AUTH_CODE_PREFIX + code);	// we' ll have to handle if there would be a problem with remove
+			   				history.remove(AUTH_CODE_PREFIX + code);	// we'll have to handle if there would be a problem with remove
 							_systemLogger.log(Level.FINEST, MODULE, sMethod, "Removed access token from local storage using auth code: " + Auxiliary.obfuscate(code));
 			   			} catch (ASelectStorageException ase2) {
 							_systemLogger.log(Level.WARNING, MODULE, sMethod, "Ignoring problem removing authentication code from temp storage: " + ase2.getMessage());
@@ -506,7 +505,8 @@ public class AuthorizationHandler extends ProtoRequestHandler
 				_htSessionContext.put("oauthsessionstate", state);
 			}
 			if (redirect_uri != null) {
-				_htSessionContext.put("oauthsessionredirect_uri", state);
+//				_htSessionContext.put("oauthsessionredirect_uri", state);	// RH, 20170606, o
+				_htSessionContext.put("oauthsessionredirect_uri", redirect_uri);	// RH, 20170606, n
 			}
 			
 			_oSessionManager.updateSession(extractedRid, _htSessionContext);
@@ -539,7 +539,16 @@ public class AuthorizationHandler extends ProtoRequestHandler
 			String javaxSessionid = servletRequest.getSession().getId();
 			_systemLogger.log(Level.FINEST, MODULE, sMethod, "javaxSessionid: " +javaxSessionid);
 
-			String org_javaxSessionid = (String)_htSessionContext.get("oauthsessionid");
+			String org_javaxSessionid = null;
+			String sTgt = decryptCredentials(extractedAselect_credentials);
+			HashMap htTGTContext = getContextFromTgt(sTgt, false);
+			if (htTGTContext != null) {
+				org_javaxSessionid = (String)htTGTContext.get("oauthsessionid");
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "original javaxSessionid: " +org_javaxSessionid);
+			} else {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not retrieve tgt for aselect_credentials:  " +extractedAselect_credentials);
+			}
+			
 			if (!javaxSessionid.equals(org_javaxSessionid)) { 
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Invalid sessionid found");
 				String error_redirect = null;
@@ -580,10 +589,9 @@ public class AuthorizationHandler extends ProtoRequestHandler
 				}
 	        }
 	        String return_url = null;
-			String saved_state = (String)_htSessionContext.get("oauthsessionstate");
-			// we force the redirect_uri so don't use it for redirection
-			// maybe put it in the tgt for later use
-//			String saved_redirect_uri = (String)_htSessionContext.get("oauthsessionredirect_uri");
+			String saved_state = (String)htTGTContext.get("oauthsessionstate");
+			// we force the redirect_uri so don't use it yet for redirection, if used, must be verified against(list of) valid uri
+//			String saved_redirect_uri = (String)htTGTContext.get("oauthsessionredirect_uri");
 	        if (authenticatedAndApproved) {
 				// If authenticatedAndApproved then send off the user with redirect
 	        	
