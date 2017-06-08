@@ -1130,6 +1130,12 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 							/////////////////////////////////////////////////////////////////////////////////////
 							//	RH, 20140925, en
 
+							// 20170608, RH: for Oauth2
+							Utils.copyHashmapValue("oauthsessionid", _htTGTContext, _htSessionContext);
+							Utils.copyHashmapValue("oauthsessionstate", _htTGTContext, _htSessionContext);
+							Utils.copyHashmapValue("oauthsessionredirect_uri", _htTGTContext, _htSessionContext);
+							
+							
 							_tgtManager.updateTGT(sTgt, _htTGTContext);
 							
 							// 20100210, Bauke: Present the Organization selection to the user
@@ -1457,6 +1463,12 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 							// Overwrite with the latest value of sp_assert_url,
 							// so the customer can reach his home-SP again.
 							Utils.copyHashmapValue("sp_assert_url", _htTGTContext, _htSessionContext);
+							
+							// 20170608, RH: for Oauth2
+							Utils.copyHashmapValue("oauthsessionid", _htTGTContext, _htSessionContext);
+							Utils.copyHashmapValue("oauthsessionstate", _htTGTContext, _htSessionContext);
+							Utils.copyHashmapValue("oauthsessionredirect_uri", _htTGTContext, _htSessionContext);
+							
 
 							_tgtManager.updateTGT(sTgt, _htTGTContext);
 							_systemLogger.log(Level.INFO, _sModule, sMethod, "REDIR " + sRedirectUrl);
