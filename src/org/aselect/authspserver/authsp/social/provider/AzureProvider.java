@@ -94,5 +94,7 @@ AuthProvider, Serializable {
 		authenticationStrategy.setScope(getScope());
 	}
 	
-	
+	@Override
+
+
 }
