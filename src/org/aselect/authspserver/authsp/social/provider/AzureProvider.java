@@ -270,6 +270,12 @@ AuthProvider, Serializable {
 		return response;
 	}
 	
+	@Override
+	public AccessGrant getAccessGrant(){
+		return accessGrant;
+	}
+	
+	
 	
 	private String getScope()	{
 		if (Permission.CUSTOM.equals(scope)
