@@ -102,7 +102,7 @@ AuthProvider, Serializable {
 return null;
 }
 
-	private String getScope(){
+	private String getScope()	{
 		if (Permission.CUSTOM.equals(scope)
 				&& config.getCustomPermissions() != null) {
 			return config.getCustomPermissions();
