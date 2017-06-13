@@ -109,6 +109,16 @@ AuthProvider, Serializable {
 		authenticationStrategy.setAccessGrant(accessGrant);
 	}
 	
+	/**
+	 * This is the most important action. It redirects the browser to an
+	 * appropriate URL which will be used for authentication with the provider
+	 * that has been set using setId()
+	 * 
+	 */
+	@Override
+	public String getLoginRedirectURL(final String successUrl) throws Exception {
+		return authenticationStrategy.getLoginRedirectURL(successUrl);
+	}
 
 
 	private String getScope()	{
