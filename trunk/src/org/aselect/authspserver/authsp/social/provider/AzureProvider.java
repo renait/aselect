@@ -228,6 +228,16 @@ AuthProvider, Serializable {
 		authenticationStrategy.logout();
 	}
 	
+	@Override
+	public void setPermission(final Permission p){
+		LOG.debug("Permission requested : " + p.toString());
+		this.scope = p;
+		authenticationStrategy.setPermission(this.scope);
+		authenticationStrategy.setScope(getScope());
+
+	}	
+	
+	
 	private String getScope()	{
 		if (Permission.CUSTOM.equals(scope)
 				&& config.getCustomPermissions() != null) {
