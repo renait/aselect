@@ -52,3 +52,50 @@ import org.brickred.socialauth.util.AccessGrant;
 import org.brickred.socialauth.util.Constants;
 import org.brickred.socialauth.util.OAuthConfig;
 import org.brickred.socialauth.util.Response;
+
+
+public class AzureProvider extends AbstractProvider implements
+AuthProvider, Serializable {
+
+	
+
+	/**
+	 * 
+	 */
+	private static final long serialVersionUID = 8420581005918578880L;
+	private final Log LOG = LogFactory.getLog(AzureProvider.class);
+	private Permission scope;
+	private OAuthConfig config;
+	private Profile userProfile;
+	private AccessGrant accessGrant;
+	private OAuthStrategyBase authenticationStrategy;
+
+	private final Map<String, String> ENDPOINTS;
+
+
+	public AzureProvider(final OAuthConfig providerConfig)
+			throws Exception {
+		config = providerConfig;
+//		LOG.debug("providerConfig: " + config);
+		
+		if (config.getCustomPermissions() != null) {
+			scope = Permission.CUSTOM;
+		}
+		LOG.debug("scope: " + scope);
+		ENDPOINTS = new HashMap<String, String>();
+		LOG.debug("OAUTH_AUTHORIZATION_URL: " + Constants.OAUTH_AUTHORIZATION_URL);
+		ENDPOINTS.put(Constants.OAUTH_AUTHORIZATION_URL,
+				providerConfig.getAuthenticationUrl());
+		LOG.debug("OAUTH_ACCESS_TOKEN_URL: " + Constants.OAUTH_ACCESS_TOKEN_URL);
+		ENDPOINTS.put(Constants.OAUTH_ACCESS_TOKEN_URL,
+				providerConfig.getAccessTokenUrl());
+		authenticationStrategy = new OpenIDConnect(config, ENDPOINTS);
+		authenticationStrategy.setPermission(scope);
+		authenticationStrategy.setScope(getScope());
+	}
+	
+
+
+
+		
+}
