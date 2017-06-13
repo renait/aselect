@@ -177,7 +177,13 @@ AuthProvider, Serializable {
 				"Update Status is not implemented for AzureProvider");
 	}
 	
-	
+
+	@Override
+	public List<Contact> getContactList() throws Exception {
+		LOG.warn("WARNING: Not implemented for AzureProvider");
+		throw new SocialAuthException(
+				"Get Contacts is not implemented for AzureProvider");
+	}	
 	
 	
 	private String getScope()	{
