@@ -138,6 +138,31 @@ AuthProvider, Serializable {
 		return doVerifyResponse(requestParams);
 	}	
 	
+	private Profile doVerifyResponse(final Map<String, String> requestParams)
+			throws Exception {
+		LOG.info("Retrieving Access Token in verify response function");
+		if (requestParams.get("error_reason") != null
+				&& "user_denied".equals(requestParams.get("error_reason"))) {
+			throw new UserDeniedPermissionException();
+		}
+		if (requestParams.get("error") != null
+				&& "access_denied".equals(requestParams.get("error"))) {
+			LOG.info("User access denied: " + requestParams.get("error_description"));
+			throw new UserDeniedPermissionException();
+		}
+		accessGrant = authenticationStrategy.verifyResponse(requestParams);
+
+		if (accessGrant != null) {
+			LOG.debug("Access grant available");
+			return null;
+		} else {
+			throw new SocialAuthException("Access token not found");
+		}
+	}	
+	
+	
+	
+	
 	private String getScope()	{
 		if (Permission.CUSTOM.equals(scope)
 				&& config.getCustomPermissions() != null) {
