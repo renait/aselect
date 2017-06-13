@@ -210,6 +210,15 @@ AuthProvider, Serializable {
 	}
 	
 	
+	@Override
+	public Profile getUserProfile() throws Exception {
+		if (userProfile == null && accessGrant != null) {
+			getProfile();
+		}
+		return userProfile;
+
+	}	
+	
 	
 	
 	private String getScope()	{
