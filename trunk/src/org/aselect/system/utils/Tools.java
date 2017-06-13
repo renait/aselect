@@ -182,7 +182,8 @@ public class Tools
 	 */
 	public static String htmlEncode(String sText)
 	{
-		StringTokenizer tokenizer = new StringTokenizer(sText, "<>\"'", true);
+//		StringTokenizer tokenizer = new StringTokenizer(sText, "<>\"'", true);	// RH, 20170613, o
+		StringTokenizer tokenizer = new StringTokenizer(sText, "<>\"'&", true);	// RH, 20170613, n
 		int tokenCount = tokenizer.countTokens();
 
 		StringBuffer buffer = new StringBuffer(sText.length() + tokenCount * 6);
@@ -200,8 +201,14 @@ public class Tools
 					buffer.append("&quot;");
 					break;
 				case '\'':
-					buffer.append("#39;");
+//					buffer.append("#39;");	// RH, 20170609, o
+					buffer.append("&apos;");	// RH, 20170609, n
 					break;
+					// RH, 20170609, sn
+				case '&':
+					buffer.append("&amp;");
+					break;
+					// RH, 20170609, en
 				default:
 					buffer.append(token);
 				}
