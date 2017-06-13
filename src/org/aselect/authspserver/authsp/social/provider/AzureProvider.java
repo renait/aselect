@@ -280,13 +280,38 @@ AuthProvider, Serializable {
 		return config.getId();
 	}	
 	
-	private String getScope()	{
+	
+	
+	@Override
+	public Response uploadImage(final String message, final String fileName,
+			final InputStream inputStream) throws Exception {
+		LOG.warn("WARNING: Not implemented for AzureProvider");
+		throw new SocialAuthException(
+				"Upload Image is not implemented for AzureProvider");
+	}
+
+	private String getScope(){
 		if (Permission.CUSTOM.equals(scope)
 				&& config.getCustomPermissions() != null) {
 			return config.getCustomPermissions();
 		} else {
 			return null;
 		}
+	}
+
+	@Override
+	protected List<String> getPluginsList(){
+		List<String> list = new ArrayList<String>();
+		if (config.getRegisteredPlugins() != null
+				&& config.getRegisteredPlugins().length > 0) {
+			list.addAll(Arrays.asList(config.getRegisteredPlugins()));
+		}
+		return list;
+	}
+
+	@Override
+	protected OAuthStrategyBase getOauthStrategy(){
+		return authenticationStrategy;
 	}
 
 }
