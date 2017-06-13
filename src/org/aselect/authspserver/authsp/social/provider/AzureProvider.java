@@ -186,6 +186,32 @@ AuthProvider, Serializable {
 	}	
 	
 	
+	private Profile getProfile() throws Exception {
+//		String presp;
+
+		AccessGrant grant = getAccessGrant();
+//		LOG.debug("getProfile using grant : " + grant);
+		Profile p = new Profile();
+
+		p.setValidatedId((String)grant.getAttribute("oid"));
+		p.setFirstName((String)grant.getAttribute("given_name"));
+		p.setLastName((String)grant.getAttribute("family_name"));
+//		emails default for azureb2c
+		String uid_claim = (config.getCustomProperties().get("uid_claim") != null) ? config.getCustomProperties().get("uid_claim") : "emails";
+		
+		LOG.debug("getProfile using uid_claim : " + uid_claim);
+		
+		p.setEmail(grant.getAttribute(uid_claim).toString());
+		
+		p.setProviderId(grant.getProviderId());
+		userProfile = p;
+
+		return p;
+	}
+	
+	
+	
+	
 	private String getScope()	{
 		if (Permission.CUSTOM.equals(scope)
 				&& config.getCustomPermissions() != null) {
