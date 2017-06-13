@@ -97,7 +97,7 @@ AuthProvider, Serializable {
 
 	
 	@Override
-
+	protected OAuthStrategyBase {
 // TODO Auto-generated method stub
 return null;
 }
