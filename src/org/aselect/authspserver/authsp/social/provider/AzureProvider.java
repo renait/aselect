@@ -275,7 +275,10 @@ AuthProvider, Serializable {
 		return accessGrant;
 	}
 	
-	
+	@Override
+	public String getProviderId(){
+		return config.getId();
+	}	
 	
 	private String getScope()	{
 		if (Permission.CUSTOM.equals(scope)
