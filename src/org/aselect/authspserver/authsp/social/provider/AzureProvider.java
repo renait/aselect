@@ -93,6 +93,8 @@ AuthProvider, Serializable {
 		authenticationStrategy.setPermission(scope);
 		authenticationStrategy.setScope(getScope());
 	}
+
+
 	
 	@Override
 
