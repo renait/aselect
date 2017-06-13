@@ -161,6 +161,23 @@ AuthProvider, Serializable {
 	}	
 	
 	
+	/**
+	 * Updates the status on the chosen provider if available. This may not be
+	 * implemented for all providers.
+	 * 
+	 * @param msg
+	 *            Message to be shown as user's status
+	 * @throws Exception
+	 */
+
+	@Override
+	public Response updateStatus(final String msg) throws Exception {
+		LOG.warn("WARNING: Not implemented for AzureProvider");
+		throw new SocialAuthException(
+				"Update Status is not implemented for AzureProvider");
+	}
+	
+	
 	
 	
 	private String getScope()	{
