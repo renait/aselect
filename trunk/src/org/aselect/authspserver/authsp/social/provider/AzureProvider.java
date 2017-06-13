@@ -237,6 +237,39 @@ AuthProvider, Serializable {
 
 	}	
 	
+	/**
+	 * Makes HTTP request to a given URL.It attaches access token in URL.
+	 * 
+	 * @param url
+	 *            URL to make HTTP request.
+	 * @param methodType
+	 *            Method type can be GET, POST or PUT
+	 * @param params
+	 *            Not using this parameter in Google API function
+	 * @param headerParams
+	 *            Parameters need to pass as Header Parameters
+	 * @param body
+	 *            Request Body
+	 * @return Response object
+	 * @throws Exception
+	 */
+	@Override
+	public Response api(final String url, final String methodType,
+			final Map<String, String> params,
+			final Map<String, String> headerParams, final String body)
+			throws Exception {
+		LOG.info("Calling api function for url	:	" + url);
+		Response response = null;
+		try {
+			response = authenticationStrategy.executeFeed(url, methodType,
+					params, headerParams, body);
+		} catch (Exception e) {
+			throw new SocialAuthException(
+					"Error while making request to URL : " + url, e);
+		}
+		return response;
+	}
+	
 	
 	private String getScope()	{
 		if (Permission.CUSTOM.equals(scope)
