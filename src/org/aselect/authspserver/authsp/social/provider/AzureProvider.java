@@ -94,10 +94,4 @@ AuthProvider, Serializable {
 		authenticationStrategy.setScope(getScope());
 	}
 	
-
-//
-	//
-
-
-		
 }
