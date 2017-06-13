@@ -98,6 +98,9 @@ AuthProvider, Serializable {
 	
 	@Override
 
+// TODO Auto-generated method stub
+return null;
+}
 
 
 }
