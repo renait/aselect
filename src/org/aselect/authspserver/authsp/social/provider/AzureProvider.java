@@ -94,13 +94,22 @@ AuthProvider, Serializable {
 		authenticationStrategy.setScope(getScope());
 	}
 
-
-	
+	/**
+	 * Stores access grant for the provider
+	 * 
+	 * @param accessGrant
+	 *            It contains the access token and other information
+	 * @throws AccessTokenExpireException
+	 */
 	@Override
-	protected OAuthStrategyBase getOauthStrategy(){
-// TODO Auto-generated method stub
-return null;
-}
+	public void setAccessGrant(final AccessGrant accessGrant)
+			throws AccessTokenExpireException {
+		this.accessGrant = accessGrant;
+		LOG.debug("accessGrant: " + accessGrant);
+		authenticationStrategy.setAccessGrant(accessGrant);
+	}
+	
+
 
 	private String getScope()	{
 		if (Permission.CUSTOM.equals(scope)
