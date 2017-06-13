@@ -121,6 +121,23 @@ AuthProvider, Serializable {
 	}
 
 
+	/**
+	 * Verifies the user when the external provider redirects back to our
+	 * application.
+	 * 
+	 * 
+	 * @param requestParams
+	 *            request parameters, received from the provider
+	 * @return Profile object containing the profile information
+	 * @throws Exception
+	 */
+
+	@Override
+	public Profile verifyResponse(final Map<String, String> requestParams)
+			throws Exception {
+		return doVerifyResponse(requestParams);
+	}	
+	
 	private String getScope()	{
 		if (Permission.CUSTOM.equals(scope)
 				&& config.getCustomPermissions() != null) {
