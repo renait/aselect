@@ -219,7 +219,14 @@ AuthProvider, Serializable {
 
 	}	
 	
-	
+	/**
+	 * Logout
+	 */
+	@Override
+	public void logout(){
+		accessGrant = null;
+		authenticationStrategy.logout();
+	}
 	
 	private String getScope()	{
 		if (Permission.CUSTOM.equals(scope)
