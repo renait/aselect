@@ -97,7 +97,8 @@ public  final class Auxiliary
 
 
 //	private static final String DEFAULT_DIGEST_ALG = "SHA-256";	// RH, 20160510, o
-	private static final String DEFAULT_DIGEST_ALG = "RANDOM";	// RH, 20160510, n
+//	private static final String DEFAULT_DIGEST_ALG = "RANDOM";	// RH, 20160510, n, 	// RH, 20170724, o
+	private static final String DEFAULT_DIGEST_ALG = "BLANK";	// RH, 20170724, n
 	private static final String PROPERTY_DEFAULT_DIGEST_ALG = "aselect.default.digest.alg";
 	private static final String[] ALGS = { "BLANK", "NONE", "RANDOM", "SHA-256" , "SHA-384" , "SHA-512" };
 	private static final List<String> ALLOWED_DIGEST_ALGS = Arrays.asList(ALGS);
