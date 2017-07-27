@@ -195,11 +195,14 @@ public abstract class Saml20_BaseHandler extends ProtoRequestHandler
 		// RH, 20120322, en
 		
 		// RH, 20151016, sn, refactor pull up from Xsaml20_SSO
+		_sDefaultSigning = "sha256";		// RH, 20170727, n		
 		try {
 //			String use_sha256 =_sReqSigning = _configManager.getParam(oHandlerConfig, "use_sha256");
 			String use_sha256 = _configManager.getParam(oHandlerConfig, "use_sha256");
-			if ( Boolean.parseBoolean(use_sha256 ))  {
-				_sDefaultSigning = "sha256";
+//			if ( Boolean.parseBoolean(use_sha256 ))  {		// RH, 20170727, o
+//				_sDefaultSigning = "sha256";		// RH, 20170727, o
+			if (  "false".equalsIgnoreCase(use_sha256) )  {		// RH, 20170727, n
+				_sDefaultSigning = "sha1";		// RH, 20170727, n
 			}
 		}
 		catch (ASelectConfigException e) {
