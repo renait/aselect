@@ -101,6 +101,7 @@ import java.net.URL;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.HashMap;
+import java.util.Map;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.Vector;
@@ -268,9 +269,16 @@ public class RawCommunicator implements IClientCommunicator
 		_systemLogger.log(Level.FINEST, MODULE, sMethod, "URL=" + sbBuffer.toString());
 		try {
 			if ( user != null) {
-				_systemLogger.log(Level.INFO, MODULE, sMethod, "Using Basic Authentication");
+//				_systemLogger.log(Level.INFO, MODULE, sMethod, "Using Basic Authentication");	// RH, 20170731, o
+				_systemLogger.log(Level.INFO, MODULE, sMethod, "Using user/pw Authentication");	// RH, 20170731, n
+
 				Authenticator.setDefault(new Authenticator() {
 				    protected PasswordAuthentication getPasswordAuthentication() {
+				    	// RH, 20170731, sn
+						String sMethod = "getPasswordAuthentication";
+				    	String scheme = getRequestingScheme();
+						_systemLogger.log(Level.FINER, MODULE, sMethod, "Requested Authentication scheme: " + scheme );
+						// RH, 20170731, en
 					return new PasswordAuthentication(getUser(), (getPw() != null) ? getPw().toCharArray() : "".toCharArray());
 				    }
 				});
@@ -499,6 +507,16 @@ public class RawCommunicator implements IClientCommunicator
 	public void setBearerToken(String bearerToken)
 	{
 		this.bearerToken = bearerToken;
+	}
+
+	public Map<String, String> getCommunicatorRequestProperties()
+	{
+		return null;	// not implemented yet
+	}
+
+	public void setCommunicatorRequestProperties(Map<String, String> communicatorRequestProperties)
+	{
+		// not implemented yet
 	}
 
 }

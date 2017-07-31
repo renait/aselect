@@ -152,13 +152,26 @@ public class RESTAPIAttributeRequestor extends APIAttributeRequestor {
 				_communicator.setUser(getUser());
 				_communicator.setPw(getPw());
 				
-
+				// RH, 20170731, sn
+				if (_htRequestHeaders != null && !_htRequestHeaders.isEmpty()) {
+					_communicator.setCommunicatorRequestProperties(_htRequestHeaders);
+				}
+				// RH, 20170731, sn
+				
 				if (get_bearerToken_attribute() != null) {
 					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Looking for  bearer_token in TGT attribute: " + get_bearerToken_attribute());
 					String bearer_token =  (String)htTGTContext.get(get_bearerToken_attribute());
 					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Located  bearer_token in TGT: " + bearer_token);
 					if (bearer_token != null) {
 						_communicator.setBearerToken(bearer_token);
+						// RH, 20170731, sn
+						Map<String, String> reqProps = _communicator.getCommunicatorRequestProperties();
+						if (reqProps == null) {
+							reqProps = new HashMap<String, String>();
+							_communicator.setCommunicatorRequestProperties(reqProps);
+						}
+						reqProps.put("Accept", "application/json");
+						// RH, 20170731, en
 					}
 				}
 				

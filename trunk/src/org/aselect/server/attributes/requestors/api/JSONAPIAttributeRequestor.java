@@ -177,6 +177,12 @@ public class JSONAPIAttributeRequestor extends APIAttributeRequestor {
 				_communicator.setUser(getUser());
 				_communicator.setPw(getPw());
 
+				// RH, 20170731, sn
+				if (_htRequestHeaders != null && !_htRequestHeaders.isEmpty()) {
+					_communicator.setCommunicatorRequestProperties(_htRequestHeaders);
+				}
+				// RH, 20170731, sn
+
 				// send message
 				htResponse = _communicator.sendMessage(htRequest, sURL);
 				
