@@ -55,6 +55,8 @@ public class JSONCommunicator implements IClientCommunicator
 	private String bearerToken = null;
 	
 	private String method = null;
+	
+	private Map<String,String> communicatorRequestProperties = null;
 
 
 
@@ -177,6 +179,15 @@ public class JSONCommunicator implements IClientCommunicator
 //			connection.setRequestProperty("Accept", "*/*");
 			reqProps.put("Content-Type", "application/x-www-form-urlencoded");
 			reqProps.put("Accept", "*/*");
+			// RH, 20170731, sn
+			if (getCommunicatorRequestProperties() != null && !getCommunicatorRequestProperties().isEmpty()) {
+				Iterator<String> iter = getCommunicatorRequestProperties() .keySet().iterator();
+				while (iter.hasNext()) {
+					String key = iter.next();
+					reqProps.put(key, getCommunicatorRequestProperties().get(key));
+				}
+			}
+			// RH, 20170731, en
 			sResponse = DataCommunicator.dataComSend(_systemLogger, sMessage, sTarget, reqProps);
 		}
 		catch (java.net.MalformedURLException eMU) {
@@ -238,9 +249,15 @@ public class JSONCommunicator implements IClientCommunicator
 		try {
 			
 			if ( user != null) {
-				_systemLogger.log(Level.INFO, MODULE, sMethod, "Using Basic Authentication");
+//				_systemLogger.log(Level.INFO, MODULE, sMethod, "Using Basic Authentication");	// RH, 20170731, o
+				_systemLogger.log(Level.INFO, MODULE, sMethod, "Using user/pw Authentication");	// RH, 20170731, n
 				Authenticator.setDefault(new Authenticator() {
 				    protected PasswordAuthentication getPasswordAuthentication() {
+				    	// RH, 20170731, sn
+						String sMethod = "getPasswordAuthentication";
+				    	String scheme = getRequestingScheme();
+						_systemLogger.log(Level.FINER, MODULE, sMethod, "Requested Authentication scheme: " + scheme );
+						// RH, 20170731, en
 					return new PasswordAuthentication(getUser(), (getPw() != null) ? getPw().toCharArray() : "".toCharArray());
 				    }
 				});
@@ -248,12 +265,24 @@ public class JSONCommunicator implements IClientCommunicator
 			// RH, 20151001, en
 
 			// RH, 20170221, sn
-			if ( bearerToken != null ) {
-				_systemLogger.log(Level.INFO, MODULE, sMethod, "Using Bearer Token Authentication");
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Bearer Token =" + Auxiliary.obfuscate(bearerToken));
+//			if ( bearerToken != null ) {	// RH, 20170731, o
+			if ( bearerToken != null || getCommunicatorRequestProperties() != null) {	// RH, 20170731, n
 				URLConnection connectionurl = new URL(sbBuffer.toString()).openConnection();
-				connectionurl.setRequestProperty("Authorization", "Bearer " + bearerToken);
-				connectionurl.setRequestProperty("Accept", "application/json");
+				// RH, 20170731, sn
+				if (getCommunicatorRequestProperties() != null && !getCommunicatorRequestProperties().isEmpty()) {
+					Iterator<String> iter = getCommunicatorRequestProperties() .keySet().iterator();
+					while (iter.hasNext()) {
+						String key = iter.next();
+						connectionurl.setRequestProperty(key, getCommunicatorRequestProperties().get(key));
+					}
+				}
+				// RH, 20170731, en
+				if (bearerToken != null) {
+					_systemLogger.log(Level.INFO, MODULE, sMethod, "Using Bearer Token Authentication");
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Bearer Token =" + Auxiliary.obfuscate(bearerToken));
+					connectionurl.setRequestProperty("Authorization", "Bearer " + bearerToken);
+				}
+//				connectionurl.setRequestProperty("Accept", "application/json");	// RH, 20170731, o // Not always needed, Moved to RESTAPIAttributeRequestor
 				
 				brInput = new BufferedReader(new InputStreamReader(connectionurl.getInputStream()), 16000);
 			} else {	// backwards compatibility
@@ -330,6 +359,16 @@ public class JSONCommunicator implements IClientCommunicator
 	public void setBearerToken(String bearerToken)
 	{
 		this.bearerToken = bearerToken;
+	}
+
+	public Map<String, String> getCommunicatorRequestProperties()
+	{
+		return communicatorRequestProperties;
+	}
+
+	public void setCommunicatorRequestProperties(Map<String, String> communicatorRequestProperties)
+	{
+		this.communicatorRequestProperties = communicatorRequestProperties;
 	}
 
 	

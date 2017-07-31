@@ -38,6 +38,7 @@
 package org.aselect.system.communication.client;
 
 import java.util.HashMap;
+import java.util.Map;
 
 import org.aselect.system.exception.ASelectCommunicationException;
 
@@ -108,5 +109,11 @@ public interface IClientCommunicator
 
 	public String getBearerToken();
 	public void setBearerToken(String bearerToken);
+	
+	public Map<String, String> getCommunicatorRequestProperties();
+	public void setCommunicatorRequestProperties(Map<String, String> communicatorRequestProperties);
+
+	
+	
 
 }

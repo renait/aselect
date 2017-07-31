@@ -29,11 +29,14 @@ package org.aselect.server.attributes.requestors.api;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.Map;
 import java.util.Vector;
 import java.util.logging.Level;
 
 import org.aselect.server.attributes.requestors.GenericAttributeRequestor;
 import org.aselect.server.attributes.requestors.IAttributeRequestor;
+import org.aselect.server.config.ASelectConfigManager;
+import org.aselect.server.request.handler.xsaml20.SecurityLevel;
 import org.aselect.server.utils.AttributeSetter;
 import org.aselect.system.communication.client.IClientCommunicator;
 import org.aselect.system.communication.client.raw.RawCommunicator;
@@ -77,6 +80,10 @@ public class APIAttributeRequestor extends GenericAttributeRequestor implements 
 	protected Vector _vTGTParameters;
 	protected HashMap _htConfigParameters;
 
+	/** All request headers that should be set	*/
+	protected  HashMap<String, String> _htRequestHeaders;
+	
+	
 	/** All attributes that can be retrieved */
 	protected Vector _vAllAttributes;
 	protected Vector _vAllAttributesMappings;
@@ -84,10 +91,11 @@ public class APIAttributeRequestor extends GenericAttributeRequestor implements 
 	/** The recourcegroup */
 	private String _sAPIResourceGroup;
 	
-	/** for (basic authentication */
+	/** for authentication */
 	private String _user = null;
 	private String _pw = null;
 	private String _bearerToken_attribute = null;
+	
 	
 	protected LinkedList<AttributeSetter> attributeSetters = new LinkedList<AttributeSetter>();
 
@@ -299,6 +307,14 @@ public class APIAttributeRequestor extends GenericAttributeRequestor implements 
 
 			AttributeSetter.initAttributesConfig(_configManager, oConfig, attributeSetters, _systemLogger);
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "size="+attributeSetters.size());
+			
+			// RH, 20170731, sn
+			_htRequestHeaders = new HashMap<String, String>();
+			_htRequestHeaders = ASelectConfigManager.getTableFromConfig(oConfig,  _htRequestHeaders, "request",
+					"header", "name",/*->*/"value", false/* mandatory */, false/* unique values */);
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "requestheaders="+_htRequestHeaders);
+			// RH, 20170731, en
+
 
 		}
 		catch (ASelectException eAS) {

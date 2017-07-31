@@ -68,6 +68,7 @@ import java.net.HttpURLConnection;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.Map;
 import java.util.logging.Level;
 
 import org.apache.xerces.dom.DocumentImpl;
@@ -754,5 +755,16 @@ public class SOAP12Communicator implements IClientCommunicator
 	{
 		// Not implemented yet
 	}
+	
+	public Map<String, String> getCommunicatorRequestProperties()
+	{
+		return null;	// not implemented yet
+	}
+
+	public void setCommunicatorRequestProperties(Map<String, String> communicatorRequestProperties)
+	{
+		// not implemented yet
+	}
+
 
 }
