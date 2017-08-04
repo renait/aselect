@@ -154,12 +154,15 @@ public class Xsaml20_SLO_Redirect extends Saml20_BrowserHandler
 			TGTManager tgtManager = TGTManager.getHandle();
 			HashMap htTGTContext = tgtManager.getTGT(sNameID);
 
-			// 20090525, Bauke: also save RelayState in the TGT for the logout response
-			if (sRelayState != null)
-				htTGTContext.put("RelayState", sRelayState);
-			else
-				htTGTContext.remove("RelayState");
-
+			// RH, 20170804, sn
+			if (htTGTContext != null) {			// RH, 20170804, n 	// avoid nullpointer when tgt not found, e.g.when using  persistent instead of transient NameID
+				// 20090525, Bauke: also save RelayState in the TGT for the logout response
+				if (sRelayState != null)
+					htTGTContext.put("RelayState", sRelayState);
+				else
+					htTGTContext.remove("RelayState");
+			} 			// RH, 20170804, n
+			
 			// If user consent is needed, first show the logout_info.html
 			ASelectConfigManager configManager = ASelectConfigManager.getHandle();
 			if (!"true".equals(sConsent) && configManager.getUserInfoSettings().contains("logout")) {
