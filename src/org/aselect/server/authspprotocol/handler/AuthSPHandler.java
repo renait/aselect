@@ -68,7 +68,7 @@ public class AuthSPHandler
 	}
 
 	/**
-	 * Contructor which contains the default parameters for an AuthSPHandler.
+	 * Constructor which contains the default parameters for an AuthSPHandler.
 	 * 
 	 * @param id
 	 *            the id
