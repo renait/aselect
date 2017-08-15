@@ -24,7 +24,6 @@ import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.crypto.Auxiliary;
 import org.opensaml.common.SAMLObjectBuilder;
 import org.opensaml.common.binding.BasicSAMLMessageContext;
-import org.opensaml.saml2.binding.encoding.HTTPRedirectDeflateEncoder;
 import org.opensaml.saml2.core.LogoutResponse;
 import org.opensaml.saml2.metadata.AssertionConsumerService;
 import org.opensaml.saml2.metadata.Endpoint;
@@ -136,7 +135,8 @@ public class LogoutResponseSender
 		history.put(logoutResponse.getID(), logoutResponse.getDOM());
 		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Dom stored in history" );
 
-		HTTPRedirectDeflateEncoder encoder = new HTTPRedirectDeflateEncoder();
+//		HTTPRedirectDeflateEncoder encoder = new HTTPRedirectDeflateEncoder();	// RH, 20170815, o
+		Saml20_RedirectEncoder encoder = new Saml20_RedirectEncoder();	// RH, 20170815, n
 		try {
 			encoder.encode(messageContext);
 		}
