@@ -306,6 +306,7 @@ import org.aselect.server.attributes.AttributeGatherer;
 import org.aselect.server.authspprotocol.IAuthSPDirectLoginProtocolHandler;
 import org.aselect.server.authspprotocol.IAuthSPProtocolHandler;
 import org.aselect.server.authspprotocol.handler.AuthSPHandlerManager;
+import org.aselect.server.authspprotocol.handler.IdinAuthSPHandler;
 import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.server.config.Version;
 import org.aselect.server.cross.CrossASelectManager;
@@ -1134,8 +1135,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 							Utils.copyHashmapValue("oauthsessionid", _htTGTContext, _htSessionContext);
 							Utils.copyHashmapValue("oauthsessionstate", _htTGTContext, _htSessionContext);
 							Utils.copyHashmapValue("oauthsessionredirect_uri", _htTGTContext, _htSessionContext);
-							
-							
+														
 							_tgtManager.updateTGT(sTgt, _htTGTContext);
 							
 							// 20100210, Bauke: Present the Organization selection to the user
@@ -1468,7 +1468,6 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 							Utils.copyHashmapValue("oauthsessionid", _htTGTContext, _htSessionContext);
 							Utils.copyHashmapValue("oauthsessionstate", _htTGTContext, _htSessionContext);
 							Utils.copyHashmapValue("oauthsessionredirect_uri", _htTGTContext, _htSessionContext);
-							
 
 							_tgtManager.updateTGT(sTgt, _htTGTContext);
 							_systemLogger.log(Level.INFO, _sModule, sMethod, "REDIR " + sRedirectUrl);
@@ -2011,7 +2010,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 
 			// RH, 20121119, sn
 			// Handle application specific select form
-			String sSelectFormName = SELECTFORMPREFIX;
+			String sSelectFormName = SELECTFORMPREFIX; // "select"
 //			String sAppId = (String) _htSessionContext.get("app_id");	// RH, 20121119, o, moved to top
 			if (sAppId != null && (_applicationManager.getSelectForm(sAppId) != null) ) {
 				sSelectFormName +=  _applicationManager.getSelectForm(sAppId); // Add application specific suffix
@@ -2028,7 +2027,8 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 			String sCountry = (String)_htSessionContext.get("country");  // 20101027 _
 			sSelectForm = Utils.replaceString(sSelectForm, "[language]", sLanguage);
 			sSelectForm = Utils.replaceString(sSelectForm, "[country]", sCountry);
-			
+			sSelectForm = Utils.replaceString(sSelectForm, "[idin_issuers]", IdinAuthSPHandler.getAvailableIssuersSelect());
+
 			// 20130411: What AuthSP's must be presented to the user?
 			if (bAuthspFromSelect) {
 				// 20130411, Bauke: Take AuthSP's from select.html
@@ -3226,7 +3226,9 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 			String strRG = _configManager.getParam(oAuthSPsection, "resourcegroup");
 			SAMResource mySAMResource = ASelectSAMAgent.getHandle().getActiveResource(strRG);
 			Object objAuthSPResource = mySAMResource.getAttributes();
+			_systemLogger.log(Level.FINE, _sModule, sMethod, "to init");
 			oProtocolHandler.init(oAuthSPsection, objAuthSPResource);
+			_systemLogger.log(Level.FINE, _sModule, sMethod, "from init");
 		}
 		catch (ASelectConfigException e) {
 			_systemLogger.log(Level.SEVERE, _sModule, sMethod, "Failed to retrieve config for AuthSPHandler="+sAuthsp);
@@ -3236,7 +3238,8 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 			_systemLogger.log(Level.SEVERE, _sModule, sMethod, "Failed to initialize handler AuthSPHandler="+sAuthsp);
 			throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR);
 		}
-
+		
+		_systemLogger.log(Level.FINE, _sModule, sMethod, "to compute");
 		// let the protocol handler for the authsp do its work
 		HashMap htResponse = oProtocolHandler.computeAuthenticationRequest(sRid, _htSessionContext);
 		return htResponse;
