@@ -20,9 +20,11 @@ import java.io.OutputStreamWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.HttpURLConnection;
 import java.net.URL;
+import java.net.URLConnection;
 import java.util.logging.Level;
 
 import org.aselect.authspserver.log.AuthSPSystemLogger;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * Sends SMS request to an SMS gateway 
@@ -86,17 +88,17 @@ public abstract class GenericSmsSender
 		String sMethod = "sendSms";
 		
 		int iReturnCode = -1;
-		StringBuffer data = new StringBuffer("");
+		StringBuffer sbData = new StringBuffer("");
 		AuthSPSystemLogger _systemLogger = AuthSPSystemLogger.getHandle();
 		_systemLogger.log(Level.INFO, sModule, sMethod, "usePost=" + usePostMethod + " content="+getContentType());
 
 		// Assemble HTTP request
 		try {
-			iReturnCode = assembleSmsMessage(sTemplate, sSecret, from, recipients, data);
-//			_systemLogger.log(Level.FINEST, sModule, sMethod, "data=" + data.toString()+ " iReturnCode="+iReturnCode);
-			_systemLogger.log(Level.FINEST, sModule, sMethod, "data=" + "..." + " iReturnCode="+iReturnCode);
+			iReturnCode = assembleSmsMessage(sTemplate, sSecret, from, recipients, sbData);
 			if (iReturnCode != 0)
 				return iReturnCode;
+
+			String sData = sbData.toString();
 			
 			// Establish the connection
 			URL url = null;
@@ -109,21 +111,20 @@ public abstract class GenericSmsSender
 			}
 			else {
 				// requestMethod = GET
-				url = new URL(providerUrl+"?"+data.toString());
+				url = new URL(providerUrl+"?"+sData);
 				conn = (HttpURLConnection)url.openConnection();
 			}
-//			_systemLogger.log(Level.FINEST, sModule, sMethod, "Send URL="+url);
-			_systemLogger.log(Level.FINEST, sModule, sMethod, "Send URL="+providerUrl + "...");
-			conn.setRequestProperty("Host", url.getHost());	// Wireless Services requires 'Host' header
-
-			//conn.setRequestProperty("Content-Type", "application/x-www-form-urlencoded");	// Wireless Services requires this for POST
-			conn.setRequestProperty("Content-Type", getContentType());  // x-www-form-urlencoded
-			conn.setReadTimeout(10000);
-			// conn.setRequestProperty("Connection", "close"); // use this if we will explicitly conn.disconnect();
 			
+			conn.setRequestProperty("Host", url.getHost());	// Wireless Services requires 'Host' header
+			// Wireless Services requires content type "application/x-www-form-urlencoded" for POST
+			conn.setRequestProperty("Content-Type", getContentType());  // take content type from specific SMS sender
+			conn.setReadTimeout(10000);
+			// conn.setRequestProperty("Connection", "close"); // use this if we will explicitly call conn.disconnect();
+			
+			_systemLogger.log(Level.FINEST, sModule, sMethod, "Send to URL="+providerUrl + Auxiliary.obfuscate(sData));
 			if (usePostMethod) { // Send the POST request
 				OutputStreamWriter wr = new OutputStreamWriter(conn.getOutputStream());
-				wr.write(data.toString());
+				wr.write(sData);
 				wr.flush();
 				wr.close();
 			}

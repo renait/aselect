@@ -12,11 +12,8 @@ package org.aselect.authspserver.authsp.sms;
 import java.io.BufferedReader;
 import java.io.IOException;
 import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 import java.util.logging.Level;
 
-import org.apache.commons.lang.StringEscapeUtils;
-import org.apache.velocity.app.event.implement.EscapeXmlReference;
 import org.aselect.authspserver.log.AuthSPSystemLogger;
 import org.aselect.system.utils.Utils;
 
@@ -28,22 +25,34 @@ import org.aselect.system.utils.Utils;
 public class CmHttpSmsSender extends GenericSmsSender
 {
 	private static final String sModule = "CM";
-	private static final String SEPCHAR = "=";
+	//private static final String SEPCHAR = "=";
 
 	private String sCustomerId = null;
+	private String sProductToken = null;
+	private String sAppKey = null;
+	
+	final String CUSTOMER_LOCATION = "_CUSTOMER_IS_HERE_";
+	final String PRODUCTTOKEN_LOCATION = "_PRODUCTTOKEN_IS_HERE_";
+	final String LOGIN_DATA_LOCATION = "_LOGIN_DATA_IS_HERE_";
+	final String APPKEY_LOCATION = "_APPKEY_IS_HERE_";
+
+	final String xmlCustomer = "<CUSTOMER ID=\"[CUSTOMER]\"/>\n";
+	final String xmlProductToken = "<AUTHENTICATION>\n<PRODUCTTOKEN>[PRODUCTTOKEN]</PRODUCTTOKEN>\n</AUTHENTICATION>\n";
+	final String xmlLoginData = "<USER LOGIN=\"[USER]\" PASSWORD=\"[PASSWORD]\"/>\n";
+	final String xmlAppKey = "<APPKEY>[APPKEY]</APPKEY>";
 
 	private String xmlSmsMessage =
-		"<?xml version=\"1.0\"?>\n" +
+		"<?xml version=\"1.0\" encoding=\"utf-8\"?>\n" +
 		"<MESSAGES>\n" +
-		"<CUSTOMER ID=\"[CUSTOMER]\"/>\n" +
-		"<USER LOGIN=\"[LOGIN]\" PASSWORD=\"[PASSWORD]\"/>\n" +
+		CUSTOMER_LOCATION + PRODUCTTOKEN_LOCATION + LOGIN_DATA_LOCATION +
 		"<MSG>\n" +
 			"<FROM>[SENDER]</FROM>\n" +
-			"<BODY TYPE=\"TEXT\">[MESSAGE]</BODY>\n" +
-			"<TO>[NUMBER]</TO>\n" +
+			"<BODY>[MESSAGE]</BODY>\n" + 
+			"<TO>[NUMBER]</TO>\n" + APPKEY_LOCATION + "\n" +
+			//"<ALLOWEDCHANNELS>SMS</ALLOWEDCHANNELS>\n" +
 		"</MSG>\n" +
 		"</MESSAGES>\n";
-
+	
 	final String CONTENT_TYPE = "text/xml; charset=utf-8";
 	
 	// Override the default from GenericSmsSender
@@ -67,10 +76,13 @@ public class CmHttpSmsSender extends GenericSmsSender
 	 * @param usePost
 	 *            use POST instead of GET
 	 */
-	public CmHttpSmsSender(String url, String customer, String user, String password, String gateway, boolean usePost)
+	public CmHttpSmsSender(String url, String customer, String user, String password, String producttoken,
+			String appkey, String gateway, boolean usePost)
 	{
 		super(url, user, password, gateway, usePost);
 		sCustomerId = customer;
+		sProductToken = producttoken;
+		sAppKey = appkey;
 	}
 	
 	/**
@@ -101,13 +113,42 @@ public class CmHttpSmsSender extends GenericSmsSender
 		String sMessage = applySmsTemplate(sTemplate, sSecret, false);
 //		_systemLogger.log(Level.FINEST, sModule, sMethod, "msg="+escapeXmlString(sMessage)+" cust="+sCustomerId+
 //				" user="+this.user+" password="+this.password+" from="+from+" rcp="+recipients);
-		_systemLogger.log(Level.FINEST, sModule, sMethod, "msg="+"..." +" from="+from);
 		String sData = xmlSmsMessage.replaceAll("\\[MESSAGE\\]", escapeXmlString(sMessage));
-		sData = sData.replaceAll("\\[CUSTOMER\\]", sCustomerId);
-		sData = sData.replaceAll("\\[LOGIN\\]", escapeXmlString(this.user));
-		sData = sData.replaceAll("\\[PASSWORD\\]", escapeXmlString(this.password));
+
+		if (Utils.hasValue(sCustomerId)) {
+			String sValue = xmlCustomer.replaceAll("\\[CUSTOMER\\]", sCustomerId);
+			sData = sData.replaceAll(CUSTOMER_LOCATION, sValue);
+		}
+		else {
+			sData = sData.replaceAll(CUSTOMER_LOCATION, "");
+		}
+		
+		if (Utils.hasValue(sProductToken)) {
+			String sValue = xmlProductToken.replaceAll("\\[PRODUCTTOKEN\\]", escapeXmlString(this.sProductToken));
+			sData = sData.replaceAll(PRODUCTTOKEN_LOCATION, sValue);
+		}
+		else {
+			sData = sData.replaceAll(PRODUCTTOKEN_LOCATION, "");
+		}
+		if (Utils.hasValue(this.user) && Utils.hasValue(this.password)) {
+			String sValue = xmlLoginData.replaceAll("\\[USER\\]", escapeXmlString(this.user));
+			sValue = sValue.replaceAll("\\[PASSWORD\\]", escapeXmlString(this.password));
+			sData = sData.replaceAll(LOGIN_DATA_LOCATION, sValue);
+		}
+		else {
+			sData = sData.replaceAll(LOGIN_DATA_LOCATION, "");
+		}
+		
 		sData = sData.replaceAll("\\[SENDER\\]", escapeXmlString(from));
 		sData = sData.replaceAll("\\[NUMBER\\]", recipients);  // a single phone number
+		
+		if (Utils.hasValue(sAppKey)) {
+			String sValue = xmlAppKey.replaceAll("\\[APPKEY\\]", escapeXmlString(this.sAppKey));
+			sData = sData.replaceAll(APPKEY_LOCATION, sValue);
+		}
+		else {
+			sData = sData.replaceAll(APPKEY_LOCATION, "");
+		}
 		
 		// gateway has no value
 		if (Utils.hasValue(this.gateway)) {
@@ -159,20 +200,22 @@ public class CmHttpSmsSender extends GenericSmsSender
 	protected int analyzeSmsResult(BufferedReader rd)
 	throws IOException, DataSendException
 	{
-		String sMethod = "sendSms";
+		String sMethod = "analyzeSmsResult";
 		AuthSPSystemLogger _systemLogger = AuthSPSystemLogger.getHandle();
 
 		String line;
 		String sResult = "";
 		while ((line = rd.readLine()) != null) {	// there should be only one significant line, ignore extra lines
-			if ("".equals(sResult) && !"".equals(line))
-				sResult = line;	// get first non-empty line
+			_systemLogger.log(Level.FINEST, sModule, sMethod, "line" + line);
+			sResult += line;
+			//if ("".equals(sResult) && !"".equals(line))
+			//	sResult = line;	// get first non-empty line
 		}
 		_systemLogger.log(Level.FINEST, sModule, sMethod, "result:" + sResult);
 
-		// Analyze the result
-		if (sResult.startsWith("Error:") || sResult.startsWith("ERROR")) {
-			throw new DataSendException("SMS provider could not send sms, error=" + sResult.substring(6));
+		// Analyse the result
+		if (sResult.contains("Error:") || sResult.contains("ERROR")) {
+			throw new DataSendException("SMS provider could not send sms, error=" + sResult);
 		}
 		return 0;  // ok
 	}
