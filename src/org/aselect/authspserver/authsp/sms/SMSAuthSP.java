@@ -79,6 +79,8 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 	private String _sSmsCustomer;  // 20140206, Bauke: added for CM
 	private String _sSmsUser;
 	private String _sSmsPassword;
+	private String _sProductToken;
+	private String _sAppKey;
 	private String _sSmsGateway;
 	private int _iSmsSecretLength;
 	private String _sSmsText;
@@ -151,77 +153,49 @@ public class SMSAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit goodi
 				Utils.loadTemplateFromFile(_systemLogger, _sWorkingDir, _sConfigID, "challenge.html", null, _sFriendlyName, VERSION);
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "Successfully loaded 'challenge.html' template.");
 			}
-
+			
+			// NOTE: getSimpleParam() can return null values if item is not mandatory
 			_iAllowedRetries = Utils.getSimpleIntParam(_configManager, _systemLogger, _oAuthSpConfig, "allowed_retries", true);
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "allowed_retries="+_iAllowedRetries);
 
-			try {
-				_sSmsUrl = _configManager.getParam(_oAuthSpConfig, "url");
-			}
-			catch (ASelectConfigException eAC) {
-				_systemLogger.log(Level.CONFIG, MODULE, sMethod, "No 'url' parameter found in configuration", eAC);
-				throw new ASelectException(Errors.ERROR_SMS_INTERNAL_ERROR, eAC);
-			}
+			_sSmsUrl = Utils.getSimpleParam(_configManager, _systemLogger, _oAuthSpConfig, "url", true/*mandatory*/);
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "url="+_sSmsUrl);
 
 			// For CM a Customer ID is needed
 			_sSmsCustomer = Utils.getSimpleParam(_configManager, _systemLogger, _oAuthSpConfig, "customer", false/*not mandatory*/);
 
-			try {
-				_sSmsUser = _configManager.getParam(_oAuthSpConfig, "user");
+			// For user/password authentication
+			_sSmsUser = Utils.getSimpleParam(_configManager, _systemLogger, _oAuthSpConfig, "user", false/*not mandatory*/);
+			_sSmsPassword = Utils.getSimpleParam(_configManager, _systemLogger, _oAuthSpConfig, "password", false/*not mandatory*/);
+
+			// if authentication uses a product token (cm)
+			_sProductToken = Utils.getSimpleParam(_configManager, _systemLogger, _oAuthSpConfig, "producttoken", false/*not mandatory*/);
+			if (!(Utils.hasValue(_sProductToken) || (Utils.hasValue(_sSmsUser) && Utils.hasValue(_sSmsPassword)))) {
+				_systemLogger.log(Level.CONFIG, MODULE, sMethod, "Either configure 'user' and 'password' or 'producttoken'");
+				throw new ASelectException(Errors.ERROR_SMS_INTERNAL_ERROR);
 			}
-			catch (ASelectConfigException eAC) {
-				_systemLogger.log(Level.CONFIG, MODULE, sMethod, "No 'user' parameter found in configuration", eAC);
-				throw new ASelectException(Errors.ERROR_SMS_INTERNAL_ERROR, eAC);
+				
+			// CM can use an application key to push messages to an App (instead of sending an SMS)
+			_sAppKey = Utils.getSimpleParam(_configManager, _systemLogger, _oAuthSpConfig, "appkey", false/*not mandatory*/);
+
+			_iSmsSecretLength = Utils.getSimpleIntParam(_configManager, _systemLogger, _oAuthSpConfig, "secret_length", true);
+
+			_sSmsText = Utils.getSimpleParam(_configManager, _systemLogger, _oAuthSpConfig, "text", true/*mandatory*/);
+
+			_sSmsFrom = Utils.getSimpleParam(_configManager, _systemLogger, _oAuthSpConfig, "from", true/*mandatory*/);
+			if (_sSmsFrom.length()>11) {
+				_sSmsFrom = _sSmsFrom.substring(0, 11);
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Sender id given in <from> tag is longer than 11 characters, truncated");
 			}
 
-			try {
-				_sSmsPassword = _configManager.getParam(_oAuthSpConfig, "password");
-			}
-			catch (ASelectConfigException eAC) {
-				_systemLogger.log(Level.CONFIG, MODULE, sMethod, "No 'password' parameter found in configuration", eAC);
-				throw new ASelectException(Errors.ERROR_SMS_INTERNAL_ERROR, eAC);
-			}
-
-			try {
-				String sSmsSecretLength = _configManager.getParam(_oAuthSpConfig, "secret_length");
-				_iSmsSecretLength = Integer.parseInt(sSmsSecretLength);
-			}
-			catch (ASelectConfigException eAC) {
-				_systemLogger.log(Level.WARNING, MODULE, sMethod,
-						"No 'secret_length' parameter found in configuration", eAC);
-				throw new ASelectException(Errors.ERROR_SMS_INTERNAL_ERROR, eAC);
-			}
-			catch (NumberFormatException eNF) {
-				_systemLogger.log(Level.WARNING, MODULE, sMethod,
-						"Invalid 'secret_length' parameter found in configuration", eNF);
-				throw new ASelectException(Errors.ERROR_SMS_INTERNAL_ERROR, eNF);
-			}
-
-			try {
-				_sSmsText = _configManager.getParam(_oAuthSpConfig, "text");
-			}
-			catch (ASelectConfigException eAC) {
-				_systemLogger.log(Level.CONFIG, MODULE, sMethod, "No 'text' parameter found in configuration", eAC);
-				throw new ASelectException(Errors.ERROR_SMS_INTERNAL_ERROR, eAC);
-			}
-
-			try {
-				_sSmsFrom = _configManager.getParam(_oAuthSpConfig, "from");
-			}
-			catch (ASelectConfigException eAC) {
-				_systemLogger.log(Level.CONFIG, MODULE, sMethod, "No 'from' parameter found in configuration", eAC);
-				throw new ASelectException(Errors.ERROR_SMS_INTERNAL_ERROR, eAC);
-			}
-			// NOTE: getSimpleParam() can return null values
-
-			// if gateway is nog given, use the default gateway for the provider
+			// if gateway is not given, use the default gateway for the provider
 			_sSmsGateway = Utils.getSimpleParam(_configManager, _systemLogger, _oAuthSpConfig, "gateway", false/*not mandatory*/);
 
 			// if _sSmsProvider is null use default provider
 			_sSmsProvider = Utils.getSimpleParam(_configManager, _systemLogger, _oAuthSpConfig, "gw_provider", false/*not mandatory*/);
 
-			_oSmsSender = SmsSenderFactory.createSmsSender(_sSmsUrl, _sSmsCustomer, _sSmsUser, _sSmsPassword, _sSmsGateway, _sSmsProvider);
+			_oSmsSender = SmsSenderFactory.createSmsSender(_sSmsUrl, _sSmsCustomer, _sSmsUser, _sSmsPassword,
+								_sProductToken, _sAppKey, _sSmsGateway, _sSmsProvider);
 			
 			// RH, 20110913, sn
 			try {
