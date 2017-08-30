@@ -102,7 +102,7 @@ public class WirelessServicesHttpSmsSender extends GenericSmsSender
 	protected int analyzeSmsResult(BufferedReader rd)
 	throws IOException, DataSendException
 	{
-		String sMethod = "sendSms";
+		String sMethod = "analyzeSmsResult";
 		AuthSPSystemLogger _systemLogger = AuthSPSystemLogger.getHandle();
 
 		String line;
