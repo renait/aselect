@@ -30,6 +30,7 @@ import org.aselect.system.exception.ASelectCommunicationException;
 import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.exception.ASelectSAMException;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 public class RESTAPIAttributeRequestor extends APIAttributeRequestor {
 
@@ -145,7 +146,7 @@ public class RESTAPIAttributeRequestor extends APIAttributeRequestor {
 					requestURL = requestURL.replaceAll("\\{" + sName + "\\}", sValue);
 
 				}
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "request url after parsing:" + requestURL);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "request url after parsing:" + Auxiliary.obfuscate(requestURL));
 
 				
 				// do Authentication if needed
