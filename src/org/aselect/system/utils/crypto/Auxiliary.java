@@ -108,7 +108,8 @@ public  final class Auxiliary
 	private static final String[] DEFAULT_REGS = { "^([0-9]{9})[^0-9]", "[^0-9]([0-9]{9})[^0-9]", "[^0-9]([0-9]{9})$", "^([0-9]{9})$"};	// anything resembling a BSN
 	public static List<Pattern> REGEX_PATTERNS =  new ArrayList<Pattern>();
 
-	private static final String[] DEFAULT_KEYS = { "uid", "Uid", "UID", "uID", "bsn", "Bsn", "BSN", "obouid", "user_id" , "sel_uid", "userId", "user_Id",
+	private static final String[] DEFAULT_KEYS = { "uid", "Uid", "UID", "uID", "bsn", "Bsn", "BSN", "obouid", "user_id" , "sel_uid", "userId", "user_Id", ""
+			+ "burgerservicenummer", "patientnummer", "Burgerservicenummer", "Patientnummer",
 		"name_id", "Name_ID", "NAME_ID", "Name_id", "authid", "Authid", "AuthId", "AuthID",
 		"password", "pw", "passwd", "shared_secret", "secret", "cn", "CN",
 	 	"full_dn", "mail", "email", "contents" };
