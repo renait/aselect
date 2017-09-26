@@ -76,7 +76,7 @@ module AP_MODULE_DECLARE_DATA aselect_filter_module;
 //static handler_rec      aselect_filter_handlers[];
 static const command_rec    aselect_filter_cmds[];
 
-char *version_number = "====subversion_====";
+char *version_number = "====subversion_599M====";
 
 // -----------------------------------------------------
 // Functions 
@@ -293,6 +293,8 @@ char *aselect_filter_verify_ticket(request_rec *pRequest, pool *pPool, PASELECT_
     if (*pcSHA1) {
 		pcSendMessage = ap_psprintf(pPool, "request=verify_ticket&ticket=%s&app_id=%s&attributes_hash=%s&request_uri=%s&ip=%s%s&usi=%s\r\n", 
 			pcTicket, pConfig->pCurrentApp->pcAppId, pcSHA1, pcURI, pRequest->connection->remote_ip, langBuf, timer_usi(pPool, pt));
+//			pcTicket, pConfig->pCurrentApp->pcAppId, pcSHA1, pcURI, pRequest->useragent_ip, langBuf, timer_usi(pPool, pt));
+//			pcTicket, pConfig->pCurrentApp->pcAppId, pcSHA1, pcURI, pRequest->connection->client_ip, langBuf, timer_usi(pPool, pt));
 	}
     else { // No attribute hash available, so don't ask for an attribute check
 		pcSendMessage = ap_psprintf(pPool, "request=verify_ticket&ticket=%s&app_id=%s&request_uri=%s&ip=%s%s&usi=%s\r\n", 
@@ -629,7 +631,9 @@ static int aselect_filter_handler(request_rec *pRequest)
     int try, rc;
 	char *p, sep;
     TIMER_DATA timer_data;
+    table *subprocess_env = pRequest->subprocess_env;   // RH, 20170926, n
 
+    
     TRACE2("---- { GET %s %s", pRequest->uri, pRequest->args);
     // START TIMER
     timer_data.td_type = 0;
@@ -734,11 +738,25 @@ static int aselect_filter_handler(request_rec *pRequest)
             TRACE1("\"%s\" requested filter_alive", pRequest->uri);
             // return output
             pRequest->content_type = "text/html; charset=utf-8";
+            
+            // RH, 20170926, sn
+            TRACE2("Set env %s: %s", "dontlog", "1");
+            if (subprocess_env) {
+                ap_table_set(subprocess_env, "dontlog", "1");
+            } else {
+                TRACE1("Creating table for subprocess_env with size %s", "1");
+                subprocess_env = ap_make_table(pPool, 1);
+                ap_table_set(subprocess_env, "dontlog", "1");
+                pRequest->subprocess_env = ap_overlay_tables(pPool, pRequest->subprocess_env, subprocess_env );
+            }
+            // RH, 20170926, sn
+
             ap_send_http_header(pRequest);
             ap_rprintf(pRequest, "%s\n", "<html><body>Filter is ALIVE</body></html>");
             iRet = DONE;
             goto finish_filter_handler; // we're done
     }
+    //
     // RH, 20170102, en
 
     // 20091114, Bauke: report application language back to the Server
@@ -2012,6 +2030,7 @@ static void aselect_filter_removeUnwantedCharacters(char *args)
 			break;
     }
 }
+
 
 //
 // Use to create the per server configuration data
