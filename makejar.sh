@@ -1,10 +1,9 @@
 #!/bin/sh
-#YYYYYYYYYYYYYYYYYYYYYYYY
 #
 # Author: Bauke Hiemstra - www.anoigo.nl
 #
-JAR="/cygdrive/c/Program Files/Java/jdk1.7.0_79/bin/jar.exe"
-WORK_HOME=/cygdrive/e/Eclipse
+JAR="/cygdrive/c/Program Files/Java/jdk1.8.0_91/bin/jar.exe"
+WORK_HOME=/cygdrive/e/Eclipse/aselect
 
 TARGET_DIR=$WORK_HOME/jars
 if test ! -d $TARGET_DIR
@@ -23,7 +22,7 @@ LAST_VERSION=`grep '!svn' "$PROP_FILES" | \
 	sort -r -n | head -1`
 VERSION_FILE=subversion_$LAST_VERSION
 
-cd $BIN_DIR
+##cd $BIN_DIR
 echo PWD=`pwd`
 echo $LAST_VERSION >$VERSION_FILE
 echo LAST_VERSION=$LAST_VERSION
@@ -61,10 +60,17 @@ all)
 	./makejar.sh lbsensor
 	;;
 src)
-	tar cvf aselect_src_`date +%Y%m%d`.tar `find . -name '*.java' -o -name '*.[ch]' | grep -v lbsensor`
+	cd $SOURCE_DIR
+	tar cvf ../aselect_src_`date +%Y%m%d`.tar `find . -name '*.java' -o -name '*.[ch]' -o -name '*.xml' | grep -v lbsensor`
 	;;
+
+all_src)
+	cd $SOURCE_DIR
+	tar cvf ../aselect_src_`date +%Y%m%d`.tar `find . -name '*.java' -o -name '*.[ch]' -o -name '*.xml' -o -name '*.sh'`
+	;;
+
 *)	echo "Usage: `basename $0` all|agent|server|system|lbsensor"
 	rm -f $VERSION_FILE
 	exit;;
 esac
-rm -f $VERSION_FILE
+#rm -f $VERSION_FILE
