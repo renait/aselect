@@ -14,10 +14,8 @@
 	
 <!--
 	<buildnumber/>
-	
 	<echo message="buildnumber: ${build.number}"/>
 -->	
-
 	
 	<exec outputproperty="build.current.revision" executable="svnversion" failifexecutionfails="false"  >
 		<!-- version 1.7 or later	-->
@@ -56,7 +54,7 @@
 		<isset property="build.current.revision"/>
 	</condition>
 
-	<echo message="Full build version: ${full.build.version}"/>
+	<echo message="Aselect build version: ${full.build.version}"/>
 	
 	<property name="vendor" value="Anoigo" />
 	
@@ -112,8 +110,9 @@
   	<!--
 	    <javac destdir="target/classes" optimize="true" debug="true" debuglevel="vars,source,lines" srcdir="src/eu" sourcepath="">
 	-->
-    <javac destdir="target/classes" target="1.6" source="1.6" compiler="javac1.6" executable="C:/Program Files/Java/jdk1.6.0_45/bin/javac"
-    	fork="true" includeantruntime="false" optimize="true" srcdir="src/eu" sourcepath="">
+    <!--javac destdir="target/classes" target="1.6" source="1.6" compiler="javac1.6" executable="C:/Program Files/Java/jdk1.6.0_45/bin/javac" -->
+    <javac destdir="target/classes" target="1.8" source="1.8" compiler="javac1.8" executable="C:/Program Files/Java/jdk1.8.0_91/bin/javac"
+    	    	fork="true" includeantruntime="false" optimize="true" srcdir="src/eu" sourcepath="">
       <classpath>
         <fileset dir="lib">
           <include name="*.jar" />
@@ -125,10 +124,11 @@
     </javac>
   	
     <!-- A-SELECT	-->
-  	<!--	
+  	<!--
         <javac destdir="target/classes" optimize="true" srcdir="src/org" sourcepath="">
     -->
-	<javac destdir="target/classes" target="1.6" source="1.6" compiler="javac1.6" executable="C:/Program Files/Java/jdk1.6.0_45/bin/javac"
+	<!--javac destdir="target/classes" target="1.6" source="1.6" compiler="javac1.6" executable="C:/Program Files/Java/jdk1.6.0_45/bin/javac"-->
+	<javac destdir="target/classes" target="1.8" source="1.8" compiler="javac1.8" executable="C:/Program Files/Java/jdk1.8.0_91/bin/javac"
 		fork="true" includeantruntime="false" optimize="true" debug="true" debuglevel="vars,source,lines" srcdir="src/org" sourcepath="">
       <classpath>
         <fileset dir="lib">
@@ -147,7 +147,7 @@
     <format property="touch.time" pattern="d-MMMM-yyyy HH:mm" />
    	</tstamp>
 
-	<echo message="Full build version: ${touch.time}"/>
+	<echo message="Touch time: ${touch.time}"/>
 
     <build-jar jar-name="eu.stork"
                include-pattern="eu/stork/**/*.class" >
