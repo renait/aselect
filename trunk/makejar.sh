@@ -2,6 +2,7 @@
 #
 # Author: Bauke Hiemstra - www.anoigo.nl
 #
+#
 JAR="/cygdrive/c/Program Files/Java/jdk1.8.0_91/bin/jar.exe"
 WORK_HOME=/cygdrive/e/Eclipse/aselect
 
