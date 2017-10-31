@@ -10,13 +10,13 @@
 <!-- Remy Hanswijk - www.anoigo.nl: Some improvements		  -->
 
 <project name="A-Select" default="jars" >
-	
-	
+
+
 <!--
 	<buildnumber/>
 	<echo message="buildnumber: ${build.number}"/>
 -->	
-	
+
 	<exec outputproperty="build.current.revision" executable="svnversion" failifexecutionfails="false"  >
 		<!-- version 1.7 or later	-->
 	         <arg line="-n -c" />
