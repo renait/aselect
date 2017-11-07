@@ -1555,5 +1555,28 @@ public class Utils
 		return dbFactory;
 	}
 
+	/**
+	 * 
+	 * @param sHandle
+	 * 
+	 * @return
+	 * Returns UUID format of input. 		8-4-4-4-12[:8-4-4-4-12]*
+	 */
+	public static String format2quasiuuid(String sHandle) {
+		String template = "00000000000000000000000000000000";
+		StringBuffer buffer = new StringBuffer();
+		int chunks = ( (sHandle.length() - 1) / template.length() ) + 1;
+		for (int i = 0; i <chunks; i++) {
+			if (i>0) {
+				buffer.append(":");
+			}
+			buffer.append(template);
+			String part = sHandle.substring(i*template.length(), Math.min( (i+1)*template.length(), sHandle.length() ));
+			buffer.replace( buffer.length() - part.length(), buffer.length() , part);
+			// some hanky-panky for the dashes
+			buffer.insert( (i*(template.length()+5))+20, "-").insert((i*(template.length()+5))+16, "-").insert((i*(template.length()+5))+12, "-").insert((i*(template.length()+5))+8, "-");
+		}
+		return buffer.toString();
+	}
 
 }
