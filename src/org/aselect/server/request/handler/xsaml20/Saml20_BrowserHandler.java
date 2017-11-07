@@ -81,6 +81,8 @@ import org.opensaml.xml.util.XMLHelper;
 public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 {
 	private final static String MODULE = "Saml20_BrowserHandler";
+	
+	protected static final String ORIGINATING_RELAYSTATE = "originating_relaystate";
 
 	public IClientCommunicator _oClientCommunicator;
 	public String _sMyServerId; // The value of <server_id> in the <aselect> section
@@ -640,8 +642,14 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 			}
 			// No saml20 IdP, the TgT goes down the drain
 			tgtManager.remove(sNameID);
-		}
-
+//		}	// RH, 20171107, o
+		} else {	// RH, 20171107, sn
+			// if we have no tgt or cannot find it, there might be a saved relaystate for the initiating SP
+			// because we have no tgt we did not send logouts to other SP's nor the IDP so initiatingID will have originating logoutrequest ID
+			SamlHistoryManager history = SamlHistoryManager.getHandle();
+			sRelayState = (String) history.get(ORIGINATING_RELAYSTATE + "_" + initiatingID);
+		}	// RH, 20171107, en
+		
 		// And answer the initiating SP by sending a LogoutResponse
 		// Get location from metadata, try ResponseLocation first, then Location
 		MetaDataManagerIdp metadataManager = MetaDataManagerIdp.getHandle();
@@ -673,6 +681,7 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 		// logoutResponseLocation += sStart+"RelayState="+sRelayState;
 		// }
 		String statusCode = StatusCode.SUCCESS_URI;
+//		String sigAlg = (_sReqSigning != null) ?_sReqSigning: _sDefaultSigning;
 		LogoutResponseSender sender = new LogoutResponseSender();
 		_systemLogger.log(Audit.AUDIT, MODULE, sMethod, ">> Sending logoutresponse to: " + logoutResponseLocation);
 		sender.sendLogoutResponse(logoutResponseLocation, _sASelectServerUrl, statusCode, initiatingID, sRelayState,
