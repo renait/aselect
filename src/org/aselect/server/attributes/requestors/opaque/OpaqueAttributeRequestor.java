@@ -42,13 +42,16 @@
  */
 package org.aselect.server.attributes.requestors.opaque;
 
+import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
+import java.security.NoSuchAlgorithmException;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Vector;
 import java.util.logging.Level;
 
 import org.aselect.server.attributes.requestors.GenericAttributeRequestor;
+import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectAttributesException;
 import org.aselect.system.exception.ASelectException;
@@ -71,6 +74,10 @@ import org.aselect.system.utils.crypto.Auxiliary;
 public class OpaqueAttributeRequestor extends GenericAttributeRequestor
 {
 	final private String MODULE = "OpaqueAttributeRequestor";
+	
+	private String _format = null;
+	private String _algorithm = null;
+
 
 	/**
 	 * Retrieve attributes from opaquehandler. <br>
@@ -106,9 +113,15 @@ public class OpaqueAttributeRequestor extends GenericAttributeRequestor
 			HashMap htAttrs = new HashMap();
 			for (Enumeration e = vAttributes.elements(); e.hasMoreElements();) {
 				// Calculate opaque handle
-				MessageDigest md = MessageDigest.getInstance("SHA1");
+//				MessageDigest md = MessageDigest.getInstance("SHA1");	// RH, 20171106, o
+				MessageDigest md = MessageDigest.getInstance(_algorithm);	// RH, 20171106, n
 				md.update(sUID.getBytes("UTF-8"));
 				String sHandle = Utils.byteArrayToHexString(md.digest());
+				//  RH, 20171106, sn
+				if ("UUID".equals(_format)) {
+					sHandle = Utils.format2quasiuuid(sHandle);
+				}
+				//  RH, 20171106, en
 
 				// Return result in a HashMap
 				htAttrs.put(e.nextElement(), sHandle);
@@ -134,7 +147,20 @@ public class OpaqueAttributeRequestor extends GenericAttributeRequestor
 	public void init(Object oConfig)
 	throws ASelectException
 	{
+		String sMethod = "init";
 		super.init(oConfig);
+
+		_format = ASelectConfigManager.getSimpleParam(oConfig, "format", false);
+		if (_format != null ) {
+			_format = _format.toUpperCase();
+		}
+		_algorithm = ASelectConfigManager.getSimpleParam(oConfig, "algorithm", false);
+		if (_algorithm == null || _algorithm.length() == 0) {
+			_algorithm = "SHA1";	// Backwards compatibility
+		} else {
+			_algorithm = _algorithm.toUpperCase();
+		}
+
 	}
 
 	/**
@@ -146,5 +172,38 @@ public class OpaqueAttributeRequestor extends GenericAttributeRequestor
 	public void destroy()
 	{
 		// Does nothing
+	}
+	
+	public static void main(String[] args)	// for testing
+	{
+//		String sUID = "12345dfk;sf;sf;sldfj;sldf;slfj;l;leer;ewr;re;lf;ladf;ldsf;lerfje;lfj;dlf;sldf;sdlf;lwef;f;lf;sdlf;sdf;sdf;sdfj;sfj;sdfj;sldf;sldf;lsdf;lsdf";
+//		String sUID = "12345";
+		String sUID = "";
+		MessageDigest md;
+		try {
+//			md = MessageDigest.getInstance("MD5");
+//			md = MessageDigest.getInstance("SHA-1");
+			md = MessageDigest.getInstance("SHA1");
+//			md = MessageDigest.getInstance("SHA-224");
+//			md = MessageDigest.getInstance("SHA-256");
+//			md = MessageDigest.getInstance("SHA-384");
+//			md = MessageDigest.getInstance("SHA-512");
+//			md = MessageDigest.getInstance("SHA3-256");
+			md.update(sUID.getBytes("UTF-8"));
+			String sHandle = Utils.byteArrayToHexString(md.digest());
+			System.out.println("Hex:" + sHandle + ", length (chars):" + sHandle.length());
+			String hash = Utils.format2quasiuuid(sHandle);
+			
+			System.out.println("Hex representation:" + hash + ", length (chars):" + hash.length());
+		}
+		catch (NoSuchAlgorithmException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		catch (UnsupportedEncodingException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+		
 	}
 }
