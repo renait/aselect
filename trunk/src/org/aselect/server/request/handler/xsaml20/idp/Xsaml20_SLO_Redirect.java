@@ -161,7 +161,14 @@ public class Xsaml20_SLO_Redirect extends Saml20_BrowserHandler
 					htTGTContext.put("RelayState", sRelayState);
 				else
 					htTGTContext.remove("RelayState");
-			} 			// RH, 20170804, n
+//			} 			// RH, 20170804, n	// RH, 20171107, o
+			} else {				// RH, 20171107, sn
+				// save the RelayState also for we might not have or find the tgt, e.g. in case of persitent NameID
+				if (sRelayState != null) {
+					history.put(ORIGINATING_RELAYSTATE + "_" + originalID, sRelayState);
+				}
+			}	// RH, 20171107, en
+
 			
 			// If user consent is needed, first show the logout_info.html
 			ASelectConfigManager configManager = ASelectConfigManager.getHandle();
