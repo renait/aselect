@@ -646,8 +646,13 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 		} else {	// RH, 20171107, sn
 			// if we have no tgt or cannot find it, there might be a saved relaystate for the initiating SP
 			// because we have no tgt we did not send logouts to other SP's nor the IDP so initiatingID will have originating logoutrequest ID
-			SamlHistoryManager history = SamlHistoryManager.getHandle();
-			sRelayState = (String) history.get(ORIGINATING_RELAYSTATE + "_" + initiatingID);
+			try {
+				SamlHistoryManager history = SamlHistoryManager.getHandle();
+				sRelayState = (String) history.get(ORIGINATING_RELAYSTATE + "_" + initiatingID);
+			} catch (ASelectException ase) {	// RH, 20171122, sn
+				// just try to continue if retrieving fails
+				_systemLogger.log(Level.FINER, MODULE, sMethod, "No originating relaystate found for: "+initiatingID+", trying to continue");
+			}	// RH, 20171122, en
 		}	// RH, 20171107, en
 		
 		// And answer the initiating SP by sending a LogoutResponse
