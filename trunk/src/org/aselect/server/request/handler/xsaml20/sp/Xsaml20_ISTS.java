@@ -65,6 +65,8 @@ import org.opensaml.saml2.core.AuthnContextComparisonTypeEnumeration;
 import org.opensaml.saml2.core.AuthnRequest;
 import org.opensaml.saml2.core.Issuer;
 import org.opensaml.saml2.core.RequestedAuthnContext;
+import org.opensaml.saml2.core.RequesterID;
+import org.opensaml.saml2.core.Scoping;
 import org.opensaml.saml2.metadata.AssertionConsumerService;
 import org.opensaml.saml2.metadata.Endpoint;
 import org.opensaml.saml2.metadata.SingleSignOnService;
@@ -368,6 +370,26 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 				requestedAuthnContext.setComparison(AuthnContextComparisonTypeEnumeration.MINIMUM);
 			else
 				requestedAuthnContext.setComparison(AuthnContextComparisonTypeEnumeration.EXACT);
+
+			// RH, 20171201, sn
+			/////////////////////////////////////////////////////////////////////
+			Scoping scoping = null;
+			String sApplicationRequestorID = getApplicationRequesterID(sApplicationId);
+			if (sApplicationRequestorID != null) {
+				SAMLObjectBuilder<Scoping> scopingtBuilder = null;
+				scopingtBuilder = (SAMLObjectBuilder<Scoping>) builderFactory
+						.getBuilder(Scoping.DEFAULT_ELEMENT_NAME);
+				scoping = scopingtBuilder.buildObject();
+				SAMLObjectBuilder<RequesterID> requestorIDBuilder = (SAMLObjectBuilder<RequesterID>) builderFactory
+						.getBuilder(RequesterID.DEFAULT_ELEMENT_NAME);
+				RequesterID requestorID = requestorIDBuilder.buildObject();
+				requestorID.setRequesterID(sApplicationRequestorID);
+				scoping.getRequesterIDs().add(requestorID);
+			} else {
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "No config item 'authnrequest_requesterid' found");
+			}
+			// RH, 20171201, en
+
 			
 			// 20120706, Bauke: save in session, must be transferred to TGT and used for Digid4 session_sync mechanism
 			String sst = partnerData.getRedirectSyncTime();
@@ -462,6 +484,12 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 			authnRequest.setIssueInstant(new DateTime());  // 20100712
 			authnRequest.setRequestedAuthnContext(requestedAuthnContext);
 
+			// RH, 20171201, sn
+			if (scoping != null) {
+				authnRequest.setScoping(scoping);
+			}
+			// RH, 20171201, en
+			
 			// Check if we have to set the ForceAuthn attribute
 			// 20090613, Bauke: use forced_authenticate (not forced_logon)!
 			Boolean bForcedAuthn = (Boolean)_htSessionContext.get("forced_authenticate");
@@ -1017,7 +1045,50 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 		return null;
 	}
 	
+	/**
+	 * Gets the RequesterID for the AuthnRequest.
+	 * 
+	 * @param sApplicationId
+	 *            the s application id
+	 * @return the application level
+	 * @throws ASelectException
+	 *             the a select exception
+	 */
+	private String getApplicationRequesterID(String sApplicationId)
+	throws ASelectException
+	{
+		String sMethod = "getApplicationRequesterID";
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Id=" + sApplicationId);
+
+		Object oApplications = null;
+		try {
+			oApplications = _configManager.getSection(null, "applications");
+		}
+		catch (ASelectConfigException e) {
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config section 'applications' found", e);
+			return null;
+		}
+
+		Object oApplication = null;
+		try {
+			oApplication = _configManager.getSection(oApplications, "application");
+		}
+		catch (ASelectConfigException e) {
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config section 'application' found", e);
+			return null;
+		}
+		while (oApplication != null) {
+			if (_configManager.getParam(oApplication, "id").equals(sApplicationId)) {
+				String sApplicationRequesterID = _configManager.getSimpleParam(oApplication,  "authnrequest_requesterid", false);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Found ' authnrequest_requesterid' =" + sApplicationRequesterID);
+				return sApplicationRequesterID;
+			}
+			oApplication = _configManager.getNextSection(oApplication);
+		}
+		return null;
+	}
     
+	
     class NamespacePrefixMapperImpl extends NamespacePrefixMapper {
 
         /**
