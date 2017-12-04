@@ -1079,7 +1079,8 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 		}
 		while (oApplication != null) {
 			if (_configManager.getParam(oApplication, "id").equals(sApplicationId)) {
-				String sApplicationRequesterID = _configManager.getSimpleParam(oApplication,  "authnrequest_requesterid", false);
+//				String sApplicationRequesterID = _configManager.getSimpleParam(oApplication,  "authnrequest_requesterid", false);
+				String sApplicationRequesterID = _configManager.getParamFromSection(oApplication, "authnrequest_scoping", "authnrequest_requesterid", false);
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Found ' authnrequest_requesterid' =" + sApplicationRequesterID);
 				return sApplicationRequesterID;
 			}
