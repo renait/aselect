@@ -294,7 +294,10 @@ public class AccountSTS extends ProtoRequestHandler
 //			if (htTGTContext != null) {	// RH, 20150915, o
 			if ( htTGTContext != null && (_iMinLevelProcess == null 
 					|| ( htTGTContext.get("authsp_level") != null 
-					&& _iMinLevelProcess.compareTo(Integer.valueOf((String)htTGTContext.get("authsp_level"))) <= 0)) ) {	// RH, 20150915, n
+//					&& _iMinLevelProcess.compareTo(Integer.valueOf((String)htTGTContext.get("authsp_level"))) <= 0)) ) {	// RH, 20150915, n	// RH, 20171208, o
+							&& _iMinLevelProcess.compareTo(Integer.valueOf((String)htTGTContext.get("authsp_level"))) <= 0)) 
+						&& _sMyAppId.equals((String)htTGTContext.get("app_id"))	// RH, 20171208, n	// temporary fix
+				) {	// RH, 20171208, n
 				// Valid TGT context found, Update TGT timestamp
 				_oTGTManager.updateTGT(sTgt, htTGTContext);
 				// Return to the caller
