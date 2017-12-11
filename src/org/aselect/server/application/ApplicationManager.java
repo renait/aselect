@@ -379,6 +379,8 @@ public class ApplicationManager
 					bPushAttributes = new Boolean(sPushAttributes).booleanValue();
 				// RH, 20150921, en
 
+				String sNameIDAttribute = ASelectConfigManager.getSimpleParam(oApplication, "nameid_attribute", false); // RH, 20171211, n
+
 				// Bauke 20101125: For DigiD4Bedrijven:
 				String sUseSsn = ASelectConfigManager.getSimpleParam(oApplication, "use_ssn", false);
 				application.setUseSsn(sUseSsn);
@@ -451,7 +453,9 @@ public class ApplicationManager
 				application.setForcedAttrConsServIndex(sForcedAttrConsServIndex);  // RH, 20140505, n
 				application.setForcedAudience(sForcedAudience);  // RH, 20160211, n
 				application.setPushAttributes(bPushAttributes);	// RH, 20150921, n
-				
+
+				application.setNameIDAttribute(sNameIDAttribute);	// RH, 20171211, n
+
 				_htApplications.put(sAppId, application);
 				oApplication = _oASelectConfigManager.getNextSection(oApplication);
 			}
@@ -1432,6 +1436,34 @@ public class ApplicationManager
 
 	
 	/**
+	 * Returns the Attribute name whose value to be used for NameID in the SAML Assertion for an application. <br>
+	 * <br>
+	 * <b>Description:</b> <br>
+	 * Returns the configured NameIDAttribute for the application. <br>
+	 * <br>
+	 * <b>Concurrency issues:</b> <br>
+	 * - <br>
+	 * <br>
+	 * <b>Preconditions:</b> <br>
+	 * - <br>
+	 * <br>
+	 * <b>Postconditions:</b> <br>
+	 * - <br>
+	 * 
+	 * @param sAppId
+	 *            <code>String</code> containing an application id.
+	 * @return String containing the Audience. <code>null</code> if no NameIDAttribute name was found.
+	 * @throws ASelectException
+	 *             the a select exception
+	 */
+	public String getNameIDAttribute(String sAppId)
+	throws ASelectException
+	{
+		Application oApplication = getApplication(sAppId);
+		return (oApplication==null)? null: oApplication.getNameIDAttribute();
+	}
+
+	/**
 	 * Returns the Optional Audience to force in the SAML Assertion for an application. <br>
 	 * <br>
 	 * <b>Description:</b> <br>
@@ -1458,7 +1490,6 @@ public class ApplicationManager
 		Application oApplication = getApplication(sAppId);
 		return (oApplication==null)? null: oApplication.getForcedAudience();
 	}
-
 	
 	
 	/**
