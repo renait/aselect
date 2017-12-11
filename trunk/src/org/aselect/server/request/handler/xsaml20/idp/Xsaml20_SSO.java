@@ -1284,7 +1284,14 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 				nameID.setNameQualifier(ApplicationManager.getHandle().getAssertionSubjectNameIDNameQualifier(_sAppId));
 			}
 			// RH, 20141002, en
-			
+
+			// RH, 20171211, sn
+			// application specific takes precedence
+			String appSpecNameIDAttribute = ApplicationManager.getHandle().getNameIDAttribute(_sAppId);
+			if (appSpecNameIDAttribute != null) {
+				_sNameIDAttribute = appSpecNameIDAttribute;	// overwrite the value from the handler config if exists
+			}
+			// RH, 20171211, en
 			
 			// 20090602, Bauke Saml-core-2.0, section 2.2.2: SHOULD be omitted:
 			// nameID.setNameQualifier(_sASelectServerUrl);

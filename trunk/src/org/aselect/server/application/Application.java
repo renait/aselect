@@ -100,7 +100,9 @@ public class Application
 	private String _AssertionAuthnStatementAuthenticatingAuthority = null;	// RH, 20141002, n
 	private String _AssertionSubjectNameIDNameQualifier = null;	// RH, 20141002, n
 	
-
+	private String _NameIDAttribute;	// RH, 20171211, n
+	
+	
 	private String _first_authsp = null;	// RH, 20110920, n
 
 	// Optional application specific select html form
@@ -762,5 +764,22 @@ public class Application
 	{
 		this._sForcedAudience = _sForcedAudience;
 	}
+
+	/**
+	 * @return the _NameIDAttribute
+	 */
+	public synchronized String getNameIDAttribute()
+	{
+		return _NameIDAttribute;
+	}
+
+	/**
+	 * @param _NameIDAttribute the _NameIDAttribute to set
+	 */
+	public synchronized void setNameIDAttribute(String _NameIDAttribute)
+	{
+		this._NameIDAttribute = _NameIDAttribute;
+	}
+
 
 }
