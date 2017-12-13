@@ -236,7 +236,7 @@ public class AccountSTS extends ProtoRequestHandler
 		}
 
 		String sPwa = servletRequest.getParameter("wa"); // action
-		String sPwreply = servletRequest.getParameter("wreply"); // response redirect URL, nog given by ADFS!
+		String sPwreply = servletRequest.getParameter("wreply"); // response redirect URL, not given by ADFS!
 		String sPwctx = servletRequest.getParameter("wctx"); // context value, pass unchanged
 		// String sPwct = request.getParameter("wct"); // current time
 		String sPwtrealm = servletRequest.getParameter("wtrealm"); // requesting realm (resource accessed)
@@ -272,12 +272,19 @@ public class AccountSTS extends ProtoRequestHandler
 		if (sPwreply == null) {
 			sPwreply = sReply; // _sDefaultWreply; // "https://adfsresource.treyresearch.net/adfs/ls";
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, "No 'wreply' parameter in request, using: " + sPwreply);
+//		}	// RH, 20171212, o
+			// RH, 20171212, sn
+		} else {
+			if ( !_htSP_LoginReturn.containsValue(sPwreply) ) {
+				_systemLogger.log(Level.SEVERE, MODULE, sMethod, "'wreply' parameter not allowed: " + sPwreply);
+				throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
+			}
 		}
-
+		// RH, 20171212, en
 		_systemLogger.log(Level.FINER, MODULE, sMethod, "wsfed_ap PATH=" + servletRequest.getPathInfo() + " "
 				+ servletRequest.getMethod() + " " + servletRequest.getQueryString());
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "wsfed_ap PATH=" + servletRequest.getPathInfo() + " "
-				+ servletRequest.getMethod() + " " + servletRequest.getQueryString());
+//		_systemLogger.log(Level.INFO, MODULE, sMethod, "wsfed_ap PATH=" + servletRequest.getPathInfo() + " "
+//				+ servletRequest.getMethod() + " " + servletRequest.getQueryString());	// RH, 20171212, o
 
 		HashMap htSessionData = new HashMap();
 		if (sPwtrealm != null)
@@ -306,7 +313,16 @@ public class AccountSTS extends ProtoRequestHandler
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Posting requestortoken");
 				return postRequestorToken(servletRequest, servletResponse, sUid, htSessionData, htAllAttributes);
 			} else {
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "No tgt context found or authsp level too low, doing authenticate");
+//				_systemLogger.log(Level.FINEST, MODULE, sMethod, "No tgt context found or authsp level too low, doing authenticate");
+				// RH, 20171212, sn
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "No tgt context found or authsp level too low or app_id not valid, doing authenticate");
+				if (htTGTContext != null) {
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Updating tgt with: " + htSessionData );
+					htTGTContext.putAll(htSessionData);
+					_oTGTManager.updateTGT(sTgt, htTGTContext);
+				}
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Updated tgt: " + Auxiliary.obfuscate(htTGTContext) );
+				// RH, 20171212, en
 			}
 		}
 		String sASelectURL = _sServerUrl;
@@ -396,7 +412,7 @@ public class AccountSTS extends ProtoRequestHandler
 			*/
 			// RH, 20141027, eo, only allow return from A-Select server
 			// From A-Select server
-			sUrlTgt = decryptCredentials(sUrlTgt);
+			sUrlTgt = decryptCredentials(sUrlTgt);	// throws exception if decryption fails
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "From A-Select TGT="+Tools.clipString(sUrlTgt, 40, true));
 
 			// Get credentials and attributes using Cookie
@@ -517,6 +533,28 @@ public class AccountSTS extends ProtoRequestHandler
 				+ sPwctx);
 		// sPwctx = sPwctx.replaceAll("\\.*", "");
 
+		// RH, 20171212, sn
+		/*
+		if (sAudience == null || sPwreply == null || sPwctx == null) {
+			HashMap htStoredSessionData = retrieveSessionDataFromRid(servletRequest, SESSION_ID_PREFIX);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "retrieved htStoredSessionData=" + htStoredSessionData );
+			if (htStoredSessionData != null) {
+				if (sAudience == null) {
+					sAudience = (String) htStoredSessionData.get("wtrealm");
+				}
+				if (sPwreply == null) {
+					sPwreply = (String) htStoredSessionData.get("wreply");
+				}
+				if (sPwctx == null) {
+					sPwctx = (String) htStoredSessionData.get("wctx"); // context, must be returned unchanged
+				}
+			}
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "final, wtrealm=" + sAudience + " wreply=" + sPwreply + " wctx="
+					+ sPwctx);
+		}
+		*/
+		// RH, 20171212, en
+		
 		try {
 			String sSubjConf = SAMLSubject.CONF_BEARER; // default value
 			String sLevel = sLevel = (String) htAttributes.get("sel_level");
@@ -546,8 +584,9 @@ public class AccountSTS extends ProtoRequestHandler
 			HandlerTools.putCookieValue(servletResponse, SESSION_ID_PREFIX + "realm", sAudience,
 						_sCookieDomain, null, -1, 1/*httpOnly*/, _systemLogger);
 
-			// _systemLogger.log(Level.INFO, MODULE, sMethod, "Inputs=" + sInputs);
-			handlePostForm(_sPostTemplate, Tools.htmlEncode(sPwreply), sInputs, servletRequest, servletResponse);
+				// _systemLogger.log(Level.INFO, MODULE, sMethod, "Inputs=" + sInputs);
+	//			handlePostForm(_sPostTemplate, Tools.htmlEncode(sPwreply), sInputs, servletRequest, servletResponse);	// RH, 20171212, o
+			handlePostForm(_sPostTemplate, sPwreply == null ? "" : Tools.htmlEncode(sPwreply), sInputs, servletRequest, servletResponse);	// RH, 20171212, n
 
 			return new RequestState(null);
 		}
