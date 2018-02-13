@@ -14,7 +14,10 @@ package org.aselect.server.request.handler.xsaml20.idp;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Set;
 import java.util.Vector;
 import java.util.logging.Level;
@@ -103,6 +106,8 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 	private String _sAddedPatching = null;
 	boolean _bSignAssertion = false;  // must be retrieved from the metadata
 	
+	List<String> _suppress_default_attributes =  null;	// option to suppress unwanted attributes in AttrubuteStatement put in by legacy default
+	
 	/**
 	 * Initializes the request handler by reading the following configuration: <br/>
 	 * <br/>
@@ -176,6 +181,29 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 			;
 		}
 		// RH, 20161013, en
+
+		// RH, 20161013, sn
+		try {
+			_sNameIDAttribute = _configManager.getParam(oHandlerConfig, "nameid_attribute");
+		}
+		catch (ASelectConfigException e) {
+			_sNameIDAttribute = null;
+			_systemLogger.log(Level.CONFIG, MODULE, sMethod, "No config item 'nameid_attribute' found, using defaults");
+			;
+		}
+		// RH, 20161013, en
+
+		// RH, 20180213, sn
+		try {
+			String _sSuppress_default_attributes = _configManager.getParam(oHandlerConfig, "suppress_default_attributes");
+			_suppress_default_attributes = new ArrayList<String>(Arrays.asList(_sSuppress_default_attributes.split(",")));
+		}
+		catch (ASelectConfigException e) {
+			_suppress_default_attributes = null;
+			_systemLogger.log(Level.CONFIG, MODULE, sMethod, "No config item 'suppress_default_attributes' found, not suppressing");
+			;
+		}
+		// RH, 20180213, en
 
 //		// RH, 20140925,sn
 //		try {
@@ -1036,9 +1064,26 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 
 			// 20090910, Bauke: new mechanism to pass the attributes
 			HashMap htAllAttributes = new HashMap();
-			htAllAttributes.put("attributes", sAllAttributes);
-			htAllAttributes.put("uid", sUid);
-			htAllAttributes.put("betrouwbaarheidsniveau", sSelectedLevel);
+			// RH, 20180213, so
+
+			// RH, 20180213, eo
+			// RH, 20180213, sn
+			if (_suppress_default_attributes != null) {
+				if (!_suppress_default_attributes.contains("attributes")) {
+					htAllAttributes.put("attributes", sAllAttributes);
+				}
+				if (!_suppress_default_attributes.contains("uid")) {
+					htAllAttributes.put("uid", sUid);
+				}
+				if (!_suppress_default_attributes.contains("betrouwbaarheidsniveau")) {
+					htAllAttributes.put("betrouwbaarheidsniveau", sSelectedLevel);
+				}
+			} else {	// backwards compatibility
+			// RH, 20180213, en
+				htAllAttributes.put("attributes", sAllAttributes);
+				htAllAttributes.put("uid", sUid);
+				htAllAttributes.put("betrouwbaarheidsniveau", sSelectedLevel);
+			}// RH, 20180213, n
 
 			// 20101229, Bauke: add configurable fixed value attributes
 			if (_sAppId != null) {
@@ -1052,7 +1097,7 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 						if (sValue == null) {	
 							sValue = htAttributes.get(sKey);
 						}// RH, 20130115, en
-						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Retrieved Attr "+sKey+"="+sValue);
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Retrieved Attr "+sKey+"="+Auxiliary.obfuscate(sValue));
 						htAllAttributes.put(sKey, sValue);
 					}
 				}
