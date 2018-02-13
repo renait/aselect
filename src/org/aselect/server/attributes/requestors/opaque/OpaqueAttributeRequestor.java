@@ -55,6 +55,7 @@ import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectAttributesException;
 import org.aselect.system.exception.ASelectException;
+import org.aselect.system.utils.BASE64Encoder;
 import org.aselect.system.utils.Utils;
 import org.aselect.system.utils.crypto.Auxiliary;
 
@@ -116,13 +117,24 @@ public class OpaqueAttributeRequestor extends GenericAttributeRequestor
 //				MessageDigest md = MessageDigest.getInstance("SHA1");	// RH, 20171106, o
 				MessageDigest md = MessageDigest.getInstance(_algorithm);	// RH, 20171106, n
 				md.update(sUID.getBytes("UTF-8"));
-				String sHandle = Utils.byteArrayToHexString(md.digest());
+				// String sHandle = Utils.byteArrayToHexString(md.digest());	// RH, 20180213, o
+				String sHandle = null;	// RH, 20180213, o
 				//  RH, 20171106, sn
-				if ("UUID".equals(_format)) {
-					sHandle = Utils.format2quasiuuid(sHandle);
-				}
+//				if ("UUID".equals(_format)) {	// RH, 20180213, o
+				if ("UUID".equalsIgnoreCase(_format)) {	// RH, 20180213, n
+					// sHandle = Utils.format2quasiuuid(sHandle);	// RH, 20180213, o
+					sHandle = Utils.format2quasiuuid(Utils.byteArrayToHexString(md.digest())); 	// RH, 20180213, n
+				//}	// RH, 20180213, o
 				//  RH, 20171106, en
-
+				//  RH, 20180213, sn
+				} else if ("BASE64".equalsIgnoreCase(_format)) {
+					BASE64Encoder b64enc = new BASE64Encoder();
+					sHandle = b64enc.encode(md.digest());
+				} else {
+					sHandle = Utils.byteArrayToHexString(md.digest());
+				}
+				//  RH, 20180213, en
+				
 				// Return result in a HashMap
 				htAttrs.put(e.nextElement(), sHandle);
 			}
