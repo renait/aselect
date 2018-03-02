@@ -309,6 +309,11 @@ public class ASelectConfigManager extends ConfigManager
 	public final static String TAG_SHOW_URL = "[requestor_url]";
 
 	/**
+	 * optional template tag
+	 */
+	public final static String TAG_RID = "[requestor_rid]";
+
+	/**
 	 * The main config section in XML: the root tag containing all A-Select configuration items
 	 */
 	private Object _oASelectConfigSection;
@@ -1243,6 +1248,7 @@ public class ASelectConfigManager extends ConfigManager
 		String sFriendlyName = "";
 		String sMaintainerEmail = "";
 		String sUrl = "";
+		String sRid = "";	// RH, 20180302, n
 
 		try {
 			sReturn = sTemplate;
@@ -1273,6 +1279,9 @@ public class ASelectConfigManager extends ConfigManager
 							sUrl = (String) htSessionContext.get("app_url");
 					}
 				}
+				// RH, 20180302, sn
+				sRid = (String) htSessionContext.get("rid");
+				// RH, 20180302, en
 			}
 
 			// 20130821, Bauke: Get tag info from the cookie
@@ -1293,6 +1302,12 @@ public class ASelectConfigManager extends ConfigManager
 			if (sUrl == null)
 				sUrl = "";
 			sReturn = Utils.replaceString(sReturn, TAG_SHOW_URL, sUrl);
+
+			// RH, 20180302, sn
+			if (Utils.hasValue(sRid)) {
+				sReturn = Utils.replaceString(sReturn, TAG_RID, sRid);
+			}
+			// RH, 20180302, en
 		}
 		catch (Exception e) {
 			_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Could not update template with optional parameters", e);
