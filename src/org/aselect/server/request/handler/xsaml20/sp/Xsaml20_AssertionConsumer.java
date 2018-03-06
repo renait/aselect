@@ -339,6 +339,7 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 				dbFactory.setNamespaceAware(true);
 				// dbFactory.setExpandEntityReferences(false);
 				// dbFactory.setIgnoringComments(true);
+				dbFactory.setIgnoringComments(true);	// By default the value of this is set to false
 				DocumentBuilder builder = dbFactory.newDocumentBuilder();
 	
 				StringReader stringReader = new StringReader(sSamlResponse);
@@ -421,6 +422,7 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 				dbFactory.setNamespaceAware(true);
 				// dbFactory.setExpandEntityReferences(false);
 				// dbFactory.setIgnoringComments(true);
+				dbFactory.setIgnoringComments(true);	//	By default the value of this is set to false
 				DocumentBuilder builder = dbFactory.newDocumentBuilder();
 	
 				StringReader stringReader = new StringReader(sReceivedResponse);

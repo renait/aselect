@@ -737,6 +737,7 @@ public class SOAP11MessageCreator implements IMessageCreatorInterface
 //			DocumentBuilderFactory oDbf = DocumentBuilderFactory.newInstance();
 			DocumentBuilderFactory oDbf = Utils.createDocumentBuilderFactory(_systemLogger);
 			oDbf.setNamespaceAware(true);
+			oDbf.setIgnoringComments(true);	// By default the value of this is set to false
 
 			// SOAP 1.1 SCHEMA VALIDATING default disabled because of
 			// performance issues

@@ -615,6 +615,8 @@ public class SessionSyncRequestSender
 //			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
 			DocumentBuilderFactory dbFactory = Utils.createDocumentBuilderFactory(_oSystemLogger);
 			dbFactory.setNamespaceAware(true);
+			dbFactory.setIgnoringComments(true);	// By default the value of this is set to false
+
 			DocumentBuilder builder = dbFactory.newDocumentBuilder();
 			StringReader stringReader = new StringReader(sMessage);
 			InputSource inputSource = new InputSource(stringReader);
@@ -700,6 +702,8 @@ public class SessionSyncRequestSender
 //			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
 			DocumentBuilderFactory dbFactory = Utils.createDocumentBuilderFactory(_oSystemLogger);
 			dbFactory.setNamespaceAware(true);
+			dbFactory.setIgnoringComments(true);	// By default the value of this is set to false
+
 			DocumentBuilder builder = dbFactory.newDocumentBuilder();
 			StringReader stringReader = new StringReader(sMessage);
 			InputSource inputSource = new InputSource(stringReader);
@@ -739,6 +743,8 @@ public class SessionSyncRequestSender
 //			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
 			DocumentBuilderFactory dbFactory = Utils.createDocumentBuilderFactory(_oSystemLogger);
 			dbFactory.setNamespaceAware(true);
+			dbFactory.setIgnoringComments(true);	// By default the value of this is set to false
+
 			DocumentBuilder builder = dbFactory.newDocumentBuilder();
 			StringReader stringReader = new StringReader(request);
 			InputSource inputSource = new InputSource(stringReader);
@@ -799,6 +805,8 @@ public class SessionSyncRequestSender
 //			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
 			DocumentBuilderFactory dbFactory = Utils.createDocumentBuilderFactory(_oSystemLogger);
 			dbFactory.setNamespaceAware(true);
+			dbFactory.setIgnoringComments(true);	// By default the value of this is set to false
+
 			DocumentBuilder builder = dbFactory.newDocumentBuilder();
 			StringReader stringReader = new StringReader(sMessage);
 			InputSource inputSource = new InputSource(stringReader);

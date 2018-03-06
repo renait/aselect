@@ -139,6 +139,8 @@ public class Xsaml20_SLO_Soap extends Saml20_BaseHandler
 //			DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
 			DocumentBuilderFactory dbFactory = Utils.createDocumentBuilderFactory(_systemLogger);
 			dbFactory.setNamespaceAware(true);
+			dbFactory.setIgnoringComments(true);	// By default the value of this is set to false
+
 			DocumentBuilder builder = dbFactory.newDocumentBuilder();
 
 			StringReader stringReader = new StringReader(sReceivedSoap);
