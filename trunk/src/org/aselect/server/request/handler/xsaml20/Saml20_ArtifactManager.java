@@ -255,6 +255,8 @@ public class Saml20_ArtifactManager extends StorageManager
 		dbFactory.setNamespaceAware(true);
 		// dbFactory.setExpandEntityReferences(false);
 		// dbFactory.setIgnoringComments(true);
+		dbFactory.setIgnoringComments(true);	// By default the value of this is set to false
+
 		StringReader stringReader = new StringReader(serializedObject);
 		InputSource inputSource = new InputSource(stringReader);
 

@@ -316,6 +316,8 @@ public class Xsaml20_AttributeRequestHandler extends Saml20_BaseHandler
 //		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
 		DocumentBuilderFactory dbFactory = Utils.createDocumentBuilderFactory(_systemLogger);
 		dbFactory.setNamespaceAware(true);
+		dbFactory.setIgnoringComments(true);	// By default the value of this is set to false
+
 		DocumentBuilder builder;
 		try {
 			builder = dbFactory.newDocumentBuilder();
