@@ -159,6 +159,12 @@ public class MetaDataManagerSp extends AbstractMetaDataManager
 			if (logoutSupport != null)
 				idpData.setLogoutSupport(logoutSupport);
 
+			// RH, 20180327, sn
+			String suppressscoping = Utils.getSimpleParam(_configManager, _systemLogger, idpSection, "suppressscoping", false);
+			if (suppressscoping != null)
+				idpData.setSuppressscoping(suppressscoping);;
+			// RH, 20180327, en
+				
 			// Set specific metadata for this partner
 			Object metadataSection = Utils.getSimpleSection(_configManager, _systemLogger, idpSection, "metadata", false);
 			if (metadataSection != null) {
