@@ -39,7 +39,8 @@ public class PartnerData
 	private String addcertificate = null;
 	
 	private String logoutSupport = "true";
-	
+	private String suppressscoping = null; // RH, 20180327, n
+
 	private String federationurl = null;
 	private Metadata4Partner metadata4partner = null;
 	private Testdata4Partner testdata4partner = null;
@@ -178,6 +179,21 @@ public class PartnerData
 		this.logoutSupport = logoutSupport;
 	}
 
+	/**
+	 * @return the suppressscoping
+	 */
+	public synchronized String getSuppressscoping()
+	{
+		return suppressscoping;
+	}
+
+	/**
+	 * @param suppressscoping the suppressscoping to set
+	 */
+	public synchronized void setSuppressscoping(String suppressscoping)
+	{
+		this.suppressscoping = suppressscoping;
+	}
 
 
 	/**

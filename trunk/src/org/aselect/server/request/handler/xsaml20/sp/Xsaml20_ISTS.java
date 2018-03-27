@@ -374,22 +374,28 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 			// RH, 20171201, sn
 			/////////////////////////////////////////////////////////////////////
 			Scoping scoping = null;
-			String sApplicationRequestorID = getApplicationRequesterID(sApplicationId);
-			if (sApplicationRequestorID != null) {
-				SAMLObjectBuilder<Scoping> scopingtBuilder = null;
-				scopingtBuilder = (SAMLObjectBuilder<Scoping>) builderFactory
-						.getBuilder(Scoping.DEFAULT_ELEMENT_NAME);
-				scoping = scopingtBuilder.buildObject();
-				SAMLObjectBuilder<RequesterID> requestorIDBuilder = (SAMLObjectBuilder<RequesterID>) builderFactory
-						.getBuilder(RequesterID.DEFAULT_ELEMENT_NAME);
-				RequesterID requestorID = requestorIDBuilder.buildObject();
-				requestorID.setRequesterID(sApplicationRequestorID);
-				scoping.getRequesterIDs().add(requestorID);
+			boolean suppressscoping = partnerData != null && "true".equalsIgnoreCase(partnerData.getSuppressscoping());	// RH, 20180327, sn
+			if (!suppressscoping) {	// RH, 20180327, en
+				String sApplicationRequestorID = getApplicationRequesterID(sApplicationId);
+				if (sApplicationRequestorID != null) {
+					SAMLObjectBuilder<Scoping> scopingtBuilder = null;
+					scopingtBuilder = (SAMLObjectBuilder<Scoping>) builderFactory
+							.getBuilder(Scoping.DEFAULT_ELEMENT_NAME);
+					scoping = scopingtBuilder.buildObject();
+					SAMLObjectBuilder<RequesterID> requestorIDBuilder = (SAMLObjectBuilder<RequesterID>) builderFactory
+							.getBuilder(RequesterID.DEFAULT_ELEMENT_NAME);
+					RequesterID requestorID = requestorIDBuilder.buildObject();
+					requestorID.setRequesterID(sApplicationRequestorID);
+					scoping.getRequesterIDs().add(requestorID);
+				} else {
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "No config item 'authnrequest_requesterid' found");
+				}
+				// RH, 20171201, en
+			// RH, 20180327, sn
 			} else {
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "No config item 'authnrequest_requesterid' found");
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Suppress Scoping enabled" );
 			}
-			// RH, 20171201, en
-
+			// RH, 20180327, en
 			
 			// 20120706, Bauke: save in session, must be transferred to TGT and used for Digid4 session_sync mechanism
 			String sst = partnerData.getRedirectSyncTime();
