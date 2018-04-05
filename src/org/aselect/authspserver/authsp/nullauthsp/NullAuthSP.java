@@ -548,7 +548,8 @@ public class NullAuthSP extends AbstractAuthSP
 					sbRedirect.append("&rid=").append(sRid);
 					sbRedirect.append("&result_code=").append(sResultCode);
 					sbRedirect.append("&a-select-server=").append(sAsId);
-					sbRedirect.append("&ser_attrs=").append(sSerializedAttrs);
+					if (sSerializedAttrs != null)	// RH, 20180405, n
+						sbRedirect.append("&ser_attrs=").append(sSerializedAttrs);
 					sbRedirect.append("&signature=").append(sSignature);
 //					_systemLogger.log(Level.INFO, MODULE, sMethod, "REDIR " + sbRedirect);
 					_systemLogger.log(Level.INFO, MODULE, sMethod, "REDIR");
