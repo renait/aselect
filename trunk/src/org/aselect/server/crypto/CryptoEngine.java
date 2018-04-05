@@ -438,27 +438,35 @@ public class CryptoEngine
 			else
 				oSignature = Signature.getInstance(_sSignatureAlgorithm);
 
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "==== VS _htAuthspSettings=\n"+_htAuthspSettings );
+
 			sAlias = sAlias.toLowerCase();
 			while (!bVerified && (iLoop == 0 || oPublicKey != null)) {
 				if (iLoop == 0) {
+					_systemLogger.log(Level.FINE, MODULE, sMethod, "Looking for public key with alias " + sAlias);
 					oPublicKey = (PublicKey) _htAuthspSettings.get(sAlias + ".public_key");
 				}
 				else {
+					_systemLogger.log(Level.FINE, MODULE, sMethod, "Looking for public key with alias " + sAlias + iLoop);
 					oPublicKey = (PublicKey) _htAuthspSettings.get(sAlias + iLoop + ".public_key");
 				}
 
 				if (oPublicKey == null) {
-					_systemLogger.log(Level.FINE, MODULE, sMethod, "could not find public key with alias " + sAlias);
+//					_systemLogger.log(Level.FINE, MODULE, sMethod, "could not find public key with alias " + sAlias);// RH, 20180405, 0
+					_systemLogger.log(Level.FINE, MODULE, sMethod, "Could not find public key with alias " + sAlias + 
+							(iLoop == 0 ? "" : iLoop));// RH, 20180405, n
 					bVerified = false;
 				}
 				else {
 					oSignature.initVerify(oPublicKey);
 					oSignature.update(sData.getBytes());
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "==== VS oSignature="+oSignature.toString() );
 
 					BASE64Decoder xDecoder = new BASE64Decoder();
 					byte[] xRawSignature = xDecoder.decodeBuffer(sSignature);
 
 					bVerified = oSignature.verify(xRawSignature);
+					_systemLogger.log(Level.FINE, MODULE, sMethod, "==== VS verify success="+bVerified );
 
 					iLoop++;
 				}
