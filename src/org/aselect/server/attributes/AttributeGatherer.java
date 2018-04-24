@@ -1010,4 +1010,14 @@ public class AttributeGatherer
 		}
 		return htFiltered;
 	}
+
+	public synchronized HashMap<String, Object> get_htRequestors()
+	{
+		return _htRequestors;
+	}
+
+	public synchronized void set_htRequestors(HashMap<String, Object> _htRequestors)
+	{
+		this._htRequestors = _htRequestors;
+	}
 }
