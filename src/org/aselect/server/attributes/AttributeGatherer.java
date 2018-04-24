@@ -675,7 +675,7 @@ public class AttributeGatherer
 					} else {
 						_systemLogger.log(Level.FINEST, _MODULE, sMethod, "no skip policies found, continuing");
 					}
-					if 	(skipRequestor) continue;	// skip this requesor
+					if 	(skipRequestor) continue;	// skip this requestor
 					
 					Vector vAttributes = (Vector) htReleasePolicy.get(sRequestorID);
 					_systemLogger.log(Level.FINEST, _MODULE, sMethod, "GATHER << Requestor=" + sRequestorID+" release="+vAttributes);
