@@ -791,7 +791,25 @@ public  final class Auxiliary
     }
 
 	
-	public static final String AES_CIPHER_ALGORITHM = "AES";
+	public static final String AES_CIPHER_ALGORITHM = "AES/ECB/PKCS5Padding";	// use this as a default
+	
+	/* See also Java: Standard Algorithm Name Documentation
+	 * 
+	 * 	AES/CBC/NoPadding (128)
+		AES/CBC/PKCS5Padding (128)
+		AES/ECB/NoPadding (128)
+		AES/ECB/PKCS5Padding (128)
+		DES/CBC/NoPadding (56)
+		DES/CBC/PKCS5Padding (56)
+		DES/ECB/NoPadding (56)
+		DES/ECB/PKCS5Padding (56)
+		DESede/CBC/NoPadding (168)
+		DESede/CBC/PKCS5Padding (168)
+		DESede/ECB/NoPadding (168)
+		DESede/ECB/PKCS5Padding (168)
+		RSA/ECB/PKCS1Padding (2048)
+		RSA/ECB/OAEPPadding (2048)
+	 */
 	public static byte[] EncryptAESData(SecretKey key, byte[] data,  String cipherAlg) {
 		try {
 			// get an RSA cipher object and print the provider
