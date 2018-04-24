@@ -416,6 +416,8 @@ public class NullAuthSP extends AbstractAuthSPProtocolHandler implements IAuthSP
 				throw new ASelectAuthSPException(Errors.ERROR_ASELECT_AUTHSP_INVALID_RESPONSE);
 			}
 
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "sResultCode="+sResultCode);
+
 			StringBuffer sbAsUrl = new StringBuffer(sAsUrl);
 			sbAsUrl.append("?authsp=").append(_sAuthSP);
 			sAsUrl = sbAsUrl.toString();
