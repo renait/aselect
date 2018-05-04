@@ -115,7 +115,7 @@ public class Saml11Builder
 	 *            the s ip
 	 * @param sHost
 	 *            the s host
-	 * @param sConfirmationMethod
+	 * @param sAuthMethod
 	 *            the s confirmation method
 	 * @param sProviderId
 	 *            the s provider id
@@ -128,7 +128,7 @@ public class Saml11Builder
 	 *             the a select exception
 	 */
 	public SAMLAssertion createSAMLAssertionFromCredentials(String sUid, String sRequestID, String sNameIdFormat,
-			String sIP, String sHost, String sConfirmationMethod, String sProviderId, String sAudience, HashMap htInfo)
+			String sIP, String sHost, String sAuthMethod, String sProviderId, String sAudience, HashMap htInfo)
 	throws ASelectException
 	{
 		String sMethod = "createSAMLAssertion";
@@ -165,7 +165,7 @@ public class Saml11Builder
 
 			// The real work!
 			SAMLAssertion oSAMLAssertion = createMySAMLAssertion(sProviderId, sUid, sNameIdFormat, sIP, sHost,
-					sConfirmationMethod, sAudience, htAttributes);
+					sAuthMethod, sAudience, htAttributes);
 
 			if (sRequestID != null) {
 				// Add InResponseTo="<sRequestID>"
@@ -198,7 +198,7 @@ public class Saml11Builder
 	 *            the s ip
 	 * @param sHost
 	 *            the s host
-	 * @param sConfirmationMethod
+	 * @param sAuthMethod
 	 *            the s confirmation method
 	 * @param sAudience
 	 *            the s audience
@@ -211,7 +211,7 @@ public class Saml11Builder
 	 *             the SAML exception
 	 */
 	public SAMLAssertion createMySAMLAssertion(String sProviderId, String sUid, String sNameIdFormat, String sIP,
-			String sHost, String sConfirmationMethod, String sAudience, HashMap htAttributes)
+			String sHost, String sAuthMethod, String sAudience, HashMap htAttributes)
 	throws ASelectException, SAMLException
 	{
 		String sMethod = "createMySAMLAssertion";
@@ -219,7 +219,7 @@ public class Saml11Builder
 		Vector vSAMLStatements = new Vector();
 
 		SAMLAuthenticationStatement oSAMLAuthenticationStatement = generateSAMLAuthenticationStatement(sUid,
-				sNameIdFormat, sIP, sHost, dCurrent, sConfirmationMethod);
+				sNameIdFormat, sIP, sHost, dCurrent, sAuthMethod);
 //		_systemLogger.log(Level.INFO, MODULE, sMethod, "SAML oSAMLAuthenticationStatement="
 //				+ oSAMLAuthenticationStatement);
 		if (oSAMLAuthenticationStatement != null)
@@ -268,14 +268,14 @@ public class Saml11Builder
 	 *            the s host
 	 * @param dCurrent
 	 *            the d current
-	 * @param sConfirmationMethod
+	 * @param sAuthMethod
 	 *            the s confirmation method
 	 * @return the sAML authentication statement
 	 * @throws ASelectException
 	 *             the a select exception
 	 */
 	private SAMLAuthenticationStatement generateSAMLAuthenticationStatement(String sUid, String sNameIdFormat,
-			String sIP, String sHost, Date dCurrent, String sConfirmationMethod)
+			String sIP, String sHost, Date dCurrent, String sAuthMethod)
 	throws ASelectException
 	{
 		String sMethod = "generateSAMLAuthenticationStatement";
@@ -291,7 +291,7 @@ public class Saml11Builder
 //			_systemLogger.log(Level.FINER, MODULE, sMethod, "AUTH oSAMLSubject=" + oSAMLSubject);
 
 			oSAMLAuthenticationStatement = new SAMLAuthenticationStatement(oSAMLSubject, // The subject
-					sConfirmationMethod, // SAMLAuthenticationStatement.AuthenticationMethod_Password, // Authentication
+					sAuthMethod, // SAMLAuthenticationStatement.AuthenticationMethod_Password, // Authentication
 					// method
 					dCurrent, // Issue instant
 					null, // sIP, // The subject's IP
