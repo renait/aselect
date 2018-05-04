@@ -641,6 +641,7 @@ public class TGTIssuer
 			Utils.copyHashmapValue("wreply", htTGTContext, htSessionContext);
 			Utils.copyHashmapValue("wtrealm", htTGTContext, htSessionContext);
 			Utils.copyHashmapValue("wctx", htTGTContext, htSessionContext);
+			Utils.copyHashmapValue("wauth", htTGTContext, htSessionContext);	// RH, 20180503, n
 
 			// RH, 20080619: Copy the client_ip in the TGT
 			Utils.copyHashmapValue("client_ip", htTGTContext, htSessionContext);

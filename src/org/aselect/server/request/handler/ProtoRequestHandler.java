@@ -267,6 +267,12 @@ public abstract class ProtoRequestHandler extends AbstractRequestHandler
 		if (sPwctx != null)
 			htCredentials.put("wctx", sPwctx);
 
+		// RH, 20180503, sn
+		String sPwauth = (String) htTGTContext.get("wauth");
+		if (sPwauth != null)
+			htCredentials.put("wauth", sPwauth);
+		// RH, 20180503, en
+
 		// And put the attributes back where they belong
 		String sSerializedAttributes = serializeTheseAttributes(htAllAttributes);
 		if (sSerializedAttributes != null)
@@ -1136,11 +1142,11 @@ public abstract class ProtoRequestHandler extends AbstractRequestHandler
 	//	RH, 20130924, sn
 	// Convenience backward compatibility wrapper for createRequestorToken
 	protected String createRequestorToken(HttpServletRequest request, String sProviderId, String sUid,
-			String sUserDomain, String sNameIdFormat, String sAudience, HashMap htAttributes, String sSubjConf)
+			String sUserDomain, String sNameIdFormat, String sAudience, HashMap htAttributes, String sAuthMeth)
 	throws ASelectException, SAMLException
 	{
 		return createRequestorToken( request, sProviderId, sUid,
-				sUserDomain, sNameIdFormat, sAudience, htAttributes, sSubjConf, null);
+				sUserDomain, sNameIdFormat, sAudience, htAttributes, sAuthMeth, null);
 	}
 	//	RH, 20130924, en
 	
@@ -1161,7 +1167,7 @@ public abstract class ProtoRequestHandler extends AbstractRequestHandler
 	 *            the s audience
 	 * @param htAttributes
 	 *            the ht attributes
-	 * @param sSubjConf
+	 * @param sAuthMeth
 	 *            the s subj conf
 	 * @param sSignAlg
 	 *            the s signature algorithm to use sha1, sha256, sha384, sha256, null (defaults to sha1)
@@ -1172,17 +1178,18 @@ public abstract class ProtoRequestHandler extends AbstractRequestHandler
 	 *             the SAML exception
 	 */
 	protected String createRequestorToken(HttpServletRequest request, String sProviderId, String sUid,
-			String sUserDomain, String sNameIdFormat, String sAudience, HashMap htAttributes, String sSubjConf,
+			String sUserDomain, String sNameIdFormat, String sAudience, HashMap htAttributes, String sAuthMeth,
 			String sSignAlg)
 	throws ASelectException, SAMLException
 	{
 		String sMethod = "createRequestorToken";
 		String sIP = request.getRemoteAddr();
 		String sHost = request.getRemoteHost();
-		if (sSubjConf == null)
-			sSubjConf = SAMLSubject.CONF_BEARER;
+		if (sAuthMeth == null)
+			sAuthMeth = SAMLSubject.CONF_BEARER;
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "Uid=" + Auxiliary.obfuscate(sUid) + " IP=" + sIP + " Host=" + sHost
-				+ " _saml11Builder=" + _saml11Builder + " SubjConf=" + sSubjConf);
+//				+ " _saml11Builder=" + _saml11Builder + " SubjConf=" + sAuthMeth);
+		+ " _saml11Builder=" + _saml11Builder + " AuthenticationMethod=" + sAuthMeth);
 
 		if (_saml11Builder == null) {
 			_systemLogger.log(Level.SEVERE, MODULE, sMethod, "_saml11Builder not set");
@@ -1192,7 +1199,7 @@ public abstract class ProtoRequestHandler extends AbstractRequestHandler
 			sUid += ((sUserDomain.startsWith("@")) ? "" : "@") + sUserDomain;
 		}
 		SAMLAssertion oSAMLAssertion = _saml11Builder.createMySAMLAssertion(sProviderId, sUid, sNameIdFormat, sIP,
-				sHost, sSubjConf, sAudience, htAttributes);
+				sHost, sAuthMeth, sAudience, htAttributes);
 //		_systemLogger.log(Level.FINEST, MODULE, sMethod, "oSAMLAssertion=" + oSAMLAssertion);
 
 		// Sign the assertion
