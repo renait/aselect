@@ -46,6 +46,8 @@ public abstract class BasicRequestHandler
 
 	protected ASelectSystemLogger _systemLogger;
 	protected ASelectConfigManager _configManager;
+	protected boolean _bCheckClientIP = false;	// RH, 20180517, n
+
 
 	// This code was stolen from ApplicationAPIHandler.handleAuthenticateRequest()
 	// But also slightly different versions were found in ASelectAPIHandler and the 'sfs' handlers

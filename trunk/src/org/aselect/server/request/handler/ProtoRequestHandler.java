@@ -82,7 +82,7 @@ public abstract class ProtoRequestHandler extends AbstractRequestHandler
 	protected Vector _vIdPUrls;
 	protected HashMap _htIdPs;
 	
-	protected boolean _bCheckClientIP = false;	// RH, 20161101, n
+//	protected boolean _bCheckClientIP = false;	// RH, 20161101, n	// RH, 20180517, o
 	
 
 	// The local version of the session,
