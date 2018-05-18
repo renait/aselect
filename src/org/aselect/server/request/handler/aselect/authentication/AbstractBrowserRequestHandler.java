@@ -264,6 +264,21 @@ public abstract class AbstractBrowserRequestHandler extends BasicRequestHandler 
 					_systemLogger.log(Level.WARNING, _sModule, sMethod, "Invalid 'a-select-server' parameter: "+sServerId);
 					throw new ASelectCommunicationException(Errors.ERROR_ASELECT_SERVER_ID_MISMATCH);
 				}
+				// 20180517, sn
+				else if (_bCheckClientIP) {
+					_systemLogger.log(Level.FINEST, _sModule, sMethod, "Checking client_ip against sAselect_credentials_client_ip");
+					String sClient_ip = (String)htServiceRequest.get("client_ip");
+					String sAselect_credentials_client_ip = (String)htServiceRequest.get("aselect_credentials_client_ip");
+					
+					if ( sAselect_credentials_client_ip != null && 
+							!( sAselect_credentials_client_ip.equals(sClient_ip) ) ) {
+								_systemLogger.log(Level.WARNING, _sModule, sMethod, "sClient_ip:" + sClient_ip + " != " + "sAselect_credentials_client_ip:" + sAselect_credentials_client_ip);
+								throw new ASelectCommunicationException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
+					} else {
+						_systemLogger.log(Level.FINEST, _sModule, sMethod, "IP's match");
+					}
+				}
+				// 20180517, en
 			}
 			// Specifics for the individual BrowserHandler,
 			// TGT has been read if available, htServiceRequest has been filled with parameters (GET or POST)
@@ -487,7 +502,9 @@ public abstract class AbstractBrowserRequestHandler extends BasicRequestHandler 
 		// Also reads TGT into _htTGTContext if available
 		HashMap htCredentials = getASelectCredentials(servletRequest);
 		if (htCredentials != null) {
-			aselect_credentials_client_ip = (String) htServiceRequest.get("aselect_credentials_client_ip");
+//			aselect_credentials_client_ip = (String) htServiceRequest.get("aselect_credentials_client_ip");	// RH, 20180517, o
+			aselect_credentials_client_ip = (String) htCredentials.get("aselect_credentials_client_ip");	// RH, 20180517, n
+			htServiceRequest.put("aselect_credentials_client_ip", aselect_credentials_client_ip);	// RH, 20180517, n
 
 			htServiceRequest.put("aselect_credentials_tgt", htCredentials.get("aselect_credentials_tgt"));
 			htServiceRequest.put("aselect_credentials_uid", htCredentials.get("aselect_credentials_uid"));

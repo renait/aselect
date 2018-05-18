@@ -306,6 +306,12 @@ public class ApplicationAPIHandler extends AbstractAPIRequestHandler
 		try {
 			String _sUpdateTokenIssueinstant = ASelectConfigManager.getParamFromSection(null, "aselect", "updatetokenissueinstant", false);
 			bUpdateTokenIssueinstant = Boolean.parseBoolean(_sUpdateTokenIssueinstant);
+
+			// RH, 20180517, sn
+			String sCheckClientIP = ASelectConfigManager.getParamFromSection(null, "aselect", "check_client_ip", false); 
+			_bCheckClientIP = Boolean.parseBoolean(sCheckClientIP);
+			// RH, 20180517, en
+			
 			Object _oUpdateTokenSection = ASelectConfigManager.getSimpleSection(null, "aselect", false);
 			if (_oUpdateTokenSection != null) {
 				String sNotBefore = ASelectConfigManager.getParamFromSection(_oUpdateTokenSection, "updatetokenissueinstant", "NotBefore", false);
@@ -719,7 +725,21 @@ public class ApplicationAPIHandler extends AbstractAPIRequestHandler
 		}
 		catch (ASelectCommunicationException eAC) {
 		}
-		
+
+		// RH, 20180517, sn
+		if (_bCheckClientIP) {
+			_systemLogger.log(Level.FINEST, _sModule, sMethod, "Checking client_ip against sAselect_credentials_client_ip");
+			String sAselect_credentials_client_ip = (String)htTGTContext.get("client_ip");
+			if (sClient_ip == null || !sClient_ip.equals(sAselect_credentials_client_ip)) {
+				_systemLogger.log(Level.WARNING, _sModule, sMethod, "sAselect_credentials_client_ip:" + sAselect_credentials_client_ip
+					+ " != " +  "sClient_ip:" + sClient_ip);
+				throw new ASelectCommunicationException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
+			} else {
+				_systemLogger.log(Level.FINEST, _sModule, sMethod, "IP's match");
+			}
+		}
+		// RH, 20180517, en
+
 		String sAppId = (String) htTGTContext.get("app_id");
 		if (Utils.hasValue(sAppId))
 			_timerSensor.setTimerSensorAppId(sAppId);
@@ -969,6 +989,27 @@ public class ApplicationAPIHandler extends AbstractAPIRequestHandler
 			throw new ASelectCommunicationException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 		}
 
+		// RH, 20180517, sn
+		if (_bCheckClientIP) {
+			String sClient_ip = null;
+			try {
+				sClient_ip = oInputMessage.getParam("ip");
+			}
+			catch (ASelectCommunicationException eAC) {
+				_systemLogger.log(Level.FINER, _sModule, sMethod, "Missing parameter ip");
+			}
+			_systemLogger.log(Level.FINEST, _sModule, sMethod, "Checking client_ip against sAselect_credentials_client_ip");
+			String sAselect_credentials_client_ip = (String)htTGTContext.get("client_ip");
+			if (sClient_ip == null || !sClient_ip.equals(sAselect_credentials_client_ip)) {
+				_systemLogger.log(Level.WARNING, _sModule, sMethod, "sAselect_credentials_client_ip:" + sAselect_credentials_client_ip
+					+ " != " +  "sClient_ip:" + sClient_ip);
+				throw new ASelectCommunicationException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
+			} else {
+				_systemLogger.log(Level.FINEST, _sModule, sMethod, "IP's match");
+			}
+		}
+		// RH, 20180517, en
+		
 		// RH, 20150610, sn
 		if (Utils.hasValue(sAppId))
 			_timerSensor.setTimerSensorAppId(sAppId);
