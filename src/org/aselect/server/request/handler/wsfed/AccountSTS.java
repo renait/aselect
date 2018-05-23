@@ -69,7 +69,7 @@ public class AccountSTS extends ProtoRequestHandler
 	protected HashMap _htSP_LoginReturn;
 	protected HashMap _htSP_LogoutReturn;
 
-	protected HashMap _htWauthMapping;	// RH, 20141014, n
+	protected HashMap _htWauthAppidMapping;	// RH, 20141014, n
 
 	protected HashMap<String, Pattern> _htSP_wctxregex;	// RH, 20130916, n
 	protected HashMap<String, String>	_htSP_SignAlgorithm;	// RH, 20130924, alg for signing the returned token
@@ -185,11 +185,11 @@ public class AccountSTS extends ProtoRequestHandler
 
 			// RH, 20141014, sn
 			//	wauth to app_id mapping
-			_htWauthMapping = new HashMap();
-			getTableFromConfig(oConfig, null, _htWauthMapping, "application_mapping", "app", "wauth",/*->*/
+			_htWauthAppidMapping = new HashMap();
+			getTableFromConfig(oConfig, null, _htWauthAppidMapping, "application_mapping", "app", "wauth",/*->*/
 			"app_id", false/* mandatory */, false/* unique values */);
 			// RH, 20141014, sn
-
+			
 			_sPostTemplate = readTemplateFromConfig(oConfig, "post_template");
 
 			String _sMinLevelProcess = ASelectConfigManager.getSimpleParam(oConfig, "min_level_process", false);
@@ -293,7 +293,7 @@ public class AccountSTS extends ProtoRequestHandler
 			htSessionData.put("wreply", sPwreply);
 		if (sPwctx != null)
 			htSessionData.put("wctx", sPwctx);
-
+		
 		// Look for a possible TGT
 		String sTgt = getCredentialsFromCookie(servletRequest);
 		if (sTgt != null) {
@@ -311,6 +311,12 @@ public class AccountSTS extends ProtoRequestHandler
 				String sUid = (String) htTGTContext.get("uid");
 				HashMap htAllAttributes = getAttributesFromTgtAndGatherer(htTGTContext);
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Posting requestortoken");
+				// RH, 20180523, sn
+				if (sPwauth != null && _htWauthAppidMapping.get(sPwauth) != null && ((String)_htWauthAppidMapping.get(sPwauth)).equals(htTGTContext.get("app_id"))) {
+					htSessionData.put("wauth", sPwauth);
+				}
+				// RH, 20180523, en
+				// We've done some elementary checking on the htSessionData. Maybe narrow this down some more, // RH, 20180523, n
 				return postRequestorToken(servletRequest, servletResponse, sUid, htSessionData, htAllAttributes);
 			} else {
 //				_systemLogger.log(Level.FINEST, MODULE, sMethod, "No tgt context found or authsp level too low, doing authenticate");
@@ -335,8 +341,8 @@ public class AccountSTS extends ProtoRequestHandler
 
 		// RH, 20141014, sn
 		String sMappedAppId = _sMyAppId;	// _sMyAppId becomes default
-		if (_htWauthMapping.size() > 0 && sPwauth != null && !"".equals(sPwauth) ) {	// do we have at least one mapping defined and is there a mapping query parm
-			String s = (String)_htWauthMapping.get(sPwauth);
+		if (_htWauthAppidMapping.size() > 0 && sPwauth != null && !"".equals(sPwauth) ) {	// do we have at least one mapping defined and is there a mapping query parm
+			String s = (String)_htWauthAppidMapping.get(sPwauth);
 			if (s != null ) {	// we found a mapping
 				sMappedAppId = s;
 			}
@@ -345,6 +351,10 @@ public class AccountSTS extends ProtoRequestHandler
 				sMappedAppId, false/*don't check signature*/, _oClientCommunicator);
 		// RH, 20141014, en
 
+		// RH, 20180523, sn
+		if (sPwauth != null && _htWauthAppidMapping.get(sPwauth) != null && ((String)_htWauthAppidMapping.get(sPwauth)).equals(sMappedAppId)) {
+			htSessionData.put("wauth", sPwauth);
+		}
 		
 		String sRid = (String) htResponse.get("rid");  // rid for the newly generated session
 		_htSessionContext = (HashMap)htResponse.get("session");
@@ -393,7 +403,8 @@ public class AccountSTS extends ProtoRequestHandler
 		// String sUrlServer = (String) request.getParameter("a-select-server");
 		String sUrlTgt = (String) request.getParameter("aselect_credentials");
 
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "sPwa=" + sPwa + " wresult=" + sPwresult + " sUrlRid=" + sUrlRid);
+//		_systemLogger.log(Level.INFO, MODULE, sMethod, "sPwa=" + sPwa + " wresult=" + sPwresult + " sUrlRid=" + sUrlRid);	// RH, 20180523, o
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "sPwa=" + sPwa + " wresult=" + Auxiliary.obfuscate(sPwresult) + " sUrlRid=" + sUrlRid);// RH, 20180523, n
 		String sUid = null;
 		String sTgt = null;
 		HashMap htCredentials = null;
@@ -417,7 +428,8 @@ public class AccountSTS extends ProtoRequestHandler
 
 			// Get credentials and attributes using Cookie
 			htCredentials = getASelectCredentials(request);
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "getAselectCredentials: " + htCredentials);
+//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "getAselectCredentials: " + htCredentials);	// RH, 20180503, o
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "getAselectCredentials: " + Auxiliary.obfuscate(htCredentials));	// RH, 20180503, n
 			
 			// RH, 20150915, sn
 			if ( htCredentials == null || htCredentials.get("authsp_level") == null  ||
@@ -532,6 +544,7 @@ public class AccountSTS extends ProtoRequestHandler
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "wtrealm=" + sAudience + " wreply=" + sPwreply + " wctx="
 				+ sPwctx);
 		// sPwctx = sPwctx.replaceAll("\\.*", "");
+		String sPwauth = (String) htSessionData.get("wauth"); // RH, 20180503
 
 		// RH, 20171212, sn
 		/*
@@ -556,19 +569,23 @@ public class AccountSTS extends ProtoRequestHandler
 		// RH, 20171212, en
 		
 		try {
-			String sSubjConf = SAMLSubject.CONF_BEARER; // default value
+			String sAuthMeth = SAMLSubject.CONF_BEARER; // default value
+
 			String sLevel = sLevel = (String) htAttributes.get("sel_level");
 			if (sLevel == null) sLevel = (String) htAttributes.get("authsp_level");
 			if (sLevel == null) sLevel = (String) htAttributes.get("betrouwbaarheidsniveau");
 			if (sLevel != null) {
 				String urn = (String) _htSecLevels.get(sLevel);
 				if (urn != null)
-					sSubjConf = urn; // default when not found
+					sAuthMeth = urn; // default when sPwauth not found, backward compatibility
 			}
+			
+			if (sPwauth != null)  sAuthMeth = sPwauth;	// sPwauth should have been checked		// RH, 20180523
+
 //			String sRequestorToken = createRequestorToken(request, _sProviderId, sUid, _sUserDomain, _sNameIdFormat,
 //					sAudience, htAttributes, sSubjConf);	// RH, 20130924, o
 			String sRequestorToken = createRequestorToken(servletRequest, _sProviderId, sUid, _sUserDomain, _sNameIdFormat,
-					sAudience, htAttributes, sSubjConf, _htSP_SignAlgorithm.get(sAudience));	// RH, 20130924, n
+					sAudience, htAttributes, sAuthMeth, _htSP_SignAlgorithm.get(sAudience));	// RH, 20130924, n
 			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Token OUT: RequestorToken wresult=" + Auxiliary.obfuscate(sRequestorToken,  Auxiliary.REGEX_PATTERNS));
 
 			// Return Requestor Token - Step 6
