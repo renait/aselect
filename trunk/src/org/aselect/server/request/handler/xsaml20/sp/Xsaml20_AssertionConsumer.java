@@ -304,11 +304,19 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 					assertionIssuer.setValue(_sRedirectUrl);
 				artifactResolve.setIssuer(assertionIssuer);
 				artifactResolve.setArtifact(artifact);
-	
+				
 				// Do some logging for testing
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "Sign the artifactResolve >======");
 				boolean useSha256 = (specialSettings != null && specialSettings.contains("sha256"));
-				artifactResolve = (ArtifactResolve)SamlTools.signSamlObject(artifactResolve, useSha256? "sha256": "sha1");
+				
+				//	RH, 20180528, sn
+				if (partnerData != null) {
+					artifactResolve = (ArtifactResolve)SamlTools.signSamlObject(artifactResolve, useSha256? "sha256": "sha1",
+							"true".equalsIgnoreCase(partnerData.getAddkeyname()), "true".equalsIgnoreCase(partnerData.getAddcertificate()) );
+				} else {
+				//	RH, 20180528, en
+					artifactResolve = (ArtifactResolve)SamlTools.signSamlObject(artifactResolve, useSha256? "sha256": "sha1");
+				}	//	RH, 20180528, n
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "Signed the artifactResolve ======<");
 	
 				// Build the SOAP message
