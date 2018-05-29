@@ -281,6 +281,16 @@ public class AccountSTS extends ProtoRequestHandler
 			}
 		}
 		// RH, 20171212, en
+
+		// RH, 20180529, sn
+		// If we don't know the wauth, kick them out
+		if (sPwauth != null && !_htWauthAppidMapping.containsKey(sPwauth)) {
+			_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Unknown \"wauth\" in call");
+			throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
+		}
+		// RH, 20180529, en
+		
+		
 		_systemLogger.log(Level.FINER, MODULE, sMethod, "wsfed_ap PATH=" + servletRequest.getPathInfo() + " "
 				+ servletRequest.getMethod() + " " + servletRequest.getQueryString());
 //		_systemLogger.log(Level.INFO, MODULE, sMethod, "wsfed_ap PATH=" + servletRequest.getPathInfo() + " "
@@ -299,11 +309,14 @@ public class AccountSTS extends ProtoRequestHandler
 		if (sTgt != null) {
 			HashMap htTGTContext = getContextFromTgt(sTgt, true); // Check expiration
 //			if (htTGTContext != null) {	// RH, 20150915, o
-			if ( htTGTContext != null && (_iMinLevelProcess == null 
-					|| ( htTGTContext.get("authsp_level") != null 
+			if ( htTGTContext != null && 
+					(_iMinLevelProcess == null || 
+						( htTGTContext.get("authsp_level") != null 
 //					&& _iMinLevelProcess.compareTo(Integer.valueOf((String)htTGTContext.get("authsp_level"))) <= 0)) ) {	// RH, 20150915, n	// RH, 20171208, o
 							&& _iMinLevelProcess.compareTo(Integer.valueOf((String)htTGTContext.get("authsp_level"))) <= 0)) 
-						&& _sMyAppId.equals((String)htTGTContext.get("app_id"))	// RH, 20171208, n	// temporary fix
+//						&& _sMyAppId.equals((String)htTGTContext.get("app_id"))	// RH, 20171208, n	// temporary fix	// RH, 20180529, o
+						&& ( sPwauth == null && _sMyAppId.equals((String)htTGTContext.get("app_id")) 
+								|| sPwauth != null && _htWauthAppidMapping.get(sPwauth) != null && ((String)_htWauthAppidMapping.get(sPwauth)).equals(htTGTContext.get("app_id")))	// RH, 20180529, n
 				) {	// RH, 20171208, n
 				// Valid TGT context found, Update TGT timestamp
 				_oTGTManager.updateTGT(sTgt, htTGTContext);
@@ -323,6 +336,7 @@ public class AccountSTS extends ProtoRequestHandler
 				// RH, 20171212, sn
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "No tgt context found or authsp level too low or app_id not valid, doing authenticate");
 				if (htTGTContext != null) {
+					htSessionData.put("wauth", sPwauth);	// RH, 20180529, n
 					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Updating tgt with: " + htSessionData );
 					htTGTContext.putAll(htSessionData);
 					_oTGTManager.updateTGT(sTgt, htTGTContext);
@@ -580,8 +594,12 @@ public class AccountSTS extends ProtoRequestHandler
 					sAuthMeth = urn; // default when sPwauth not found, backward compatibility
 			}
 			
-			if (sPwauth != null)  sAuthMeth = sPwauth;	// sPwauth should have been checked		// RH, 20180523
+//			if (sPwauth != null)  sAuthMeth = sPwauth;	// sPwauth should have been checked		// RH, 20180523, n	// RH, 20180529, o
+			if (sPwauth != null 
+					&& _htWauthAppidMapping.get(sPwauth) != null && ((String)_htWauthAppidMapping.get(sPwauth)).equals(htSessionData.get("app_id")))  
+				sAuthMeth = sPwauth;	// sPwauth, we must check again	// RH, 20180529
 
+			
 //			String sRequestorToken = createRequestorToken(request, _sProviderId, sUid, _sUserDomain, _sNameIdFormat,
 //					sAudience, htAttributes, sSubjConf);	// RH, 20130924, o
 			String sRequestorToken = createRequestorToken(servletRequest, _sProviderId, sUid, _sUserDomain, _sNameIdFormat,
