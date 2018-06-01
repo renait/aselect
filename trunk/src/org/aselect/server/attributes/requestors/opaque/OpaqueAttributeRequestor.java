@@ -55,6 +55,7 @@ import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectAttributesException;
 import org.aselect.system.exception.ASelectException;
+import org.aselect.system.utils.BASE64Decoder;
 import org.aselect.system.utils.BASE64Encoder;
 import org.aselect.system.utils.Utils;
 import org.aselect.system.utils.crypto.Auxiliary;
@@ -78,6 +79,7 @@ public class OpaqueAttributeRequestor extends GenericAttributeRequestor
 	
 	private String _format = null;
 	private String _algorithm = null;
+	private String _precoding = null;	// RH, 20180601, n
 
 
 	/**
@@ -94,6 +96,67 @@ public class OpaqueAttributeRequestor extends GenericAttributeRequestor
 	 * @see org.aselect.server.attributes.requestors.IAttributeRequestor#getAttributes(java.util.HashMap,
 	 *      java.util.Vector)
 	 */
+	// RH, 20180601, sn
+	public HashMap getAttributes(HashMap htTGTContext, Vector vAttributes, HashMap hmAttributes)
+	throws ASelectAttributesException
+	{
+		final String sMethod = "getAttributes";
+
+		try {
+			String sUID = (String)(_bFromTgt? htTGTContext: hmAttributes).get(_sUseKey);
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "vAttr="+vAttributes+" hmAttr="+hmAttributes+" "+_sUseKey+"="+Auxiliary.obfuscate(sUID)+" fromTgt="+_bFromTgt);
+
+			if (!Utils.hasValue(sUID)) {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Attribute '"+_sUseKey+"' not found, from_tgt="+_bFromTgt);
+				return null;
+			}
+
+			if (vAttributes == null)
+				return null;
+
+			// Calculate opaque handle
+			byte[] digest_input;
+			if ("BASE64DECODE".equals(_precoding)) {
+				BASE64Decoder b64dec = new BASE64Decoder();
+				digest_input =  b64dec.decodeBuffer(sUID);
+			} else {
+				digest_input = sUID.getBytes("UTF-8");
+			}
+			byte[] digested;
+			if ("NONE".equals(_algorithm)) {
+				digested = digest_input;
+			} else {
+				MessageDigest md = MessageDigest.getInstance(_algorithm);
+				md.update(digest_input);
+				digested = md.digest();
+			}
+			String sHandle = null;
+			if ("UUID".equalsIgnoreCase(_format)) {
+				sHandle = Utils.format2quasiuuid(Utils.byteArrayToHexString(digested));
+			} else if ("BASE64".equalsIgnoreCase(_format)) {
+				BASE64Encoder b64enc = new BASE64Encoder();
+				sHandle = b64enc.encode(digested);
+			} else if ("PLAIN".equals(_format)) {
+				sHandle = new String(digested, "UTF-8");
+			} else {
+				sHandle = Utils.byteArrayToHexString(digested);
+			}
+			
+			// Return result in a HashMap
+			HashMap htAttrs = new HashMap();
+			for (Enumeration e = vAttributes.elements(); e.hasMoreElements();) {
+				htAttrs.put(e.nextElement(), sHandle);
+			}
+			return htAttrs;
+		}
+		catch (Exception e) {
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Unable to generate opaque handle", e);
+			throw new ASelectAttributesException(Errors.ERROR_ASELECT_INTERNAL_ERROR);
+		}
+	}
+	// RH, 20180601, en
+
+	/*		// RH, 20180601, so
 	public HashMap getAttributes(HashMap htTGTContext, Vector vAttributes, HashMap hmAttributes)
 	throws ASelectAttributesException
 	{
@@ -145,7 +208,8 @@ public class OpaqueAttributeRequestor extends GenericAttributeRequestor
 			throw new ASelectAttributesException(Errors.ERROR_ASELECT_INTERNAL_ERROR);
 		}
 	}
-
+	*/	// RH, 20180601, eo
+	
 	/**
 	 * Initialize the <code>OpaqueAttributeRequestor</code>. <br>
 	 * <br>
@@ -172,6 +236,13 @@ public class OpaqueAttributeRequestor extends GenericAttributeRequestor
 		} else {
 			_algorithm = _algorithm.toUpperCase();
 		}
+		// RH, 20180601, sn
+		_precoding = ASelectConfigManager.getSimpleParam(oConfig, "precoding", false);
+		if (_precoding != null ) {
+			_precoding = _precoding.toUpperCase();
+		}
+		// RH, 20180601, en
+		
 
 	}
 
