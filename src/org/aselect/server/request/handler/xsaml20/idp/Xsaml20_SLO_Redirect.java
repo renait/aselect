@@ -154,6 +154,21 @@ public class Xsaml20_SLO_Redirect extends Saml20_BrowserHandler
 			TGTManager tgtManager = TGTManager.getHandle();
 			HashMap htTGTContext = tgtManager.getTGT(sNameID);
 
+			// 20180619, sn, experimental
+			if (htTGTContext == null) {	// probably a persistent NameID
+				// Check for credentials that might be present in cookie
+				String cookiesTgt = getCredentialsFromCookie(httpRequest);
+				if (cookiesTgt != null) {
+					htTGTContext = tgtManager.getTGT(cookiesTgt);
+					if (htTGTContext != null) {
+						htTGTContext.put("cookiestgt", cookiesTgt);
+					}
+				}
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "coookiestgt retrieved=" + cookiesTgt);
+			}
+			// 20180619, en, experimental
+
+			
 			// RH, 20170804, sn
 			if (htTGTContext != null) {			// RH, 20170804, n 	// avoid nullpointer when tgt not found, e.g.when using  persistent instead of transient NameID
 				// 20090525, Bauke: also save RelayState in the TGT for the logout response

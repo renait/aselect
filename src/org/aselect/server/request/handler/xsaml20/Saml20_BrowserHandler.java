@@ -542,7 +542,8 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 				htTGTContext.put("sso_session", sso);
 			}
 			// Write the TgT (caller may also have changed it!)
-			tgtManager.updateTGT(sNameID, htTGTContext);
+//			tgtManager.updateTGT(sNameID, htTGTContext);	// RH, 20180619, o
+			tgtManager.updateTGT(htTGTContext.get("cookiestgt") != null ? (String)htTGTContext.get("cookiestgt") : sNameID, htTGTContext);	// RH, 20180619, n
 			sRelayState = (String) htTGTContext.get("RelayState");
 
 			// Send a LogoutRequest to another SP
@@ -570,7 +571,8 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 						_systemLogger.log(Level.FINER, MODULE, sMethod, "TIMER logout (as backup)");
 						SLOTimer timer = SLOTimer.getHandle(_systemLogger);
 						// Store the session with the remaining SP's in it
-						SLOTimerTask task = new SLOTimerTask(sNameID, originalLogoutRequest.getID(), sso, _sASelectServerUrl);
+//						SLOTimerTask task = new SLOTimerTask(sNameID, originalLogoutRequest.getID(), sso, _sASelectServerUrl);	// RH, 20180619, o
+						SLOTimerTask task = new SLOTimerTask(htTGTContext.get("cookiestgt") != null ? (String)htTGTContext.get("cookiestgt") : sNameID, originalLogoutRequest.getID(), sso, _sASelectServerUrl);	// RH, 20180619, n
 						long now = new Date().getTime();
 						_systemLogger.log(Level.FINER, MODULE, sMethod, "Schedule timer +"+redirectLogoutTimeout*1000);
 						timer.schedule(task, new Date(now + redirectLogoutTimeout * 1000));
@@ -596,7 +598,8 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 					}
 					// Will come back at this same handler
 					_systemLogger.log(Audit.AUDIT, MODULE, sMethod, ">> Sending logoutrequest to: " + url);
-					sender.sendLogoutRequest(httpRequest, httpResponse, sNameID, url, _sASelectServerUrl, sNameID,
+//					sender.sendLogoutRequest(httpRequest, httpResponse, sNameID, url, _sASelectServerUrl, sNameID,	// RH, 20180619, o
+					sender.sendLogoutRequest(httpRequest, httpResponse, htTGTContext.get("cookiestgt") != null ? (String)htTGTContext.get("cookiestgt") : sNameID , url, _sASelectServerUrl, sNameID,	// RH, 20180619, n
 							"urn:oasis:names:tc:SAML:2.0:logout:user", null);
 					return;
 					// stop further execution, we'll be back here to handle the rest
@@ -605,7 +608,11 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 					// This will logout all SP's
 					_systemLogger.log(Level.FINER, MODULE, sMethod, "TIMER logout for SP=" + serviceProvider);
 					SLOTimer timer = SLOTimer.getHandle(_systemLogger);
-					SLOTimerTask task = new SLOTimerTask(sNameID, originalLogoutRequest.getID(), sso, _sASelectServerUrl);
+//					SLOTimerTask task = new SLOTimerTask(sNameID, originalLogoutRequest.getID(), sso, _sASelectServerUrl);	// RH, 20180619, o
+					SLOTimerTask task = new SLOTimerTask(htTGTContext.get("cookiestgt") != null ? (String)htTGTContext.get("cookiestgt") : sNameID,
+							originalLogoutRequest.getID(), sso, _sASelectServerUrl);	// RH, 20180619, n
+					
+					
 					// RH, 20161220, so
 					// schedule it for now. No need to wait
 //					_systemLogger.log(Level.FINER, MODULE, sMethod, "Schedule timer now");
@@ -628,10 +635,14 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 			// For Saml20, will also send word to the IdP
 			if (sAuthspType != null && sAuthspType.equals("saml20") && sSendIdPLogout == null) {
 				htTGTContext.put("SendIdPLogout", "true");
-				tgtManager.updateTGT(sNameID, htTGTContext);
+//				tgtManager.updateTGT(sNameID, htTGTContext);	// RH, 20180619, o
+				tgtManager.updateTGT(htTGTContext.get("cookiestgt") != null ? (String)htTGTContext.get("cookiestgt") : sNameID,
+						htTGTContext);	// RH, 20180619, n
 				// Should also come back to this handler, but an IdP will send to the slo_http_response handler!
 //				sendLogoutToIdP(httpRequest, httpResponse, sNameID, htTGTContext, _sASelectServerUrl, null/* sLogoutReturnUrl */);
-				int loggingOut = sendLogoutToIdP(httpRequest, httpResponse, sNameID, htTGTContext, _sASelectServerUrl, originalLogoutRequest.getID()/* sLogoutReturnUrl */);
+//				int loggingOut = sendLogoutToIdP(httpRequest, httpResponse, sNameID, htTGTContext, _sASelectServerUrl, originalLogoutRequest.getID()/* sLogoutReturnUrl */);	// RH, 20180619, o
+				int loggingOut = sendLogoutToIdP(httpRequest, httpResponse, htTGTContext.get("cookiestgt") != null ? (String)htTGTContext.get("cookiestgt") : sNameID,
+						htTGTContext, _sASelectServerUrl, originalLogoutRequest.getID()/* sLogoutReturnUrl */);	// RH, 20180619, n
 				// _sASelectServerUrl+"/saml20_sp_slo_http_request");
 				// The sp_slo_htt_response handler must take care of TgT destruction
 				// and responding to the caller
@@ -641,7 +652,8 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 				}
 			}
 			// No saml20 IdP, the TgT goes down the drain
-			tgtManager.remove(sNameID);
+//			tgtManager.remove(sNameID);	// RH, 20180619, o
+			tgtManager.remove(htTGTContext.get("cookiestgt") != null ? (String)htTGTContext.get("cookiestgt") : sNameID);	// RH, 20180619, n
 //		}	// RH, 20171107, o
 		} else {	// RH, 20171107, sn
 			// if we have no tgt or cannot find it, there might be a saved relaystate for the initiating SP
