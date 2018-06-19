@@ -843,7 +843,8 @@ public class SamlTools
 		SAMLObjectBuilder<NameID> nameIdBuilder = (SAMLObjectBuilder<NameID>) builderFactory
 				.getBuilder(NameID.DEFAULT_ELEMENT_NAME);
 		NameID nameId = nameIdBuilder.buildObject();
-		nameId.setFormat(NameIDType.TRANSIENT);	// RH, 20140801, n. We use transient id's for nameid
+//		nameId.setFormat(NameIDType.TRANSIENT);	// RH, 20140801, n. We use transient id's for nameid	// RH, 20180619, o
+		nameId.setFormat(sNameID.equals(sTgT) ? NameIDType.TRANSIENT : NameIDType.PERSISTENT);	// RH, 20140801, n. We use transient id's for nameid	// RH, 20180619, n
 		nameId.setValue(sNameID);
 		logoutRequest.setNameID(nameId);
 
