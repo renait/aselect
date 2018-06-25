@@ -407,6 +407,14 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 			_htSessionContext.put("sp_rid", sSPRid);
 			_htSessionContext.put("sp_issuer", sIssuer);
 			_htSessionContext.put("sp_assert_url", sAssertionConsumerServiceURL);
+			
+			// RH, 20180625, sn
+			String appEndEntityID = ApplicationManager.getHandle().getApplicationEndpointAudience(sAppId);
+			if ( appEndEntityID != null && appEndEntityID.length() > 0) {
+				_htSessionContext.put("sp_audience", appEndEntityID);
+			}
+			// RH, 20180625, sn
+			
 			// RH, 20101101, Save requested binding for when we return from authSP
 			// 20110323, Bauke: if no requested binding, take binding from metadata
 			if (Utils.hasValue(sReqBinding))  // 20120313, Bauke: added test

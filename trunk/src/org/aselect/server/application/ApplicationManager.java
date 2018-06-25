@@ -372,6 +372,8 @@ public class ApplicationManager
 
 				String sForcedAudience = ASelectConfigManager.getSimpleParam(oApplication, "forced_audience", false); // RH, 20160211, n
 
+				String sApplicationEndpointAudience = ASelectConfigManager.getSimpleParam(oApplication, "applicationendpointaudience", false); // RH, 20180625, n
+
 				// RH, 20150921, sn
 				boolean bPushAttributes = false;
 				String sPushAttributes = ASelectConfigManager.getSimpleParam(oApplication, "push_attributes", false);
@@ -452,6 +454,8 @@ public class ApplicationManager
 
 				application.setForcedAttrConsServIndex(sForcedAttrConsServIndex);  // RH, 20140505, n
 				application.setForcedAudience(sForcedAudience);  // RH, 20160211, n
+				application.setApplicationEndpointAudience(sApplicationEndpointAudience);  // RH, 20180625, n
+
 				application.setPushAttributes(bPushAttributes);	// RH, 20150921, n
 
 				application.setNameIDAttribute(sNameIDAttribute);	// RH, 20171211, n
@@ -1491,6 +1495,35 @@ public class ApplicationManager
 		return (oApplication==null)? null: oApplication.getForcedAudience();
 	}
 	
+
+	/**
+	 * Returns the Optional Audience to force in the SAML Assertion for an application. <br>
+	 * <br>
+	 * <b>Description:</b> <br>
+	 * Returns the configured ForcedAudience for the application. <br>
+	 * <br>
+	 * <b>Concurrency issues:</b> <br>
+	 * - <br>
+	 * <br>
+	 * <b>Preconditions:</b> <br>
+	 * - <br>
+	 * <br>
+	 * <b>Postconditions:</b> <br>
+	 * - <br>
+	 * 
+	 * @param sAppId
+	 *            <code>String</code> containing an application id.
+	 * @return String containing the Audience. <code>null</code> if no Audience name was found.
+	 * @throws ASelectException
+	 *             the a select exception
+	 */
+	public String getApplicationEndpointAudience(String sAppId)
+	throws ASelectException
+	{
+		Application oApplication = getApplication(sAppId);
+		return (oApplication==null)? null: oApplication.getApplicationEndpointAudience();
+	}
+
 	
 	/**
 	 * Returns the Optional PushAttributes to force pushing 'attributes'  parameter back on tgt_upgrade request <br>
