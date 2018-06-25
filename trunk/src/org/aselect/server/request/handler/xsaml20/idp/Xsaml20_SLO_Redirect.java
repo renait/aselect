@@ -162,6 +162,13 @@ public class Xsaml20_SLO_Redirect extends Saml20_BrowserHandler
 					htTGTContext = tgtManager.getTGT(cookiesTgt);
 					if (htTGTContext != null) {
 						htTGTContext.put("cookiestgt", cookiesTgt);
+						// save the RelayState also for we might not have or find the tgt, e.g. in case of persitent NameID
+						// RH, 20180622, sn
+						// We'll need it later because the cookie and tgt will be gone
+						if (sRelayState != null) {
+							history.put(ORIGINATING_RELAYSTATE + "_" + originalID, sRelayState);
+						}
+						// RH, 20180622, en
 					}
 				}
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "coookiestgt retrieved=" + cookiesTgt);
