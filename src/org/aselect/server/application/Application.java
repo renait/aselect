@@ -121,6 +121,9 @@ public class Application
 	// Optional application specific Audience in AudienceRestriction of Assertion in samlresponse
 	private String _sForcedAudience = null;	// RH, 20160211, n
 
+	// Optional
+	private String _sApplicationEndpointAudience = null;	// RH, 20180625, n
+	
 	// Optional application specific for pushing 'attributes' parameter back on upgrade_tgt request
 	private boolean _bPushAttributes = false;	// backwards compatibility
 
@@ -779,6 +782,15 @@ public class Application
 	public synchronized void setNameIDAttribute(String _NameIDAttribute)
 	{
 		this._NameIDAttribute = _NameIDAttribute;
+	}
+
+	public String getApplicationEndpointAudience() {
+		return _sApplicationEndpointAudience;
+	}
+
+	public void setApplicationEndpointAudience(
+			String _sApplicationEndpointAudience) {
+		this._sApplicationEndpointAudience = _sApplicationEndpointAudience;
 	}
 
 
