@@ -695,6 +695,8 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 							Iterator<Attribute> iAttr = lAttr.iterator();
 							while (iAttr.hasNext()) {
 								Attribute attr = iAttr.next();
+//								_systemLogger.log(Level.FINEST, MODULE, sMethod, "Next attr as xml:\n"  + 
+//										XMLHelper.prettyPrintXML(attr.getDOM()));
 								String sAttrName = attr.getName();
 								
 								String sAttrValue = null;// RH, 20120124, sn
@@ -708,7 +710,8 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 //	    							_systemLogger.log(Level.FINEST, MODULE, sMethod, "sValue:" + sValue);
 	//    							String sChild = Auxiliary.obfuscate(XMLHelper.nodeToString(xmlObj.getDOM().getFirstChild()));
 	    							EncryptedID eID = null;
-	    							if (xmlObj.getOrderedChildren() != null && !xmlObj.getOrderedChildren().isEmpty()) {
+//	    							if (xmlObj.getOrderedChildren() != null && !xmlObj.getOrderedChildren().isEmpty()) {	// RH, 20180620, o
+	    							if (xmlObj != null && xmlObj.getOrderedChildren() != null && !xmlObj.getOrderedChildren().isEmpty()) {	// RH, 20180620, n
 	//        							String sChild = Auxiliary.obfuscate(XMLHelper.nodeToString(xmlObj.getOrderedChildren().get(0).getDOM()));
 	//        							_systemLogger.log(Level.FINEST, MODULE, sMethod, "sChild:" + sChild);
 	//        							String sLocalName = xmlObj.getDOM().getFirstChild().getLocalName();
@@ -727,10 +730,11 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 	        	                            }
 	        							}
 	    							}
-	    							
-									sAttrValue = xmlObj.getDOM().getFirstChild().getTextContent();
-	//								_systemLogger.log(Level.INFO, MODULE, sMethod, "Name=" + sAttrName + " Value=" + sAttrValue);
-									_systemLogger.log(Level.INFO, MODULE, sMethod, "Name=" + sAttrName + " Value=" + Auxiliary.obfuscate(sAttrValue));
+	    							if (xmlObj != null && xmlObj.getDOM().getFirstChild() != null) {
+	    								sAttrValue = xmlObj.getDOM().getFirstChild().getTextContent();
+	//									_systemLogger.log(Level.INFO, MODULE, sMethod, "Name=" + sAttrName + " Value=" + sAttrValue);
+	    							}
+    								_systemLogger.log(Level.INFO, MODULE, sMethod, "Name=" + sAttrName + " Value=" + Auxiliary.obfuscate(sAttrValue));
 								}
 								else {
 									_systemLogger.log(Level.INFO, MODULE, sMethod, "Only single valued attributes allowed, skipped attribute Name=" + sAttrName);
