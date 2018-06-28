@@ -42,14 +42,15 @@
  */
 package org.aselect.server.attributes.requestors.opaque;
 
-import java.io.UnsupportedEncodingException;
+import java.nio.ByteBuffer;
 import java.security.MessageDigest;
-import java.security.NoSuchAlgorithmException;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.UUID;
 import java.util.Vector;
 import java.util.logging.Level;
 
+import org.apache.commons.codec.binary.Base64;
 import org.aselect.server.attributes.requestors.GenericAttributeRequestor;
 import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.system.error.Errors;
@@ -80,6 +81,9 @@ public class OpaqueAttributeRequestor extends GenericAttributeRequestor
 	private String _format = null;
 	private String _algorithm = null;
 	private String _precoding = null;	// RH, 20180601, n
+
+	private boolean _silent = false;	// RH, 20180628, n
+	private boolean _urlsafe = false;	// RH, 20180628, n
 
 
 	/**
@@ -116,14 +120,19 @@ public class OpaqueAttributeRequestor extends GenericAttributeRequestor
 
 			// Calculate opaque handle
 			byte[] digest_input;
-			if ("BASE64DECODE".equals(_precoding)) {
-				BASE64Decoder b64dec = new BASE64Decoder();
-				digest_input =  b64dec.decodeBuffer(sUID);
-			} else {
+			if ("BASE64DECODE".equalsIgnoreCase(_precoding) || "BASE64".equalsIgnoreCase(_precoding)) {
+				digest_input = Base64.decodeBase64(sUID);
+			} else if ("GUID".equalsIgnoreCase(_precoding)) {
+				digest_input = uuidToBytes(sUID);
+			} else if ("MSIMMUTABLEID".equalsIgnoreCase(_precoding)) {
+				digest_input = Base64.decodeBase64(sUID);	// looks good. supports URL safe base64
+				digest_input = SwapMSImmutable(digest_input);
+			} else { 
 				digest_input = sUID.getBytes("UTF-8");
 			}
+			
 			byte[] digested;
-			if ("NONE".equals(_algorithm)) {
+			if ("NONE".equalsIgnoreCase(_algorithm)) {
 				digested = digest_input;
 			} else {
 				MessageDigest md = MessageDigest.getInstance(_algorithm);
@@ -133,10 +142,22 @@ public class OpaqueAttributeRequestor extends GenericAttributeRequestor
 			String sHandle = null;
 			if ("UUID".equalsIgnoreCase(_format)) {
 				sHandle = Utils.format2quasiuuid(Utils.byteArrayToHexString(digested));
-			} else if ("BASE64".equalsIgnoreCase(_format)) {
-				BASE64Encoder b64enc = new BASE64Encoder();
-				sHandle = b64enc.encode(digested);
-			} else if ("PLAIN".equals(_format)) {
+			} else if ("BASE64ENCODE".equalsIgnoreCase(_format) || "BASE64".equalsIgnoreCase(_format)) {
+				if (_urlsafe) {
+					sHandle = Base64.encodeBase64URLSafeString(digested);
+				} else {
+					sHandle = Base64.encodeBase64String(digested);
+				}
+			} else if ("GUID".equalsIgnoreCase(_format)) {
+			    sHandle = uuidFromBytes(digested);
+			} else if ("MSIMMUTABLEID".equalsIgnoreCase(_format)) {
+				digested = SwapMSImmutable(digested);
+				if (_urlsafe) {
+					sHandle = Base64.encodeBase64URLSafeString(digested);
+				} else {
+					sHandle = Base64.encodeBase64String(digested);
+				}
+			} else if ("PLAIN".equalsIgnoreCase(_format)) {
 				sHandle = new String(digested, "UTF-8");
 			} else {
 				sHandle = Utils.byteArrayToHexString(digested);
@@ -150,65 +171,19 @@ public class OpaqueAttributeRequestor extends GenericAttributeRequestor
 			return htAttrs;
 		}
 		catch (Exception e) {
+			// RH, 20180628, sn
+			if (_silent) {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Silently ignoring exception opaque handle ", e);
+				return null;
+				// RH, 20180628, en
+			} else {
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Unable to generate opaque handle", e);
 			throw new ASelectAttributesException(Errors.ERROR_ASELECT_INTERNAL_ERROR);
+			}
 		}
 	}
 	// RH, 20180601, en
 
-	/*		// RH, 20180601, so
-	public HashMap getAttributes(HashMap htTGTContext, Vector vAttributes, HashMap hmAttributes)
-	throws ASelectAttributesException
-	{
-		final String sMethod = "getAttributes";
-
-		try {
-			String sUID = (String)(_bFromTgt? htTGTContext: hmAttributes).get(_sUseKey);
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "vAttr="+vAttributes+" hmAttr="+hmAttributes+" "+_sUseKey+"="+Auxiliary.obfuscate(sUID)+" fromTgt="+_bFromTgt);
-
-			if (!Utils.hasValue(sUID)) {
-				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Attribute '"+_sUseKey+"' not found, from_tgt="+_bFromTgt);
-				return null;
-			}
-
-			if (vAttributes == null)
-				return null;
-
-			HashMap htAttrs = new HashMap();
-			for (Enumeration e = vAttributes.elements(); e.hasMoreElements();) {
-				// Calculate opaque handle
-//				MessageDigest md = MessageDigest.getInstance("SHA1");	// RH, 20171106, o
-				MessageDigest md = MessageDigest.getInstance(_algorithm);	// RH, 20171106, n
-				md.update(sUID.getBytes("UTF-8"));
-				// String sHandle = Utils.byteArrayToHexString(md.digest());	// RH, 20180213, o
-				String sHandle = null;	// RH, 20180213, o
-				//  RH, 20171106, sn
-//				if ("UUID".equals(_format)) {	// RH, 20180213, o
-				if ("UUID".equalsIgnoreCase(_format)) {	// RH, 20180213, n
-					// sHandle = Utils.format2quasiuuid(sHandle);	// RH, 20180213, o
-					sHandle = Utils.format2quasiuuid(Utils.byteArrayToHexString(md.digest())); 	// RH, 20180213, n
-				//}	// RH, 20180213, o
-				//  RH, 20171106, en
-				//  RH, 20180213, sn
-				} else if ("BASE64".equalsIgnoreCase(_format)) {
-					BASE64Encoder b64enc = new BASE64Encoder();
-					sHandle = b64enc.encode(md.digest());
-				} else {
-					sHandle = Utils.byteArrayToHexString(md.digest());
-				}
-				//  RH, 20180213, en
-				
-				// Return result in a HashMap
-				htAttrs.put(e.nextElement(), sHandle);
-			}
-			return htAttrs;
-		}
-		catch (Exception e) {
-			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Unable to generate opaque handle", e);
-			throw new ASelectAttributesException(Errors.ERROR_ASELECT_INTERNAL_ERROR);
-		}
-	}
-	*/	// RH, 20180601, eo
 	
 	/**
 	 * Initialize the <code>OpaqueAttributeRequestor</code>. <br>
@@ -242,7 +217,18 @@ public class OpaqueAttributeRequestor extends GenericAttributeRequestor
 			_precoding = _precoding.toUpperCase();
 		}
 		// RH, 20180601, en
-		
+		// RH, 20180628, sn
+		String sSilent = ASelectConfigManager.getSimpleParam(oConfig, "silent", false);
+		if (sSilent != null ) {
+			_silent = Boolean.parseBoolean(sSilent);
+		}
+		// RH, 20180628, en
+		// RH, 20180628, sn
+		String sURLSafe = ASelectConfigManager.getSimpleParam(oConfig, "urlsafe", false);
+		if (sURLSafe != null ) {
+			_urlsafe = Boolean.parseBoolean(sURLSafe);
+		}
+		// RH, 20180628, en
 
 	}
 
@@ -256,37 +242,45 @@ public class OpaqueAttributeRequestor extends GenericAttributeRequestor
 	{
 		// Does nothing
 	}
-	
-	public static void main(String[] args)	// for testing
-	{
-//		String sUID = "12345dfk;sf;sf;sldfj;sldf;slfj;l;leer;ewr;re;lf;ladf;ldsf;lerfje;lfj;dlf;sldf;sdlf;lwef;f;lf;sdlf;sdf;sdf;sdfj;sfj;sdfj;sldf;sldf;lsdf;lsdf";
-//		String sUID = "12345";
-		String sUID = "";
-		MessageDigest md;
-		try {
-//			md = MessageDigest.getInstance("MD5");
-//			md = MessageDigest.getInstance("SHA-1");
-			md = MessageDigest.getInstance("SHA1");
-//			md = MessageDigest.getInstance("SHA-224");
-//			md = MessageDigest.getInstance("SHA-256");
-//			md = MessageDigest.getInstance("SHA-384");
-//			md = MessageDigest.getInstance("SHA-512");
-//			md = MessageDigest.getInstance("SHA3-256");
-			md.update(sUID.getBytes("UTF-8"));
-			String sHandle = Utils.byteArrayToHexString(md.digest());
-			System.out.println("Hex:" + sHandle + ", length (chars):" + sHandle.length());
-			String hash = Utils.format2quasiuuid(sHandle);
-			
-			System.out.println("Hex representation:" + hash + ", length (chars):" + hash.length());
-		}
-		catch (NoSuchAlgorithmException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		catch (UnsupportedEncodingException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		
+
+	private static String uuidFromBytes(byte[] highlow) {
+	    ByteBuffer bb = ByteBuffer.wrap(highlow);
+	    UUID uuid = new UUID(bb.getLong(), bb.getLong());
+	    return uuid.toString();
 	}
+
+	private static byte[] uuidToBytes(String str) {
+	    UUID uuid = UUID.fromString(str);
+	    ByteBuffer bb = ByteBuffer.wrap(new byte[16]);
+	    bb.putLong(uuid.getMostSignificantBits());
+	    bb.putLong(uuid.getLeastSignificantBits());
+	    return bb.array();
+	}
+
+	// Only for 128 bits ( 16 bytes) byte[] )
+	public static byte[] SwapMSImmutable(byte[] bytes) {
+        
+    	byte[] swappedBytes = new byte[16];
+    	
+    	//	MS typical marshalling-unmarshalling
+    	//	last part no suprises
+    	for (int i = 8 ; i < 16 ; i++) {	// lsb (last part) the same
+    		swappedBytes[i] = bytes[i];
+    	}
+
+    	// now the MS specifics
+    	swappedBytes[0] = bytes[3];
+    	swappedBytes[1] = bytes[2];
+    	swappedBytes[2] = bytes[1];
+    	swappedBytes[3] = bytes[0];
+
+    	swappedBytes[4] = bytes[5];
+    	swappedBytes[5] = bytes[4];
+
+    	swappedBytes[6] = bytes[7];
+    	swappedBytes[7] = bytes[6];
+    	//
+    	return swappedBytes;
+	}
+	
 }
