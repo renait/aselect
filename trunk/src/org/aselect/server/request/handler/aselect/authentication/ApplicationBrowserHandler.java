@@ -306,7 +306,8 @@ import org.aselect.server.attributes.AttributeGatherer;
 import org.aselect.server.authspprotocol.IAuthSPDirectLoginProtocolHandler;
 import org.aselect.server.authspprotocol.IAuthSPProtocolHandler;
 import org.aselect.server.authspprotocol.handler.AuthSPHandlerManager;
-import org.aselect.server.authspprotocol.handler.IdinAuthSPHandler;
+// no idin yet
+//	import org.aselect.server.authspprotocol.handler.IdinAuthSPHandler;
 import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.server.config.Version;
 import org.aselect.server.cross.CrossASelectManager;
@@ -2027,7 +2028,8 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 			String sCountry = (String)_htSessionContext.get("country");  // 20101027 _
 			sSelectForm = Utils.replaceString(sSelectForm, "[language]", sLanguage);
 			sSelectForm = Utils.replaceString(sSelectForm, "[country]", sCountry);
-			sSelectForm = Utils.replaceString(sSelectForm, "[idin_issuers]", IdinAuthSPHandler.getAvailableIssuersSelect());
+			// no idin yet
+//			sSelectForm = Utils.replaceString(sSelectForm, "[idin_issuers]", IdinAuthSPHandler.getAvailableIssuersSelect());
 
 			// 20130411: What AuthSP's must be presented to the user?
 			if (bAuthspFromSelect) {
