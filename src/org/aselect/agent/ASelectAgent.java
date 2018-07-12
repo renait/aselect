@@ -485,7 +485,14 @@ public class ASelectAgent
 			ASelectAgentSAMAgent.getHandle().destroy();
 			TicketManager.getHandle().stop();
 			SessionManager.getHandle().stop();
-			ConfigManager.timerSensorStopThread(_timerSensorThread);
+			_oASelectAgentSystemLogger.log(Level.FINEST, MODULE, sMethod, "A-Select Stopping timerSensorThread.");
+			if (_timerSensorThread != null) {
+				ConfigManager.timerSensorStopThread(_timerSensorThread);
+				_oASelectAgentSystemLogger.log(Level.FINEST, MODULE, sMethod, "A-Select _timerSensorThread Stopped. ");
+			} else {
+				_oASelectAgentSystemLogger.log(Level.FINEST, MODULE, sMethod, "A-Select Agent _timerSensorThread alrady vanished.");
+			}
+			_oASelectAgentSystemLogger.log(Level.FINEST, MODULE, sMethod, "A-Select Auxiliary.teardown()");
 			Auxiliary.teardown();	// RH, 20170120, n
 			_oASelectAgentSystemLogger.log(Level.INFO, MODULE, sMethod, "A-Select Agent stopped.");
 			_oASelectAgentSystemLogger.closeHandlers();

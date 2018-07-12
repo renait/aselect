@@ -86,6 +86,7 @@ import org.aselect.system.logging.ISystemLogger;
 import org.aselect.system.logging.SystemLogger;
 import org.aselect.system.utils.Base64Codec;
 import org.aselect.system.utils.Utils;
+import org.opensaml.ws.wssecurity.impl.TimestampUnmarshaller;
 
 public  final class Auxiliary
 {	
@@ -117,8 +118,10 @@ public  final class Auxiliary
 	private static SecureRandom sr = null;
 	private static  byte bytes[] = new byte[20];
 //	private static final Map<String, String> digestedMap = new HashMap<String, String>();
-	private static final Map<String, String> digestedMap = new ConcurrentHashMap<String, String>();
-	private static final ScheduledExecutorService scheduledThreadPool = Executors.newScheduledThreadPool(2);
+//	private static final Map<String, String> digestedMap = new ConcurrentHashMap<String, String>();	// RH, 20180710, o
+	private static Map<String, String> digestedMap = null;	// RH, 20180710, n
+//	private static final ScheduledExecutorService scheduledThreadPool = Executors.newScheduledThreadPool(2);	// RH, 20180710, o
+	private static ScheduledExecutorService scheduledThreadPool = null;	// RH, 20180710, n
 	
 	static {
 		try {
@@ -126,10 +129,12 @@ public  final class Auxiliary
 			if (DIGEST_ALG == null || !ALLOWED_DIGEST_ALGS.contains(DIGEST_ALG )) {
 				DIGEST_ALG = DEFAULT_DIGEST_ALG;
 			}
-			if (DEFAULT_DIGEST_ALG.equals(DIGEST_ALG)) {
-				scheduledThreadPool.scheduleAtFixedRate(new Auxiliary.CleanupDigestMap(), 0, 24,
-			            TimeUnit.HOURS);
-			}
+			// RH, 20180710. so
+//			if (DEFAULT_DIGEST_ALG.equals(DIGEST_ALG)) {
+//				scheduledThreadPool.scheduleAtFixedRate(new Auxiliary.CleanupDigestMap(), 0, 24,
+//			            TimeUnit.HOURS);
+//			}
+			// RH, 20180710. so
 		} catch (Exception se) {
 			System.err.println( "=+=+=+=+=" + ( new SimpleDateFormat( "yyyy-MM-dd'T'HH:mm:ss.SSS" ) ).format( Calendar.getInstance().getTime() ) + 
 					": " + Thread.currentThread().getName() + ": " + "Exception at Auxiliary static initializer: " + se.getMessage());
@@ -162,6 +167,15 @@ public  final class Auxiliary
 		
 	}
 
+	private static Map<String, String> getDigestedMapInstane() {	// lazy
+		if (digestedMap == null) {
+			digestedMap = new ConcurrentHashMap<String, String>();
+			scheduledThreadPool = Executors.newScheduledThreadPool(2);
+			scheduledThreadPool.scheduleAtFixedRate(new Auxiliary.CleanupDigestMap(), 0, 24,
+		            TimeUnit.HOURS);	// only cleanup when there is a digestedMap
+		}
+		return digestedMap;
+	}
 	
 	private Auxiliary() {	// hide contructor
 		
@@ -414,14 +428,15 @@ public  final class Auxiliary
 	
 	private static String getRandom(String plaintext)
 	{
-		String digested = digestedMap.get(plaintext);
+//		String digested = digestedMap.get(plaintext);
+		String digested = getDigestedMapInstane().get(plaintext);
 		if (digested == null) {
 	        sr.nextBytes(bytes);
-	        digested =  Base64Codec.encode(bytes) ;
-	        digestedMap.put(plaintext, digested);
+	        digested =  Base64Codec.encode(bytes) ;	        
+//	        digestedMap.put(plaintext, digested);
+	        getDigestedMapInstane().put(plaintext, digested);
 	    }
 		return digested;
-
 	}
 
 	public static byte[] calculateRawRFC2104HMAC(byte[] data, byte[] key)
@@ -775,7 +790,7 @@ public  final class Auxiliary
 		public void run() {
 //			System.out.println( "=+=+=+=+=" + ( new SimpleDateFormat( "yyyy-MM-dd'T'HH:mm:ss.SSS" ) ).format( Calendar.getInstance().getTime() ) + 
 //					Thread.currentThread().getName() + ": " + "Cleaning up digestedMap");// must go
-			digestedMap.clear();
+			if (digestedMap != null) digestedMap.clear();
 		}
 	}
 	
@@ -784,7 +799,14 @@ public  final class Auxiliary
 		if (scheduledThreadPool != null) {
 //			System.out.println( "=+=+=+=+=" + ( new SimpleDateFormat( "yyyy-MM-dd'T'HH:mm:ss.SSS" ) ).format( Calendar.getInstance().getTime() ) + 
 //					Thread.currentThread().getName() + ": " + "Shutting down  scheduledThreadPool");// must go
-			scheduledThreadPool.shutdownNow();
+			scheduledThreadPool.shutdown();
+			try {
+				if (!scheduledThreadPool.awaitTermination(10, TimeUnit.SECONDS)) {
+					scheduledThreadPool.shutdownNow();
+				}
+			} catch (InterruptedException e) {
+				scheduledThreadPool.shutdownNow();
+			}
 //			System.out.println( "=+=+=+=+=" + ( new SimpleDateFormat( "yyyy-MM-dd'T'HH:mm:ss.SSS" ) ).format( Calendar.getInstance().getTime() ) + 
 //					Thread.currentThread().getName() + ": " + "scheduledThreadPool shut down initialized");// must go
 		}
