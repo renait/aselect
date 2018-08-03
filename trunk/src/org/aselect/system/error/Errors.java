@@ -210,6 +210,11 @@ public class Errors
 	public final static String ERROR_ASELECT_SERVER_CANCEL = "0040";
 
 	/**
+	 * A-Select error: The user authentication attempt expired.
+	 */
+	public final static String ERROR_ASELECT_SERVER_AUTH_EXPIRED = "0042";
+
+	/**
 	 * A-Select error: The A-Select Server is busy and cannot handle the request.
 	 */
 	public final static String ERROR_ASELECT_SERVER_BUSY = "0050";

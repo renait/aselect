@@ -1208,6 +1208,13 @@ public class ASelectConfigManager extends ConfigManager
 			return Utils.loadTemplateFromFile(_systemLogger, getWorkingdir(), null, sForm, sLanguage, _sOrgFriendlyName, Version.getVersion());
 		// End sequential authsp's
 
+		// RH, 20180712, sn
+		// Start authsp's subselect
+		if (sForm.startsWith("subselect"))
+			return Utils.loadTemplateFromFile(_systemLogger, getWorkingdir(), null, sForm, sLanguage, _sOrgFriendlyName, Version.getVersion());
+		// End  authsp's subselect
+		// RH, 20180712, en
+
 		return "Form '" + sForm + "' not found, not a standard form";
 	}
 	

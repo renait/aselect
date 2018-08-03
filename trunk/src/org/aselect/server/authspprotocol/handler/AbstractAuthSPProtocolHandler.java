@@ -1,5 +1,7 @@
 package org.aselect.server.authspprotocol.handler;
 
+import java.util.Map;
+
 import org.aselect.server.authspprotocol.IAuthSPConditions;
 
 
@@ -16,6 +18,11 @@ public synchronized boolean isOutputAvailable()
 public synchronized void setOutputAvailable(boolean outputAvailable)
 {
 	this.outputAvailable = outputAvailable;
+}
+
+// default implementation
+public String inquireSubselect(Map  map) {
+	return null;
 }
 
 }
