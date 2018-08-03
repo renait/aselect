@@ -33,6 +33,7 @@
 package org.aselect.server.authspprotocol;
 
 import java.util.HashMap;
+import java.util.Map;
 
 import org.aselect.system.exception.ASelectAuthSPException;
 
@@ -101,6 +102,24 @@ public interface IAuthSPProtocolHandler extends IAuthSPConditions
 	 */
 	public HashMap computeAuthenticationRequest(String sRid, HashMap htSessionContext);
 
+	
+	/**
+	 * Optional inquiry of specific AuthSP handler for additional user form information after AuthSP has been selected. <br>
+	 * <br>
+	 * <b>Description:</b> <br>
+	 * The AuthSP handler has been selected (by the user or implicit) and we want to obtain extra information
+	 * from the selected AuthSP to pass to the user (as a form) before actually starting the authentication.<br>
+	 * The user will be presented with the subselect form to provide additional information to the authentication process
+	 * <br>
+	 * 
+	 * @param map
+	 *      Generic container to pass info to the AuthSPHandler.
+	 * @return <code>String</code> containing preformatted html to present to the user,
+	 *  e.g. a formatted html <select> option box
+	 */
+	public String inquireSubselect(Map map);
+
+	
 	/**
 	 * Verification of an AuthSP specific response. <br>
 	 * <br>
