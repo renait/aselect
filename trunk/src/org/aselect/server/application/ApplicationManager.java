@@ -320,14 +320,17 @@ public class ApplicationManager
 				HashMap<String, String> _htLevels = new HashMap<String, String>(); // contains level -> urn
 				_htLevels = ASelectConfigManager.getTableFromConfig(oApplication,  _htLevels, "authentication_method",
 						"security", "level",/*->*/"uri", false/* mandatory */, false/* unique values */);
+				// RH, 20180810, so
+				// Because levels are dynamic now we cannot validate in advance
 				// check if all levels are valid for integer conversion
-				if (_htLevels != null) {
-					// 20160115, Bauke: Let SecurityLevel handle this
-					if (!SecurityLevel.checkAllValidLevels(_htLevels)) {
-						throw new ASelectConfigException("Level not allowed in 'authentication_method/security' for application: " + sAppId );
-					}
-				}
+//				if (_htLevels != null) {
+//					// 20160115, Bauke: Let SecurityLevel handle this
+//					if (!SecurityLevel.checkAllValidLevels(_htLevels)) {
+//						throw new ASelectConfigException("Level not allowed in 'authentication_method/security' for application: " + sAppId );
+//					}
+//				}
 				// RH, 20101206, en
+				// RH, 20180810, so
 				
 				// 20101229, Bauke: fixed attributes to be added to a returned SAML token
 				HashMap<String, String> _htAdditionalAttributes = new HashMap<String, String>();
