@@ -624,6 +624,14 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 //					String sAuthnContextClassRefURI = oAuthnContext.getAuthnContextClassRef().getAuthnContextClassRef();	// RH, 20160405, o
 					// RH, 20160405, sn
 					PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sFederationUrl);
+					// RH, 20180810, sn, Moved this up a bit
+					String specialSettings = (partnerData == null)? null: partnerData.getSpecialSettings();
+					boolean useLoa = (specialSettings != null && specialSettings.contains("use_loa"));
+					_systemLogger.log(Level.FINER, MODULE, sMethod, "useLoa="+useLoa);
+					boolean useNewLoa = (specialSettings != null && specialSettings.contains("use_newloa"));
+					_systemLogger.log(Level.FINER, MODULE, sMethod, "useNewLoa="+useNewLoa);
+					// RH, 20180810, en, Moved this up a bit
+
 					String sAuthnContextClassRefURI = null;
 					AuthnContextClassRef accr = oAuthnContext.getAuthnContextClassRef();
 					if (accr != null) {
@@ -631,8 +639,13 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 					} else {
 						if ( partnerData != null && partnerData.getExtensionsdata4partner() != null && partnerData.getExtensionsdata4partner() .getQualityAuthenticationAssuranceLevel() != null) {
 							String loaLevel = SecurityLevel.stork2loa(partnerData.getExtensionsdata4partner() .getQualityAuthenticationAssuranceLevel());	// use level from config
-							String sLevel = SecurityLevel.convertAuthnContextClassRefURIToLevel(loaLevel, true, _systemLogger);
-							sAuthnContextClassRefURI = SecurityLevel.convertLevelToAuthnContextClassRefURI(sLevel, false, _systemLogger);
+							if (useNewLoa) {
+								String sLevel = SecurityLevel.convertAuthnContextClassRefURIToLevel(loaLevel, true, SecurityLevel.getNewLoaLevels(), _systemLogger);
+								sAuthnContextClassRefURI = SecurityLevel.convertLevelToAuthnContextClassRefURI(sLevel, false, SecurityLevel.getNewLoaLevels(), _systemLogger);
+							} else {
+								String sLevel = SecurityLevel.convertAuthnContextClassRefURIToLevel(loaLevel, true, SecurityLevel.getDefaultLevels(), _systemLogger);
+								sAuthnContextClassRefURI = SecurityLevel.convertLevelToAuthnContextClassRefURI(sLevel, false, SecurityLevel.getDefaultLevels(), _systemLogger);
+							}
 							_systemLogger.log(Level.FINE, MODULE, sMethod, "No AuthnContextClassRef found, using from config :" + sAuthnContextClassRefURI);
 						} else {
 							_systemLogger.log(Level.WARNING, MODULE, sMethod, "No AuthnContextClassRef found and no default specified");
@@ -648,11 +661,19 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 					/////////////////////////	digid4	///////////////////////////////////////////
 					
 //					PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sFederationUrl);	// RH, 20160405, o
-					String specialSettings = (partnerData == null)? null: partnerData.getSpecialSettings();
-					boolean useLoa = (specialSettings != null && specialSettings.contains("use_loa"));
-					_systemLogger.log(Level.FINER, MODULE, sMethod, "useLoa="+useLoa);
-					String sSelectedLevel = SecurityLevel.convertAuthnContextClassRefURIToLevel(sAuthnContextClassRefURI, useLoa, _systemLogger);
-					
+					// RH, 20180810, so, Moved this up a bit
+//					String specialSettings = (partnerData == null)? null: partnerData.getSpecialSettings();
+//					boolean useLoa = (specialSettings != null && specialSettings.contains("use_loa"));
+//					_systemLogger.log(Level.FINER, MODULE, sMethod, "useLoa="+useLoa);
+//					boolean useNewLoa = (specialSettings != null && specialSettings.contains("use_newloa"));
+//					_systemLogger.log(Level.FINER, MODULE, sMethod, "useNewLoa="+useNewLoa);
+					// RH, 20180810, eo, Moved this up a bit
+					String sSelectedLevel = null;
+					if (useNewLoa) {	// fix for new loa levels 
+						sSelectedLevel = SecurityLevel.convertAuthnContextClassRefURIToLevel(sAuthnContextClassRefURI, useLoa, SecurityLevel.getNewLoaLevels(), _systemLogger);
+					} else {
+						sSelectedLevel = SecurityLevel.convertAuthnContextClassRefURIToLevel(sAuthnContextClassRefURI, useLoa, SecurityLevel.getDefaultLevels(), _systemLogger);
+					}
 					// Check returned security level
 					Integer intAppLevel = (Integer) _htSessionContext.get("level");
 					if (Integer.parseInt(sSelectedLevel) < intAppLevel) {

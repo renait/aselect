@@ -32,11 +32,11 @@ import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.server.config.Version;
 import org.aselect.server.request.HandlerTools;
 import org.aselect.server.request.RequestState;
+import org.aselect.server.request.handler.xsaml20.Saml20_ArtifactManager;
 import org.aselect.server.request.handler.xsaml20.Saml20_BrowserHandler;
 import org.aselect.server.request.handler.xsaml20.Saml20_Metadata;
 import org.aselect.server.request.handler.xsaml20.SamlTools;
 import org.aselect.server.request.handler.xsaml20.SecurityLevel;
-import org.aselect.server.request.handler.xsaml20.Saml20_ArtifactManager;
 import org.aselect.server.tgt.TGTManager;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectConfigException;
@@ -442,9 +442,20 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 			RequestedAuthnContext requestedAuthnContext = authnRequest.getRequestedAuthnContext();
 			HashMap<String, String> secLevels =  ApplicationManager.getHandle().getSecLevels(sAppId);
 			
-			boolean useLoa = (_sSpecialSettings != null && _sSpecialSettings.contains("use_loa"));
+//			boolean useLoa = (_sSpecialSettings != null && _sSpecialSettings.contains("use_loa"));
+			String addedPatching = ApplicationManager.getHandle().getAddedPatching(sAppId);
+			boolean useLoa = (addedPatching != null && addedPatching.contains("use_loa")) || (_sSpecialSettings != null && _sSpecialSettings.contains("use_loa"));
+			
 			_systemLogger.log(Level.FINER, MODULE, sMethod, "useLoa="+useLoa);
-			String sBetrouwbaarheidsNiveau = SecurityLevel.getComparedSecurityLevelUsingExternal(requestedAuthnContext, secLevels, useLoa, _systemLogger);
+//			boolean useNewLoa = (_sSpecialSettings != null && _sSpecialSettings.contains("use_newloa"));
+			boolean useNewLoa = (addedPatching != null && addedPatching.contains("use_newloa")) || (_sSpecialSettings != null && _sSpecialSettings.contains("use_newloa"));
+			_systemLogger.log(Level.FINER, MODULE, sMethod, "useNewLoa="+useNewLoa);
+			String sBetrouwbaarheidsNiveau = null;
+			if (useNewLoa) {	// fix for new loa levels
+				sBetrouwbaarheidsNiveau = SecurityLevel.getComparedSecurityLevelUsingExternal(requestedAuthnContext, secLevels, useLoa, SecurityLevel.getNewLoaLevels(), _systemLogger);
+			} else {
+				sBetrouwbaarheidsNiveau = SecurityLevel.getComparedSecurityLevelUsingExternal(requestedAuthnContext, secLevels, useLoa, SecurityLevel.getDefaultLevels(), _systemLogger);
+			}
 			if (sBetrouwbaarheidsNiveau == null) {
 				// We've got a security level but it is not known
 				String sStatusMessage = "The requested AuthnContext isn't present in the configuration";
@@ -1185,9 +1196,20 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 			}
 			if (sAutnContextClassRefURI == null) {	// for backward compatability
 				// Throws an exception on invalid levels:
-				boolean useLoa = (_sSpecialSettings != null && _sSpecialSettings.contains("use_loa"));
+//				boolean useLoa = (_sSpecialSettings != null && _sSpecialSettings.contains("use_loa"));
+				String addedPatching = ApplicationManager.getHandle().getAddedPatching(_sAppId);
+				boolean useLoa = (addedPatching != null && addedPatching.contains("use_loa")) || (_sSpecialSettings != null && _sSpecialSettings.contains("use_loa"));
+
 				_systemLogger.log(Level.FINER, MODULE, sMethod, "useLoa="+useLoa);
-				sAutnContextClassRefURI = SecurityLevel.convertLevelToAuthnContextClassRefURI(sSelectedLevel, useLoa, _systemLogger);
+//				boolean useNewLoa = (_sSpecialSettings != null && _sSpecialSettings.contains("use_newloa"));
+				boolean useNewLoa = (addedPatching != null && addedPatching.contains("use_newloa")) || (_sSpecialSettings != null && _sSpecialSettings.contains("use_newloa"));
+
+				_systemLogger.log(Level.FINER, MODULE, sMethod, "useNewLoa="+useNewLoa);
+				if (useNewLoa) {	// fix for new loa levels
+					sAutnContextClassRefURI = SecurityLevel.convertLevelToAuthnContextClassRefURI(sSelectedLevel, useLoa, SecurityLevel.getNewLoaLevels(), _systemLogger);
+				} else {
+					sAutnContextClassRefURI = SecurityLevel.convertLevelToAuthnContextClassRefURI(sSelectedLevel, useLoa, SecurityLevel.getDefaultLevels(), _systemLogger);
+				}
 			}				
 			// RH, 20101214, en
 			authnContextClassRef.setAuthnContextClassRef(sAutnContextClassRefURI);

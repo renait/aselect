@@ -3,6 +3,8 @@
  */
 package org.aselect.server.request.handler.xsaml20;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -68,7 +70,7 @@ public class SecurityLevel
 	public static Set<String> ALLOWEDLEVELS = new HashSet<String>(Arrays.asList(aAlllowedLevels));
 	*/
 
-	private static class SecurityLevelEntry
+	public static class SecurityLevelEntry
 	{
 		int sleLevel;
 		String sleLevelString;
@@ -81,9 +83,16 @@ public class SecurityLevel
 			this.sleLevelString = sLevel;
 			this.sleSamlUri = sSaml;
 			this.sleLoaUri = sLoa;
-		}		
+		}	
+		
+		@Override
+		public String toString() {
+			return "Level:" + this.sleLevel + " " + "LevelString:" + this.sleLevelString 
+					+ " " + "SamlUri:" + this.sleSamlUri + " " + "LoaUri:" + this.sleLoaUri;
+		}
 	}
-	
+/*	
+//	private static SecurityLevelEntry[] allLevels =
 	private static SecurityLevelEntry[] allLevels =
 	{
 		new SecurityLevelEntry(2, "2", PREVIOUSSESSION_URI, null),
@@ -93,8 +102,12 @@ public class SecurityLevel
 		new SecurityLevelEntry(15, "15", MOBILETWOFACTORUNREGISTERED_URI, LOA2PLUS),
 		new SecurityLevelEntry(20, "20", MOBILETWOFACTORCONTRACT_URI, LOA3),
 		new SecurityLevelEntry(25, "25", SMARTCARD_URI, null),	// no loa level (yet) defined for SMARTCARD_URI, beware to sustain ono-to-one relation for backward compatibility
+		
+//		new SecurityLevelEntry(20, "20", MOBILETWOFACTORCONTRACT_URI, null),
+//		new SecurityLevelEntry(25, "25", SMARTCARD_URI, LOA3),	// RH, 20180730, loa3 has been decided to be SMARTCARD_URI
 		new SecurityLevelEntry(30, "30", SMARTCARDPKI_URI, LOA4)
 	};
+*/
 	
 	/**MOBILETWOFACTORCONTRACT_URI
 	 * Checks if 'iLvel' is low, but not previous session.
@@ -116,6 +129,8 @@ public class SecurityLevel
 	 *            the security levels to be checked
 	 * @return true, if successful
 	 */
+	
+	/*
 	public static boolean checkAllValidLevels(HashMap<String, String> secLevels)
 	{
 		Iterator<?> secIter = secLevels.entrySet().iterator();
@@ -134,7 +149,8 @@ public class SecurityLevel
 		}
 		return true;
 	}
-
+	 */
+	
 	/**
 	 * Convert level to authn context class ref uri.
 	 * 
@@ -148,10 +164,16 @@ public class SecurityLevel
 	 * @throws ASelectException
 	 *             when the given level is invalid or cannot found
 	 */
-	public static String convertLevelToAuthnContextClassRefURI(String sLevel, boolean useLoa, ASelectSystemLogger systemLogger)
+//	public static String convertLevelToAuthnContextClassRefURI(String sLevel, boolean useLoa, ASelectSystemLogger systemLogger)
+	public static String convertLevelToAuthnContextClassRefURI(String sLevel, boolean useLoa, SecurityLevelEntry[]	allLevels, ASelectSystemLogger systemLogger)
 	throws ASelectException
 	{
+		if (allLevels == null) {
+			allLevels = getDefaultLevels();
+		}
 		String sMethod = "convertLevelToAuthnContextClassRefURI";
+		systemLogger.log(Level.FINEST, MODULE, sMethod, "allLevels: "+Arrays.deepToString(allLevels));
+
 		
 		for (int i=0; i<allLevels.length; i++) {
 			String useUri = (useLoa)? allLevels[i].sleLoaUri: allLevels[i].sleSamlUri;
@@ -196,10 +218,17 @@ public class SecurityLevel
 	 * @throws ASelectException
 	 *             when the uri string was not found
 	 */
-	public static String convertAuthnContextClassRefURIToLevel(String sAuthnContextClassRefURI, boolean useLoa, ASelectSystemLogger systemLogger)
+//	public static String convertAuthnContextClassRefURIToLevel(String sAuthnContextClassRefURI, boolean useLoa, ASelectSystemLogger systemLogger)
+	public static String convertAuthnContextClassRefURIToLevel(String sAuthnContextClassRefURI, boolean useLoa, SecurityLevelEntry[] allLevels, ASelectSystemLogger systemLogger)
 	throws ASelectException
 	{
+		if (allLevels == null) {
+			allLevels = getDefaultLevels();
+		}
+		
+		
 		String sMethod = "convertAuthnContextClassRefURIToLevel";
+		systemLogger.log(Level.FINEST, MODULE, sMethod, "allLevels: "+Arrays.deepToString(allLevels));
 
 		for (int i=0; i<allLevels.length; i++) {
 			String useUri = (useLoa)? allLevels[i].sleLoaUri: allLevels[i].sleSamlUri;
@@ -282,11 +311,14 @@ public class SecurityLevel
 	 *            HashMap with mapping from key=level to value=AuthnContextClassRef
 	 * @return the Security Level or null if not found
 	 */
-	private static String getSecurityLevelFromContextUsingExternal(String sAuthnContextClassRef, HashMap<String, String> secLevels, boolean useLoa)
+//	private static String getSecurityLevelFromContextUsingExternal(String sAuthnContextClassRef, HashMap<String, String> secLevels, boolean useLoa)
+	private static String getSecurityLevelFromContextUsingExternal(String sAuthnContextClassRef, HashMap<String, String> secLevels, boolean useLoa, SecurityLevelEntry[] allLevels)
 	{
 		if (secLevels == null) {	// backward compatibility
-			int iLevel = getIntSecurityLevel(sAuthnContextClassRef, useLoa);
-			return convertSecurityLevelToString(iLevel);
+//			int iLevel = getIntSecurityLevel(sAuthnContextClassRef, useLoa);
+//			return convertSecurityLevelToString(iLevel);
+			int iLevel = getIntSecurityLevel(sAuthnContextClassRef, useLoa, allLevels);
+			return convertSecurityLevelToString(iLevel, allLevels);
 			//return getSecurityLevelFromContext(sAuthnContextClassRef, useLoa);
 		}
 		
@@ -308,7 +340,8 @@ public class SecurityLevel
 	 *            AuthnContext class ref
 	 * @return the Security Level or null if not found
 	 */
-	private static String convertSecurityLevelToString(int iSecurityLevel)
+//	private static String convertSecurityLevelToString(int iSecurityLevel)
+	private static String convertSecurityLevelToString(int iSecurityLevel, SecurityLevelEntry[] allLevels)
 	{
 		for (int i=0; i<allLevels.length; i++) {
 			if (allLevels[i].sleLevel == iSecurityLevel)
@@ -340,7 +373,8 @@ public class SecurityLevel
 	 *            AuthnContext class ref
 	 * @return the Security Level
 	 */
-	private static int getIntSecurityLevel(String sCurrentAuthnContextClassRef, boolean useLoa)
+//	private static int getIntSecurityLevel(String sCurrentAuthnContextClassRef, boolean useLoa)
+	private static int getIntSecurityLevel(String sCurrentAuthnContextClassRef, boolean useLoa, SecurityLevelEntry[] allLevels)
 	{
 		for (int i=0; i<allLevels.length; i++) {
 			String useUri = (useLoa)? allLevels[i].sleLoaUri: allLevels[i].sleSamlUri;
@@ -376,14 +410,17 @@ public class SecurityLevel
 	 *            HashMap with mapping from key=level to value=AuthnContextClassRef
 	 * @return the integer Security Level
 	 */
-	private static int getIntSecurityLevelUsingExternal(String sCurrentAuthnContextClassRef, HashMap<String, String> secLevels, boolean useLoa)
+//	private static int getIntSecurityLevelUsingExternal(String sCurrentAuthnContextClassRef, HashMap<String, String> secLevels, boolean useLoa)
+	private static int getIntSecurityLevelUsingExternal(String sCurrentAuthnContextClassRef, HashMap<String, String> secLevels, boolean useLoa, SecurityLevelEntry[] allLevels)
 	{
 		if (secLevels == null) {	// backward compatibility
-			return getIntSecurityLevel(sCurrentAuthnContextClassRef, useLoa);
+//			return getIntSecurityLevel(sCurrentAuthnContextClassRef, useLoa);
+			return getIntSecurityLevel(sCurrentAuthnContextClassRef, useLoa, allLevels);
 		}
 		
 		// levels given as argument
-		String sLevel = getSecurityLevelFromContextUsingExternal(sCurrentAuthnContextClassRef, secLevels, useLoa);
+//		String sLevel = getSecurityLevelFromContextUsingExternal(sCurrentAuthnContextClassRef, secLevels, useLoa);
+		String sLevel = getSecurityLevelFromContextUsingExternal(sCurrentAuthnContextClassRef, secLevels, useLoa, allLevels);
 		if (sLevel == null) {
 			return LEVEL_NOT_FOUND;
 		}
@@ -407,14 +444,18 @@ public class SecurityLevel
 	 *            the systemlogger
 	 * @return the Security Level
 	 */
+//	public static String getComparedSecurityLevelUsingExternal(RequestedAuthnContext requestedAuthnContext,
+//					HashMap<String, String> secLevels, boolean useLoa, ASelectSystemLogger systemLogger)
 	public static String getComparedSecurityLevelUsingExternal(RequestedAuthnContext requestedAuthnContext,
-					HashMap<String, String> secLevels, boolean useLoa, ASelectSystemLogger systemLogger)
+			HashMap<String, String> secLevels, boolean useLoa, SecurityLevelEntry[] allLevels, ASelectSystemLogger systemLogger)
 	{
 		String sMethod = "getSecurityLevel";
 		final int EXACT = 0;
 		final int MINIMUM = 1;
 		final int MAXIMUM = 2;
 		final int BETTER = 3;
+
+		systemLogger.log(Level.FINEST, MODULE, sMethod, "allLevels: "+Arrays.deepToString(allLevels));
 
 		if (requestedAuthnContext != null) {
 			int iComparison = EXACT;
@@ -442,7 +483,8 @@ public class SecurityLevel
 			case EXACT:
 				while (itr.hasNext() && sMatchedBetrouwheidsNiveau == null) {
 					sCurrentAuthnContextClassRef = itr.next().getAuthnContextClassRef();
-					sMatchedBetrouwheidsNiveau = getSecurityLevelFromContextUsingExternal(sCurrentAuthnContextClassRef, secLevels, useLoa);
+//					sMatchedBetrouwheidsNiveau = getSecurityLevelFromContextUsingExternal(sCurrentAuthnContextClassRef, secLevels, useLoa);
+					sMatchedBetrouwheidsNiveau = getSecurityLevelFromContextUsingExternal(sCurrentAuthnContextClassRef, secLevels, useLoa, allLevels);
 				}
 				break;
 
@@ -450,19 +492,22 @@ public class SecurityLevel
 				int iCurrentMinBetrouwheidsNiveau = LEVEL_MAX;
 				while (itr.hasNext()) {
 					sCurrentAuthnContextClassRef = itr.next().getAuthnContextClassRef();
-					iCurrentBetrouwheidsNiveau = getIntSecurityLevelUsingExternal(sCurrentAuthnContextClassRef, secLevels, useLoa);
+//					iCurrentBetrouwheidsNiveau = getIntSecurityLevelUsingExternal(sCurrentAuthnContextClassRef, secLevels, useLoa);
+					iCurrentBetrouwheidsNiveau = getIntSecurityLevelUsingExternal(sCurrentAuthnContextClassRef, secLevels, useLoa, allLevels);
 					if (iCurrentBetrouwheidsNiveau != LEVEL_NOT_FOUND
 							&& iCurrentBetrouwheidsNiveau < iCurrentMinBetrouwheidsNiveau)
 						iCurrentMinBetrouwheidsNiveau = iCurrentBetrouwheidsNiveau;
 				}
-				sMatchedBetrouwheidsNiveau = convertSecurityLevelToString(iCurrentMinBetrouwheidsNiveau);
+//				sMatchedBetrouwheidsNiveau = convertSecurityLevelToString(iCurrentMinBetrouwheidsNiveau);
+				sMatchedBetrouwheidsNiveau = convertSecurityLevelToString(iCurrentMinBetrouwheidsNiveau, allLevels);
 				break;
 
 			case BETTER:
 				int iCurrentBestBetrouwheidsNiveau = LEVEL_MIN;
 				while (itr.hasNext()) {
 					sCurrentAuthnContextClassRef = itr.next().getAuthnContextClassRef();
-					iCurrentBetrouwheidsNiveau = getIntSecurityLevelUsingExternal(sCurrentAuthnContextClassRef, secLevels, useLoa);
+//					iCurrentBetrouwheidsNiveau = getIntSecurityLevelUsingExternal(sCurrentAuthnContextClassRef, secLevels, useLoa);
+					iCurrentBetrouwheidsNiveau = getIntSecurityLevelUsingExternal(sCurrentAuthnContextClassRef, secLevels, useLoa, allLevels);
 					if (iCurrentBetrouwheidsNiveau != LEVEL_NOT_FOUND
 							&& iCurrentBetrouwheidsNiveau > iCurrentBestBetrouwheidsNiveau)
 						iCurrentBestBetrouwheidsNiveau = iCurrentBetrouwheidsNiveau;
@@ -501,19 +546,22 @@ public class SecurityLevel
 				else if (iCurrentBestBetrouwheidsNiveau == LEVEL_HIGH)
 					iCurrentBestBetrouwheidsNiveau = LEVEL_MAX;*/
 
-				sMatchedBetrouwheidsNiveau = convertSecurityLevelToString(iBetterLevel);
+//				sMatchedBetrouwheidsNiveau = convertSecurityLevelToString(iBetterLevel);
+				sMatchedBetrouwheidsNiveau = convertSecurityLevelToString(iBetterLevel, allLevels);
 				break;
 
 			case MAXIMUM:
 				int iCurrentMaxBetrouwheidsNiveau = LEVEL_MIN;
 				while (itr.hasNext()) {
 					sCurrentAuthnContextClassRef = itr.next().getAuthnContextClassRef();
-					iCurrentBetrouwheidsNiveau = getIntSecurityLevelUsingExternal(sCurrentAuthnContextClassRef, secLevels, useLoa);
+//					iCurrentBetrouwheidsNiveau = getIntSecurityLevelUsingExternal(sCurrentAuthnContextClassRef, secLevels, useLoa);
+					iCurrentBetrouwheidsNiveau = getIntSecurityLevelUsingExternal(sCurrentAuthnContextClassRef, secLevels, useLoa, allLevels);
 					if (iCurrentBetrouwheidsNiveau != LEVEL_NOT_FOUND
 							&& iCurrentBetrouwheidsNiveau > iCurrentMaxBetrouwheidsNiveau)
 						iCurrentMaxBetrouwheidsNiveau = iCurrentBetrouwheidsNiveau;
 				}
-				sMatchedBetrouwheidsNiveau = convertSecurityLevelToString(iCurrentMaxBetrouwheidsNiveau);
+//				sMatchedBetrouwheidsNiveau = convertSecurityLevelToString(iCurrentMaxBetrouwheidsNiveau);
+				sMatchedBetrouwheidsNiveau = convertSecurityLevelToString(iCurrentMaxBetrouwheidsNiveau, allLevels);
 			}
 			
 			systemLogger.log(Level.INFO, MODULE, sMethod, "Level=" + sMatchedBetrouwheidsNiveau);
@@ -524,6 +572,51 @@ public class SecurityLevel
 		// we return the lowest known level here. (no restriction on the level is required)
 		return LEVEL_LOWEST_SERIOUS; // BN_EMPTY;
 	}
+	
+	
+	public static SecurityLevelEntry[] getDefaultLevels() {
+		SecurityLevelEntry[] lvls =
+		{
+			new SecurityLevelEntry(2, "2", PREVIOUSSESSION_URI, null),
+			new SecurityLevelEntry(5, "5", UNSPECIFIED_URI, LOA1),
+			new SecurityLevelEntry(7, "7", PASSWORD_URI, null),
+			new SecurityLevelEntry(10, "10", PASSWORDPROTECTEDTRANSPORT_URI, LOA2),
+			new SecurityLevelEntry(15, "15", MOBILETWOFACTORUNREGISTERED_URI, LOA2PLUS),
+			new SecurityLevelEntry(20, "20", MOBILETWOFACTORCONTRACT_URI, LOA3),
+			new SecurityLevelEntry(25, "25", SMARTCARD_URI, null),	// no loa level (yet) defined for SMARTCARD_URI, beware to sustain ono-to-one relation for backward compatibility
+			new SecurityLevelEntry(30, "30", SMARTCARDPKI_URI, LOA4)
+		};
+		return lvls;
+	}
+
+	public static SecurityLevelEntry[] getNewLoaLevels() {
+		SecurityLevelEntry[] lvls =
+		{
+			new SecurityLevelEntry(2, "2", PREVIOUSSESSION_URI, null),
+			new SecurityLevelEntry(5, "5", UNSPECIFIED_URI, LOA1),
+			new SecurityLevelEntry(7, "7", PASSWORD_URI, null),
+			new SecurityLevelEntry(10, "10", PASSWORDPROTECTEDTRANSPORT_URI, LOA2),
+			new SecurityLevelEntry(15, "15", MOBILETWOFACTORUNREGISTERED_URI, LOA2PLUS),
+			new SecurityLevelEntry(20, "20", MOBILETWOFACTORCONTRACT_URI, null),
+			new SecurityLevelEntry(25, "25", SMARTCARD_URI, LOA3),	// RH, 20180730, loa3 has been decided to be SMARTCARD_URI
+			new SecurityLevelEntry(30, "30", SMARTCARDPKI_URI, LOA4)
+		};
+		return lvls;
+	}
+
+	public static SecurityLevelEntry[] getCustomLevels(HashMap<String, String> samlLevels, HashMap<String, String> loaLevels) {
+		ArrayList<SecurityLevelEntry> lvls = new ArrayList<SecurityLevelEntry>();
+		
+		for (String lvl: samlLevels.keySet()) {
+			SecurityLevelEntry e = new SecurityLevelEntry(Integer.parseInt(lvl), lvl, samlLevels.get(lvl), 
+					loaLevels != null ? loaLevels.get(lvl) : null);
+			lvls.add(e);
+		}
+		SecurityLevelEntry[] aLvls =  new SecurityLevelEntry[] {};
+		lvls.toArray(aLvls);
+		return aLvls;
+	}
+
 	
 	static public Integer loa2stork(String loaLevel) {
 		Integer storkLevel = null;
