@@ -306,8 +306,7 @@ import org.aselect.server.attributes.AttributeGatherer;
 import org.aselect.server.authspprotocol.IAuthSPDirectLoginProtocolHandler;
 import org.aselect.server.authspprotocol.IAuthSPProtocolHandler;
 import org.aselect.server.authspprotocol.handler.AuthSPHandlerManager;
-// no idin yet
-//	import org.aselect.server.authspprotocol.handler.IdinAuthSPHandler;
+import org.aselect.server.authspprotocol.handler.IdinAuthSPHandler;
 import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.server.config.Version;
 import org.aselect.server.cross.CrossASelectManager;
@@ -378,6 +377,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 {
 	private static final int OBO_MAXTRIES = 3;
 	private static final String SELECTFORMPREFIX = "select";
+	private static final String SUBSELECTFORMPREFIX = "subselect";
 	final String select_choice_COOKIE = "select_choice";
 	private ApplicationManager _applicationManager;
 	private CrossASelectManager _crossASelectManager;
@@ -2028,9 +2028,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 			String sCountry = (String)_htSessionContext.get("country");  // 20101027 _
 			sSelectForm = Utils.replaceString(sSelectForm, "[language]", sLanguage);
 			sSelectForm = Utils.replaceString(sSelectForm, "[country]", sCountry);
-			// no idin yet
-//			sSelectForm = Utils.replaceString(sSelectForm, "[idin_issuers]", IdinAuthSPHandler.getAvailableIssuersSelect());
-
+			
 			// 20130411: What AuthSP's must be presented to the user?
 			if (bAuthspFromSelect) {
 				// 20130411, Bauke: Take AuthSP's from select.html
@@ -2269,9 +2267,11 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 				_systemLogger.log(Level.FINEST, _sModule, sMethod, "After lookup htAllowedAuthsps=" + htAllowedAuthsps);
 			}
 			//	RH, 20140424, en
-			
+
 			// 20111013, Bauke: added absent phonenumber handling
-			HashMap htResponse = startAuthentication(sRid, htServiceRequest);
+//			HashMap htResponse = startAuthentication(sRid, htServiceRequest);	// RH, 20180712, o
+			HashMap htResponse = startAuthentication(sRid, htServiceRequest, pwOut);	// RH, 20180712, n
+			if (htResponse == null) return;
 			
 			if (bAuthspFromSelect && Utils.hasValue(sChosenAppId))  // restore app_id after startAuthentication() has done it's work
 				_htSessionContext.put("app_id", sSaveAppId);
@@ -3179,7 +3179,8 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 	 * @return The error code.
 	 * @throws ASelectException
 	 */
-	private HashMap startAuthentication(String sRid, HashMap htLoginRequest)
+//	private HashMap startAuthentication(String sRid, HashMap htLoginRequest)
+	private HashMap startAuthentication(String sRid, HashMap htLoginRequest, PrintWriter pwOut)
 	throws ASelectException
 	{
 		String sMethod = "startAuthentication";
@@ -3217,8 +3218,10 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 		// Everything seems okay -> instantiate the protocol handler for
 		// the selected authsp and let it compute a signed authentication request
 		IAuthSPProtocolHandler oProtocolHandler;
+		Object oAuthSPsection = null; 	// RH, 20180712, n
 		try {
-			Object oAuthSPsection = _configManager.getSection(_configManager.getSection(null, "authsps"), "authsp",	"id=" + sAuthsp);
+//			Object oAuthSPsection = _configManager.getSection(_configManager.getSection(null, "authsps"), "authsp",	"id=" + sAuthsp); 	// RH, 20180712, o
+			oAuthSPsection = _configManager.getSection(_configManager.getSection(null, "authsps"), "authsp",	"id=" + sAuthsp); 	// RH, 20180712, n
 			String sHandlerName = _configManager.getParam(oAuthSPsection, "handler");
 
 			Class oClass = Class.forName(sHandlerName);
@@ -3241,12 +3244,57 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 			throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR);
 		}
 		
+		// RH, 20180712, sn
+		// Do subselect here
+		// oAuthSPsection cannot be null here
+		String	subselect_form = _configManager.getSimpleParam(oAuthSPsection, "subselectform", false);
+		// we should push even more to the AuthSPHandler so it will return a preformatted html snippet
+		if (subselect_form != null && subselect_form.length()>0  /* authsp subselect == true */ && !"true".equalsIgnoreCase((String)htLoginRequest.get("subselect")) ) {
+			// RH, 20121119, sn
+			// Handle application specific select form
+			String sSelectFormName = SUBSELECTFORMPREFIX + subselect_form; // "select"
+			String sSelectForm = _configManager.getHTMLForm(sSelectFormName, _sUserLanguage, _sUserCountry);
+
+			sSelectForm = Utils.replaceString(sSelectForm, "[rid]", sRid);
+			sSelectForm = Utils.replaceString(sSelectForm, "[a-select-server]", _sMyServerId);
+			sSelectForm = Utils.replaceString(sSelectForm, "[user_id]", (String) htLoginRequest.get("user_id"));
+			sSelectForm = Utils.replaceString(sSelectForm, "[aselect_url]", (String) htLoginRequest.get("my_url"));
+			sSelectForm = Utils.replaceString(sSelectForm, "[request]", "login3");
+			sSelectForm = Utils.replaceString(sSelectForm, "[authsp]", sAuthsp);
+			String sLanguage = (String)_htSessionContext.get("language");
+			String sCountry = (String)_htSessionContext.get("country");
+			sSelectForm = Utils.replaceString(sSelectForm, "[language]", sLanguage);
+			sSelectForm = Utils.replaceString(sSelectForm, "[country]", sCountry);
+
+			sSelectForm = Utils.replaceString(sSelectForm, "[authsp_subselect]", (String) oProtocolHandler.inquireSubselect(null));
+			// will be
+			// oProtocolHandler.getSubselect() or something
+			// Create the Cancel action:
+			StringBuffer sb = new StringBuffer((String) htLoginRequest.get("my_url")).append("?request=error")
+					.append("&result_code=").append(Errors.ERROR_ASELECT_SERVER_CANCEL).append("&a-select-server=")
+					.append(_sMyServerId).append("&rid=").append(sRid);
+
+			sSelectForm = Utils.replaceString(sSelectForm, "[cancel]", sb.toString());
+			sSelectForm = _configManager.updateTemplate(sSelectForm, _htSessionContext, _servletRequest);
+			
+
+			// _systemLogger.log(Level.FINER, _sModule, sMethod, "Form select=["+sSelectForm+"]");
+			Tools.pauseSensorData(_configManager, _systemLogger, _htSessionContext);  //20111102
+			//_sessionManager.update(sRid, _htSessionContext); // Write session
+			// pauseSensorData does this already: _sessionManager.setUpdateSession(_htSessionContext, _systemLogger);  // 20120401, Bauke: changed, was update()
+			_systemLogger.log(Level.FINE, _sModule, sMethod, "present subselect");
+			pwOut.println(sSelectForm);
+			return null;
+		}
+		// RH, 20180712, en
+		
+
 		_systemLogger.log(Level.FINE, _sModule, sMethod, "to compute");
 		// let the protocol handler for the authsp do its work
 		HashMap htResponse = oProtocolHandler.computeAuthenticationRequest(sRid, _htSessionContext);
 		return htResponse;
 	}
-
+	
 	/**
 	 * Private method to check whether the user's tgt is valid and satisfies the required level for the current
 	 * application. TGT must be available in _htTGTContext.
