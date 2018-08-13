@@ -343,8 +343,19 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 			String sApplicationId = (String)_htSessionContext.get("app_id");
 			String sApplicationLevel = getApplicationLevel(sApplicationId);
 			
+			// RH, 20180810, sn
+			boolean useNewLoa = (specialSettings != null && specialSettings.contains("use_newloa"));
+			String sAuthnContextClassRefURI = null;
+			if (useNewLoa) {
+				sAuthnContextClassRefURI = SecurityLevel.convertLevelToAuthnContextClassRefURI(sApplicationLevel, useLoa, SecurityLevel.getNewLoaLevels(), _systemLogger);
+				
+			} else {
+				sAuthnContextClassRefURI = SecurityLevel.convertLevelToAuthnContextClassRefURI(sApplicationLevel, useLoa, SecurityLevel.getDefaultLevels(), _systemLogger);
+			}
+			// RH, 20180810, en
+			
 			// Throws an exception on invalid levels:
-			String sAuthnContextClassRefURI = SecurityLevel.convertLevelToAuthnContextClassRefURI(sApplicationLevel, useLoa, _systemLogger);
+//			String sAuthnContextClassRefURI = SecurityLevel.convertLevelToAuthnContextClassRefURI(sApplicationLevel, useLoa, _systemLogger); // RH, 20180810, o
 			//if (sAuthnContextClassRefURI == null) {
 			//	// this level was not configured. Log it and inform the user
 			//	_systemLogger.log(Level.WARNING, MODULE, sMethod, "Application Level "+sApplicationLevel+" has not been configured");
@@ -713,7 +724,17 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 		ArrayList<XMLObject> extObjects = new ArrayList<XMLObject>();
 		Integer assLevel = partnerData.getExtensionsdata4partner().getQualityAuthenticationAssuranceLevel();
 		if (assLevel == null) {
-			String s_loaLevel = SecurityLevel.convertLevelToAuthnContextClassRefURI(sApplicationLevel, true, _systemLogger);
+			// RH, 20180810, sn
+			String specialSettings = (partnerData == null)? null: partnerData.getSpecialSettings();
+			boolean useNewLoa = (specialSettings != null && specialSettings.contains("use_newloa"));
+			String s_loaLevel = null;
+			if (useNewLoa) {
+				s_loaLevel = SecurityLevel.convertLevelToAuthnContextClassRefURI(sApplicationLevel, true, SecurityLevel.getNewLoaLevels(), _systemLogger);
+			} else {
+				s_loaLevel = SecurityLevel.convertLevelToAuthnContextClassRefURI(sApplicationLevel, true, SecurityLevel.getDefaultLevels(), _systemLogger);
+			}
+			// RH, 20180810, en
+//			String s_loaLevel = SecurityLevel.convertLevelToAuthnContextClassRefURI(sApplicationLevel, true, _systemLogger);// RH, 20180810, o
 			assLevel = SecurityLevel.loa2stork(s_loaLevel);
 		}
 		

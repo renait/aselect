@@ -27,6 +27,7 @@ import org.aselect.server.application.Application;
 import org.aselect.server.application.ApplicationManager;
 import org.aselect.server.request.HandlerTools;
 import org.aselect.server.request.RequestState;
+import org.aselect.server.request.handler.xsaml20.PartnerData;
 import org.aselect.server.request.handler.xsaml20.Saml20_BrowserHandler;
 import org.aselect.server.request.handler.xsaml20.SamlTools;
 import org.aselect.server.request.handler.xsaml20.SecurityLevel;
@@ -182,7 +183,28 @@ public class Xsaml20_Receiver extends Saml20_BrowserHandler
 			AuthnContext oContext = oAuthn.getAuthnContext();
 			AuthnContextClassRef oClassRef = oContext.getAuthnContextClassRef();
 			String sClassRef = oClassRef.getAuthnContextClassRef();
-			String sSecLevel = SecurityLevel.convertAuthnContextClassRefURIToLevel(sClassRef, false/*useLoa*/, _systemLogger);
+			// RH, 20180810, sn
+			// We want to get the partnerdata
+			String sEntityId = _oSamlIssuer.getValue();
+			PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sEntityId);
+			String specialSettings = (partnerData == null)? null: partnerData.getSpecialSettings();
+			//////////////////////
+			// Maybe per application, not sure yet
+//			String addedPatching = appData.getAddedPatching();
+			////////////////////////////////
+			boolean useLoa = (specialSettings != null && specialSettings.contains("use_loa"));
+			_systemLogger.log(Level.FINER, MODULE, sMethod, "useLoa="+useLoa);
+//			boolean useNewLoa = (_sSpecialSettings != null && _sSpecialSettings.contains("use_newloa"));
+			boolean useNewLoa = (specialSettings != null && specialSettings.contains("use_newloa"));
+			_systemLogger.log(Level.FINER, MODULE, sMethod, "useNewLoa="+useNewLoa);
+			String sSecLevel = null;
+			if (useNewLoa) {
+				sSecLevel = SecurityLevel.convertAuthnContextClassRefURIToLevel(sClassRef, useLoa, SecurityLevel.getNewLoaLevels(), _systemLogger);
+			} else {
+				sSecLevel = SecurityLevel.convertAuthnContextClassRefURIToLevel(sClassRef, useLoa, SecurityLevel.getDefaultLevels(), _systemLogger);
+			}
+			// RH, 20180810, en
+//			String sSecLevel = SecurityLevel.convertAuthnContextClassRefURIToLevel(sClassRef, false/*useLoa*/, _systemLogger);// RH, 20180810, o
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "ClassRef="+sClassRef+" level="+sSecLevel);
 			
 			Conditions oCond = assertObj.getConditions();
