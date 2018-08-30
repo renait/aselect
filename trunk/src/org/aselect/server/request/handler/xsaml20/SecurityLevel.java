@@ -613,7 +613,7 @@ public class SecurityLevel
 			lvls.add(e);
 		}
 		SecurityLevelEntry[] aLvls =  new SecurityLevelEntry[] {};
-		lvls.toArray(aLvls);
+		aLvls = lvls.toArray(aLvls);
 		return aLvls;
 	}
 

@@ -17,6 +17,8 @@ import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 
+import org.aselect.server.request.handler.xsaml20.SecurityLevel.SecurityLevelEntry;
+
 /**
  * Store all data for an IdP or SP partner
  * @author bauke
@@ -42,6 +44,7 @@ public class PartnerData
 	private String suppressscoping = null; // RH, 20180327, n
 
 	private String federationurl = null;
+	private SecurityLevelEntry[] securityLevels = null;
 	private Metadata4Partner metadata4partner = null;
 	private Testdata4Partner testdata4partner = null;
 	private Extensionsdata4Partner extensionsdata4partner = null;
@@ -206,6 +209,15 @@ public class PartnerData
 		}
 		return metadata4partner;
 	}
+
+	public synchronized SecurityLevelEntry[] getSecurityLevels() {
+		return securityLevels;
+	}
+
+	public synchronized void setSecurityLevels(SecurityLevelEntry[] securityLevels) {
+		this.securityLevels = securityLevels;
+	}
+
 	
 	// Simple wrapper for handler info
 	public class HandlerInfo
@@ -351,7 +363,6 @@ public class PartnerData
 
 	}
 
-	
 	
 	// SImple wrapper class for specific data 
 	public class Metadata4Partner
@@ -1025,7 +1036,6 @@ public class PartnerData
 		}
 		return testdata4partner;
 	}
-
 
 	
 }
