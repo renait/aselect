@@ -12,6 +12,7 @@
 package org.aselect.server.request.handler.xsaml20.sp;
 
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Map;
 import java.util.logging.Level;
@@ -20,6 +21,8 @@ import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.server.request.handler.xsaml20.AbstractMetaDataManager;
 import org.aselect.server.request.handler.xsaml20.PartnerData;
 import org.aselect.server.request.handler.xsaml20.PartnerData.HandlerInfo;
+import org.aselect.server.request.handler.xsaml20.SecurityLevel;
+import org.aselect.server.request.handler.xsaml20.SecurityLevel.SecurityLevelEntry;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
@@ -164,6 +167,20 @@ public class MetaDataManagerSp extends AbstractMetaDataManager
 			if (suppressscoping != null)
 				idpData.setSuppressscoping(suppressscoping);;
 			// RH, 20180327, en
+	
+
+			// RH, 20180810, sn
+			HashMap<String, String> _htSamlLevels = new HashMap<String, String>(); // contains level -> urn
+			_htSamlLevels = ASelectConfigManager.getTableFromConfig(idpSection,  _htSamlLevels, "authentication_method",
+					"security", "level",/*->*/"uri", false/* mandatory */, false/* unique values */);
+			if (_htSamlLevels != null) {
+				HashMap<String, String> _htLoaLevels = new HashMap<String, String>(); // contains level -> urn
+				_htLoaLevels = ASelectConfigManager.getTableFromConfig(idpSection,  _htLoaLevels, "authentication_method",
+						"security", "level",/*->*/"loauri", false/* mandatory */, false/* unique values */);
+				idpData.setSecurityLevels(SecurityLevel.getCustomLevels(_htSamlLevels, _htLoaLevels));
+			}
+			// RH, 20180810, sn
+	
 				
 			// Set specific metadata for this partner
 			Object metadataSection = Utils.getSimpleSection(_configManager, _systemLogger, idpSection, "metadata", false);

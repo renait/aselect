@@ -14,6 +14,7 @@ package org.aselect.server.request.handler.xsaml20.sp;
 import java.io.PrintWriter;
 import java.io.StringReader;
 import java.security.PublicKey;
+import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -41,6 +42,7 @@ import org.aselect.server.request.handler.xsaml20.PartnerData;
 import org.aselect.server.request.handler.xsaml20.Saml20_BaseHandler;
 import org.aselect.server.request.handler.xsaml20.SamlTools;
 import org.aselect.server.request.handler.xsaml20.SecurityLevel;
+import org.aselect.server.request.handler.xsaml20.SecurityLevel.SecurityLevelEntry;
 import org.aselect.server.request.handler.xsaml20.SoapManager;
 import org.aselect.server.tgt.TGTIssuer;
 import org.aselect.server.tgt.TGTManager;
@@ -631,7 +633,13 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 					boolean useNewLoa = (specialSettings != null && specialSettings.contains("use_newloa"));
 					_systemLogger.log(Level.FINER, MODULE, sMethod, "useNewLoa="+useNewLoa);
 					// RH, 20180810, en, Moved this up a bit
-
+					SecurityLevelEntry[] compLevels = SecurityLevel.getDefaultLevels();
+					if (partnerData != null && partnerData.getSecurityLevels() != null) {
+						compLevels = partnerData.getSecurityLevels();
+						_systemLogger.log(Level.FINER, MODULE, sMethod, "Using custom Security Levels: " + Arrays.deepToString(compLevels));
+					} else if (useNewLoa) {
+						compLevels = SecurityLevel.getNewLoaLevels();
+					}
 					String sAuthnContextClassRefURI = null;
 					AuthnContextClassRef accr = oAuthnContext.getAuthnContextClassRef();
 					if (accr != null) {
@@ -669,11 +677,15 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 //					_systemLogger.log(Level.FINER, MODULE, sMethod, "useNewLoa="+useNewLoa);
 					// RH, 20180810, eo, Moved this up a bit
 					String sSelectedLevel = null;
-					if (useNewLoa) {	// fix for new loa levels 
-						sSelectedLevel = SecurityLevel.convertAuthnContextClassRefURIToLevel(sAuthnContextClassRefURI, useLoa, SecurityLevel.getNewLoaLevels(), _systemLogger);
-					} else {
-						sSelectedLevel = SecurityLevel.convertAuthnContextClassRefURIToLevel(sAuthnContextClassRefURI, useLoa, SecurityLevel.getDefaultLevels(), _systemLogger);
-					}
+					sSelectedLevel = SecurityLevel.convertAuthnContextClassRefURIToLevel(sAuthnContextClassRefURI, useLoa, compLevels, _systemLogger);
+//	RH, 20180813, so					
+//					if (useNewLoa) {	// fix for new loa levels 
+//						sSelectedLevel = SecurityLevel.convertAuthnContextClassRefURIToLevel(sAuthnContextClassRefURI, useLoa, SecurityLevel.getNewLoaLevels(), _systemLogger);
+//					} else {
+//						sSelectedLevel = SecurityLevel.convertAuthnContextClassRefURIToLevel(sAuthnContextClassRefURI, useLoa, SecurityLevel.getDefaultLevels(), _systemLogger);
+//					}
+//	RH, 20180813, eo						
+					
 					// Check returned security level
 					Integer intAppLevel = (Integer) _htSessionContext.get("level");
 					if (Integer.parseInt(sSelectedLevel) < intAppLevel) {
