@@ -704,7 +704,8 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 							AttributeStatement sAttr = iASList.next();
 	
 							// First decrypt if there are any EncryptedAttributes
-							if (sAttr.getEncryptedAttributes() != null) {
+//							if (sAttr.getEncryptedAttributes() != null) {	// RH, 20180910, o
+							if (sAttr.getEncryptedAttributes() != null && sAttr.getEncryptedAttributes().size() > 0) {	// RH, 20180910, n
 								_systemLogger.log(Level.FINEST, MODULE, sMethod, "Start decrypting " + sAttr.getEncryptedAttributes().size() + " attributes");
 								Iterator<EncryptedAttribute> encryptAttrIt = sAttr.getEncryptedAttributes().iterator();
 								while (encryptAttrIt.hasNext()) {
@@ -732,10 +733,14 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 //										XMLHelper.prettyPrintXML(attr.getDOM()));
 								String sAttrName = attr.getName();
 								
-								String sAttrValue = null;// RH, 20120124, sn
+//								String sAttrValue = null;// RH, 20120124, sn	// RH, 20180910, o
+								Vector sAttrValue = null;// RH, 20120124, sn	// RH, 20180910, n	// Vector for legacy
 								List <XMLObject> aValues = attr.getAttributeValues();
-								if ( aValues != null && aValues.size() == 1 ) {	// For now we only allow single valued simple type xs:string attributes
-		                            XMLObject xmlObj = aValues.get(0);
+//								if ( aValues != null && aValues.size() == 1 ) {	// For now we only allow single valued simple type xs:string attributes	// RH, 20180910, o
+									if ( aValues != null ) {	// Also allow for multi-valued simple type xs:string attributes	// RH, 20180910, n
+										sAttrValue = new Vector();	// at least one value
+										for (XMLObject xmlObj : aValues) {	// RH, 20180910, n
+		                 //           XMLObject xmlObj = aValues.get(0);	// RH, 20180910, o
 	//								XSStringImpl xsString = (XSStringImpl) attr.getOrderedChildren().get(0);// RH, 20120124, so
 	//								String sAttrValue = xsString.getValue();// RH, 20120124, o
 	//								sAttrValue = xsString.getValue();// RH, 20120124, eo
@@ -764,29 +769,46 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 	        							}
 	    							}
 	    							if (xmlObj != null && xmlObj.getDOM().getFirstChild() != null) {
-	    								sAttrValue = xmlObj.getDOM().getFirstChild().getTextContent();
+//	    								sAttrValue = xmlObj.getDOM().getFirstChild().getTextContent();	// RH, 20180910, o
+	    								sAttrValue.add(xmlObj.getDOM().getFirstChild().getTextContent());	// RH, 20180910, n
 	//									_systemLogger.log(Level.INFO, MODULE, sMethod, "Name=" + sAttrName + " Value=" + sAttrValue);
+	    								_systemLogger.log(Level.INFO, MODULE, sMethod, "Name=" + sAttrName + " Value=" + Auxiliary.obfuscate(xmlObj.getDOM().getFirstChild().getTextContent()));	// RH, 20180910, n
 	    							}
-    								_systemLogger.log(Level.INFO, MODULE, sMethod, "Name=" + sAttrName + " Value=" + Auxiliary.obfuscate(sAttrValue));
+//    								_systemLogger.log(Level.INFO, MODULE, sMethod, "Name=" + sAttrName + " Value=" + Auxiliary.obfuscate(sAttrValue));	// RH, 20180910, o
+										}
 								}
 								else {
-									_systemLogger.log(Level.INFO, MODULE, sMethod, "Only single valued attributes allowed, skipped attribute Name=" + sAttrName);
+//									_systemLogger.log(Level.INFO, MODULE, sMethod, "Only single valued attributes allowed, skipped attribute Name=" + sAttrName);	// RH, 20180910, o
+									// maybe allow for empty valued attributes
+									_systemLogger.log(Level.INFO, MODULE, sMethod, "No values found for attribute Name=" + sAttrName);	// RH, 20180910, n
 								}	// RH, 20120124, en
 								if ("attributes".equals(sAttrName))
-									sEncodedAttributes = sAttrValue;
-								else
-									hmSamlAttributes.put(sAttrName, sAttrValue);
+//									sEncodedAttributes = sAttrValue;	// RH, 20180910, o
+									sEncodedAttributes = (String)sAttrValue.firstElement();	// RH, 20180910, n	// should be single-valued string
+								else {
+//									hmSamlAttributes.put(sAttrName, sAttrValue);	// RH, 20180910, o
+									// RH, 20180910, sn
+									// For legacy reasons we do not want all attributes to be Vectors
+									if (sAttrValue != null && sAttrValue.size() == 1) {
+										hmSamlAttributes.put(sAttrName, sAttrValue.firstElement());	// Single valued used to be String 
+									} else {
+										hmSamlAttributes.put(sAttrName, sAttrValue);
+									}
+									// RH, 20180910, en
+								}
 							}
 						}
 					}
 					
 					// Since the "attributes" Attribute is used for gathering, add the Saml Attributes to it
-					HashMap<String, String> hmAttributes;
+//					HashMap<String, String> hmAttributes;	// RH,20180910, o
+					HashMap<String, Object> hmAttributes;	// RH,20180910, n // deserializing might contain Vector
 					if (sEncodedAttributes != null) {
 						hmAttributes = org.aselect.server.utils.Utils.deserializeAttributes(sEncodedAttributes);
 					}
 					else {
-						hmAttributes = new HashMap<String, String>();
+//						hmAttributes = new HashMap<String, String>();	// RH,20180910, o
+						hmAttributes = new HashMap<String, Object>();	// RH,20180910, n
 					}
 					// Add the serialized attributes and a few specials
 					hmSamlAttributes.putAll(hmAttributes);
