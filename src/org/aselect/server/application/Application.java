@@ -46,7 +46,9 @@ package org.aselect.server.application;
 
 import java.security.PublicKey;
 import java.util.HashMap;
+import java.util.Set;
 import java.util.Vector;
+import java.util.regex.Pattern;
 
 /**
  * The Application (Bean) class <br>
@@ -90,6 +92,8 @@ public class Application
 
 	// Fixed attributes for a SAML token
 	private HashMap<String, String> _htAdditionalAttributes = null;	// Bauke, 20101229, n
+	
+	private Set<Pattern> _htAdditionalRegex = null;
 
 	// Allowed applications used by the saml20_receiver
 	private HashMap<String, String> _htValidApplications = null;	// Bauke, 20110928
@@ -791,6 +795,22 @@ public class Application
 	public void setApplicationEndpointAudience(
 			String _sApplicationEndpointAudience) {
 		this._sApplicationEndpointAudience = _sApplicationEndpointAudience;
+	}
+
+	/**
+	 * @return the _htAdditionalRegex
+	 */
+	public Set<Pattern> getAdditionalRegex()
+	{
+		return _htAdditionalRegex;
+	}
+
+	/**
+	 * @param _htAdditionalRegex the _htAdditionalRegex to set
+	 */
+	public void setAdditionalRegex(Set<Pattern> _htAdditionalRegex)
+	{
+		this._htAdditionalRegex = _htAdditionalRegex;
 	}
 
 

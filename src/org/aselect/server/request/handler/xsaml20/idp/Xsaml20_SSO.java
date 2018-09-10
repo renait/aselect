@@ -17,10 +17,12 @@ import java.io.UnsupportedEncodingException;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Set;
 import java.util.Vector;
 import java.util.logging.Level;
+import java.util.regex.Pattern;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.http.HttpServletRequest;
@@ -1104,10 +1106,29 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 				htAllAttributes.put("betrouwbaarheidsniveau", sSelectedLevel);
 			}// RH, 20180213, n
 
+			
 			// 20101229, Bauke: add configurable fixed value attributes
 			if (_sAppId != null) {
 				HashMap<String,String> additionalAttributes = ApplicationManager.getHandle().getAdditionalAttributes(_sAppId);
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "AddAttr="+additionalAttributes);
+				// RH, 20180907, sn
+				Set<Pattern> additionalRegex = ApplicationManager.getHandle().getAdditionalRexex(_sAppId);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "AddRegex="+additionalRegex);
+				if (additionalRegex != null && !additionalRegex.isEmpty() ) {
+					Set<String> attrNames = htAttributes.keySet();
+					for ( Pattern p : additionalRegex) {
+						for (String attrName : attrNames) {
+							if (p.matcher(attrName).matches()) {
+								if (additionalAttributes == null) {
+									additionalAttributes = new HashMap<String,String>();
+								}
+								additionalAttributes.put(attrName, null);
+							}
+						}
+					}
+				}
+				// RH, 20180907, en
+
 				if (additionalAttributes != null) {
 					Set<String> keys = additionalAttributes.keySet();
 					for (String sKey : keys) {
@@ -1128,7 +1149,6 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 //				Object oValue = htAllAttributes.get(sKey);
 //				if (!(oValue instanceof String))
 //					continue;
-				////////////////////////////////////////////////////////////////
 				Iterable aValues = null;
 				
 				Object anyValue = htAllAttributes.get(sKey);
@@ -1176,11 +1196,9 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 					theAttribute.getAttributeValues().add(theAttributeValue);
 				
 				}
-				/////////////////////////////////////////////////////
 				
 				attributeStatement.getAttributes().add(theAttribute); // add this attribute
 			}
-			// CONSIDER maybe also add htAttributes as individual saml attributes
 			
 			// ---- AuthenticationContext
 			SAMLObjectBuilder<AuthnContextClassRef> authnContextClassRefBuilder = (SAMLObjectBuilder<AuthnContextClassRef>) builderFactory
@@ -1221,7 +1239,6 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 			
 			
 			// RH, 20141002, sn
-			////////////////////////////
 			// for eHerk authnContext AuthenticatingAuthorities MUST contain EntityID of AD
 			if ( ApplicationManager.getHandle().getAuthenticatingAuthority(_sAppId) != null ) {
 				SAMLObjectBuilder<AuthenticatingAuthority> authenticatingAuthorityBuilder = (SAMLObjectBuilder<AuthenticatingAuthority>) builderFactory
