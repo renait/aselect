@@ -117,9 +117,13 @@ import java.io.FileInputStream;
 import java.security.KeyStore;
 import java.security.PublicKey;
 import java.util.HashMap;
+import java.util.HashSet;
+import java.util.Iterator;
 import java.util.Set;
 import java.util.Vector;
 import java.util.logging.Level;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.server.log.ASelectSystemLogger;
@@ -336,6 +340,26 @@ public class ApplicationManager
 				HashMap<String, String> _htAdditionalAttributes = new HashMap<String, String>();
 				_htAdditionalAttributes = ASelectConfigManager.getTableFromConfig(oApplication, _htAdditionalAttributes,
 						"additional_attributes", "attribute", "name",/*->*/"value", false/* mandatory */, false/* unique values */);
+				
+				// RH, 20180907, sn
+				HashMap<String, String> _htAdditionalRegexString = new HashMap<String, String>();
+				_htAdditionalRegexString = ASelectConfigManager.getTableFromConfig(oApplication, _htAdditionalRegexString,
+						"additional_attributes_regex", "attribute", "regex",/*->*/ null, false/* mandatory */, false/* unique values */);
+				Set<Pattern> _htAdditionalRegex = new HashSet<Pattern>();
+				if (_htAdditionalRegexString != null && !_htAdditionalRegexString.isEmpty()) {
+						for(String sRegex : _htAdditionalRegexString.keySet()) {
+						try {
+							Pattern pattern = Pattern.compile(sRegex);
+							_htAdditionalRegex.add(pattern);
+						} catch (PatternSyntaxException pse) {
+							_systemLogger.log(Level.SEVERE, MODULE, sMethod, 
+									"Error compiling regex:"  + sRegex);
+							throw new ASelectConfigException("Error compiling regex", pse);
+						}
+					}
+				}
+				// RH, 20180907, sn
+				
 
 				// 20110928, Bauke
 				HashMap<String, String> _htValidResources = new HashMap<String, String>();
@@ -437,6 +461,9 @@ public class ApplicationManager
 				application.setAddedPatching(sAddedPatching);// RH, 20101206, n
 				application.setSecLevels(_htLevels); // RH, 20101214, n
 				application.setAdditionalAttributes(_htAdditionalAttributes); // Bauke, 20101229
+
+				application.setAdditionalRegex(_htAdditionalRegex); // RH, 20180907, n
+
 				application.set_ValidResources(_htValidResources);
 
 				application.setAuthnContextDeclValue(sAuthnContextDeclValue); // RH, 20101217, n
@@ -1247,6 +1274,26 @@ public class ApplicationManager
 			return null;
 		}
 		return oApplication.getAdditionalAttributes();
+	}
+
+	/**
+	 * Returns the application specific Attributes Names Regex for the attributes to be added to a Saml token<br>
+	 *
+	 * @return the Regex to be matched
+	 */
+	public synchronized Set<Pattern> getAdditionalRexex(String sAppId)
+	{
+		String sMethod = "getAdditionalRexex";
+		Application oApplication;
+
+		try {
+			oApplication = getApplication(sAppId);
+		}
+		catch (ASelectException e) {
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "No application configuration found for: " + sAppId);
+			return null;
+		}
+		return oApplication.getAdditionalRegex();
 	}
 
 	/**
