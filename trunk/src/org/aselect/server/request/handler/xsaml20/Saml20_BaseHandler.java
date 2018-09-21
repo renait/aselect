@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.StringReader;
 import java.security.GeneralSecurityException;
+import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.HashMap;
 import java.util.Set;
@@ -316,7 +317,7 @@ public abstract class Saml20_BaseHandler extends ProtoRequestHandler
 		int returnValue = 0;
 
 		// Send a saml LogoutRequest to the federation idp
-		LogoutRequestSender logoutRequestSender = new LogoutRequestSender();
+//		LogoutRequestSender logoutRequestSender = new LogoutRequestSender();	// RH, 20180918, o
 		String sNameID = (String) htTGTContext.get("name_id");
 
 		// metadata
@@ -330,8 +331,18 @@ public abstract class Saml20_BaseHandler extends ProtoRequestHandler
 			MetaDataManagerSp metadataManager = MetaDataManagerSp.getHandle();
 			String url = metadataManager.getLocation(sFederationUrl, SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME,
 					SAMLConstants.SAML2_REDIRECT_BINDING_URI);
-	
 			if (url != null) {
+				// RH, 20180918, sn
+				PrivateKey specialKey = null;
+				LogoutRequestSender logoutRequestSender = null;
+				if (partnerData.getCrypto() != null) {
+					logoutRequestSender = new LogoutRequestSender(partnerData.getCrypto());
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Using specific private key for redirect");
+				} else {
+					logoutRequestSender = new LogoutRequestSender();
+				}
+				// RH, 20180918, en
+
 				// Get list of sessions to kill if present in tgt
 				Vector<String> sessionindexes = (Vector<String>) htTGTContext.get("remote_sessionlist");	// can be null
 				logoutRequestSender.sendLogoutRequest(request, response, sTgT, url, sIssuer/* issuer */, sNameID,
@@ -579,7 +590,8 @@ public abstract class Saml20_BaseHandler extends ProtoRequestHandler
 			}
 		}
 		try {
-			StatusCode statuscode = requestSender.sendSoapLogoutRequestWithStatus(url, _sServerUrl, sNameID, reason, pkey, null);
+//			StatusCode statuscode = requestSender.sendSoapLogoutRequestWithStatus(url, _sServerUrl, sNameID, reason, pkey, null);	// RH, 20180918, o
+			StatusCode statuscode = requestSender.sendSoapLogoutRequestWithStatus(url, _sServerUrl, sNameID, reason, pkey, null, null);	// RH, 20180918, n
 			status = statuscode.getValue();
 		}
 		catch (ASelectException e) {

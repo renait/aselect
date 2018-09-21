@@ -593,6 +593,10 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 				_systemLogger.log(Level.FINER, MODULE, sMethod, "RelayState="+sRelayState);
 			}
 
+			// RH, 20180918, sn
+			PartnerData.Crypto specificCrypto = partnerData.getCrypto();	// might be null
+			// RH, 20180918, en
+
 			//
 			// We have the AuthnRequest, now get it to the other side
 			//
@@ -622,7 +626,16 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 				messageContext.setPeerEntityEndpoint(samlEndpoint);
 	
 				BasicX509Credential credential = new BasicX509Credential();
-				PrivateKey key = _configManager.getDefaultPrivateKey();
+//				PrivateKey key = _configManager.getDefaultPrivateKey();	// RH, 20180918, o
+				// RH, 20180918, sn
+				PrivateKey key = null;
+				if (specificCrypto != null) {
+					key = specificCrypto.getPrivateKey();
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Using specific private key for redirect");
+				} else {
+					key = _configManager.getDefaultPrivateKey();
+				}
+				// RH, 20180918, en
 				credential.setPrivateKey(key);
 				messageContext.setOutboundSAMLMessageSigningCredential(credential);
 	
@@ -650,8 +663,10 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 			else {  // POST
 				// 20100331, Bauke: added support for HTTP POST
 				_systemLogger.log(Level.FINER, MODULE, sMethod, "Sign the authnRequest >======"+authnRequest);
+//				authnRequest = (AuthnRequest)SamlTools.signSamlObject(authnRequest, useSha256? "sha256": "sha1", 
+//							"true".equalsIgnoreCase(partnerData.getAddkeyname()), "true".equalsIgnoreCase(partnerData.getAddcertificate()) );	// RH, 20180918, o
 				authnRequest = (AuthnRequest)SamlTools.signSamlObject(authnRequest, useSha256? "sha256": "sha1", 
-							"true".equalsIgnoreCase(partnerData.getAddkeyname()), "true".equalsIgnoreCase(partnerData.getAddcertificate()) );
+						"true".equalsIgnoreCase(partnerData.getAddkeyname()), "true".equalsIgnoreCase(partnerData.getAddcertificate()), specificCrypto);	// RH, 20180918, N
 				_systemLogger.log(Level.FINER, MODULE, sMethod, "Signed the authnRequest ======<"+authnRequest);
 
 				String sAssertion = XMLHelper.nodeToString(authnRequest.getDOM());

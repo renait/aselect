@@ -11,6 +11,8 @@
  */
 package org.aselect.server.request.handler.xsaml20.sp;
 
+import java.security.PrivateKey;
+import java.security.cert.CertificateEncodingException;
 import java.util.Enumeration;
 import java.util.Hashtable;
 import java.util.List;
@@ -20,6 +22,7 @@ import java.util.logging.Level;
 import javax.servlet.ServletConfig;
 import javax.xml.namespace.QName;
 
+import org.apache.commons.codec.binary.Base64;
 import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.server.request.handler.xsaml20.AbstractMetaDataManager;
 import org.aselect.server.request.handler.xsaml20.PartnerData;
@@ -262,7 +265,22 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 		X509CertificateBuilder x509CertificateBuilder = (X509CertificateBuilder) _oBuilderFactory
 				.getBuilder(X509Certificate.DEFAULT_ELEMENT_NAME);
 		X509Certificate x509Certificate = x509CertificateBuilder.buildObject();
-		x509Certificate.setValue(getSigningCertificate());
+		
+		// RH, 20180920, sn
+		if (partnerData != null && partnerData.getCrypto() != null) {
+			java.security.cert.X509Certificate x509Cert = partnerData.getCrypto().getX509Cert();
+			try {
+				String encodedCert = new String(Base64.encodeBase64(x509Cert.getEncoded()));
+				x509Certificate.setValue(encodedCert);
+				_systemLogger.log(Level.INFO, MODULE, sMethod, "Add specific partner certificate to Signing keyinfo");
+			} catch (CertificateEncodingException e) {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Error encoding certificate");
+				throw new ASelectException(Errors.ERROR_ASELECT_INIT_ERROR, e);
+			}
+		} else {
+		// RH, 20180920, en
+			x509Certificate.setValue(getSigningCertificate());
+		}	// RH, 20180920, n
 
 		X509DataBuilder x509DataBuilder = (X509DataBuilder) _oBuilderFactory.getBuilder(X509Data.DEFAULT_ELEMENT_NAME);
 		X509Data x509Data = x509DataBuilder.buildObject();
@@ -278,7 +296,15 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 			XMLSignatureBuilder<KeyName> keyNameBuilder = (XMLSignatureBuilder<KeyName>) _oBuilderFactory
 			.getBuilder(KeyName.DEFAULT_ELEMENT_NAME);
 			KeyName keyName = keyNameBuilder.buildObject();
-			keyName.setValue( _configManager.getDefaultCertId());
+			// RH, 20180920, sn
+			if (partnerData != null && partnerData.getCrypto() != null) {
+				keyName.setValue( partnerData.getCrypto().getCertFingerPrint());
+				_systemLogger.log(Level.INFO, MODULE, sMethod, "Adding specific partner certificate keyname to Signing keyinfo");	// RH, 20160223, n
+			} else {
+				// RH, 20180920, en
+				keyName.setValue( _configManager.getDefaultCertId());
+			}	// RH, 20180920, n
+
 			keyInfo.getKeyNames().add(keyName);
 		}
 
@@ -292,8 +318,21 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 		KeyInfo keyInfoEncryption = keyInfoBuilder.buildObject();
 
 		X509Certificate x509CertificateEncryption = x509CertificateBuilder.buildObject();
-		x509CertificateEncryption.setValue(getSigningCertificate());	// For now we use the same for signing and encryption
-
+		// RH, 20180920, sn
+		if (partnerData != null && partnerData.getCrypto() != null) {
+			java.security.cert.X509Certificate x509Cert = partnerData.getCrypto().getX509Cert();
+			try {
+				String encodedCert = new String(Base64.encodeBase64(x509Cert.getEncoded()));
+				x509CertificateEncryption.setValue(encodedCert);
+				_systemLogger.log(Level.INFO, MODULE, sMethod, "Add specific partner certificate to Encryption keyinfo");
+			} catch (CertificateEncodingException e) {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Error encoding certificate");
+				throw new ASelectException(Errors.ERROR_ASELECT_INIT_ERROR, e);
+			}
+		} else {
+		// RH, 20180920, en
+			x509CertificateEncryption.setValue(getSigningCertificate());	// For now we use the same for signing and encryption
+		}	// RH, 20180920, n
 		X509Data x509DataEncryption = x509DataBuilder.buildObject();
 		x509DataEncryption.getX509Certificates().add(x509CertificateEncryption);
 		if (includeencryptioncertificate)	// RH, 20160225, n
@@ -305,14 +344,19 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 			XMLSignatureBuilder<KeyName> keyNameBuilder = (XMLSignatureBuilder<KeyName>) _oBuilderFactory
 			.getBuilder(KeyName.DEFAULT_ELEMENT_NAME);
 			KeyName keyNameEncryption = keyNameBuilder.buildObject();
-			keyNameEncryption.setValue( _configManager.getDefaultCertId());	// For now we use the same for signing and encryption
+			// RH, 20180920, sn
+			if (partnerData != null && partnerData.getCrypto() != null) {
+				keyNameEncryption.setValue( partnerData.getCrypto().getCertFingerPrint());
+				_systemLogger.log(Level.INFO, MODULE, sMethod, "Adding specific partner certificate keyname to Encryption keyinfo");
+			} else {
+				// RH, 20180920, en
+				keyNameEncryption.setValue( _configManager.getDefaultCertId());	// For now we use the same for signing and encryption
+			}	// RH, 20180920, n
 			keyInfoEncryption.getKeyNames().add(keyNameEncryption);
 		}
 
 		keyDescriptorEncryption.setKeyInfo(keyInfoEncryption);
 		// RH, 20160223, en
-		
-		
 		
 		// Create the SPSSODescriptor
 		SAMLObjectBuilder<SPSSODescriptor> ssoDescriptorBuilder = (SAMLObjectBuilder<SPSSODescriptor>) _oBuilderFactory
@@ -583,11 +627,22 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 		ssoDescriptor.addSupportedProtocol(SAMLConstants.SAML20P_NS);
 		entityDescriptor.getRoleDescriptors().add(ssoDescriptor);
 
+		// RH, 20180918, sn
+		PartnerData.Crypto specificCrypto = null;
+		if (partnerData != null) {
+			specificCrypto = partnerData.getCrypto();	// might be null
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "Signing metadata with specific partner private key");
+			// RH, 20180920, en
+		}
+		// RH, 20180918, en
+
 //		entityDescriptor = (EntityDescriptor) SamlTools.signSamlObject(entityDescriptor);		// RH, 20110113, o
 		// RH, 20110113, sn
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "Signing entityDescriptor");
+//		entityDescriptor = (EntityDescriptor) SamlTools.signSamlObject(entityDescriptor,  usesha256 ? "sha256": "sha1",
+//						addkeyname, addcertificate);	// RH, 20180918, o
 		entityDescriptor = (EntityDescriptor) SamlTools.signSamlObject(entityDescriptor,  usesha256 ? "sha256": "sha1",
-						addkeyname, addcertificate);
+				addkeyname, addcertificate, specificCrypto);	// RH, 20180918, n
 		// RH, 20110113, en
 
 		// The Session Sync descriptor (PDPDescriptor?) would go here

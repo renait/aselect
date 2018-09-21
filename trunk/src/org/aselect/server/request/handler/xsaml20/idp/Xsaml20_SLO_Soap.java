@@ -200,7 +200,8 @@ public class Xsaml20_SLO_Soap extends Saml20_BaseHandler
 			// always sign the logoutResponse
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "Sign the logoutResponse >======");
 //			logoutResponse = (LogoutResponse)SamlTools.signSamlObject(logoutResponse, "sha1");	// RH, 20170727, o
-			logoutResponse = (LogoutResponse)SamlTools.signSamlObject(logoutResponse, (_sReqSigning != null) ?_sReqSigning: _sDefaultSigning);	// RH, 20170727, n
+//			logoutResponse = (LogoutResponse)SamlTools.signSamlObject(logoutResponse, (_sReqSigning != null) ?_sReqSigning: _sDefaultSigning);	// RH, 20170727, n	// RH, 20180918, o
+			logoutResponse = (LogoutResponse)SamlTools.signSamlObject(logoutResponse, (_sReqSigning != null) ?_sReqSigning: _sDefaultSigning, null);	// RH, 20170727, n	// RH, 20180918, n
 			
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "Signed the logoutResponse ======<");
 

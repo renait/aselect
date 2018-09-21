@@ -12,6 +12,7 @@
 package org.aselect.server.request.handler.xsaml20.sp;
 
 import java.io.StringReader;
+import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.HashMap;
 import java.util.logging.Level;
@@ -23,6 +24,7 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.aselect.server.request.RequestState;
+import org.aselect.server.request.handler.xsaml20.PartnerData;
 import org.aselect.server.request.handler.xsaml20.SoapLogoutRequestSender;
 import org.aselect.server.request.handler.xsaml20.SoapManager;
 import org.aselect.server.request.handler.xsaml20.Saml20_BaseHandler;
@@ -231,9 +233,18 @@ public class Xsaml20_SLO_Soap extends Saml20_BaseHandler
 			String myEntityId = _sServerUrl;
 			LogoutResponse logoutResponse = SamlTools.buildLogoutResponse(myEntityId, statusCode, logoutRequest.getID());
 
+			// RH, 20180918, sn
+			PartnerData partnerData = metadataManager.getPartnerDataEntry(logoutRequestIssuer);
+			PartnerData.Crypto specificCyrpto = null;
+			if (partnerData != null) {
+				specificCyrpto = partnerData.getCrypto();	// might be null
+			}
+			// RH, 20180918, en
+		
 			// always sign the logoutResponse
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "Sign the logoutResponse >======");
-			logoutResponse = (LogoutResponse)SamlTools.signSamlObject(logoutResponse, "sha1");
+//			logoutResponse = (LogoutResponse)SamlTools.signSamlObject(logoutResponse, "sha1");	// RH, 20180918, o
+			logoutResponse = (LogoutResponse)SamlTools.signSamlObject(logoutResponse, "sha1", specificCyrpto);	// RH, 20180918, n
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "Signed the logoutResponse ======<");
 
 			SoapManager soapManager = new SoapManager();

@@ -11,13 +11,24 @@
  */
 package org.aselect.server.request.handler.xsaml20;
 
+import java.io.File;
+import java.io.FileInputStream;
+import java.security.KeyStore;
+import java.security.MessageDigest;
+import java.security.PrivateKey;
 import java.util.ArrayList;
+import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
+import java.util.logging.Level;
 
 import org.aselect.server.request.handler.xsaml20.SecurityLevel.SecurityLevelEntry;
+import org.aselect.system.error.Errors;
+import org.aselect.system.exception.ASelectConfigException;
+import org.aselect.system.exception.ASelectException;
+import org.aselect.system.utils.Utils;
 
 /**
  * Store all data for an IdP or SP partner
@@ -48,7 +59,10 @@ public class PartnerData
 	private Metadata4Partner metadata4partner = null;
 	private Testdata4Partner testdata4partner = null;
 	private Extensionsdata4Partner extensionsdata4partner = null;
-		
+
+	private Crypto crypto = null;	// RH, 20180917, n
+
+
 	public PartnerData(String sId)
 	{
 		partnerID = sId;
@@ -198,6 +212,105 @@ public class PartnerData
 		this.suppressscoping = suppressscoping;
 	}
 
+	// RH, 20180917, sn
+	
+	// Simple wrapper for crypto info
+	public class Crypto
+	{
+		private java.security.cert.X509Certificate x509Cert = null;
+		private PrivateKey oPrivateKey = null;
+		private String sCertFingerPrint = null;
+
+		private Crypto()
+		{
+			// hide this constructor
+		}
+
+		public Crypto(java.security.cert.X509Certificate x509Cert, PrivateKey oPrivateKey, String sCertFingerPrint)
+		{
+			this.x509Cert = x509Cert;
+			this.oPrivateKey = oPrivateKey;
+			this.sCertFingerPrint = sCertFingerPrint;
+		}
+
+		public synchronized java.security.cert.X509Certificate getX509Cert() {
+			return x509Cert;
+		}
+
+		public synchronized void setX509Cert(java.security.cert.X509Certificate x509Cert) {
+			this.x509Cert = x509Cert;
+		}
+
+		public synchronized PrivateKey getPrivateKey() {
+			return oPrivateKey;
+		}
+
+		public synchronized void setPrivateKey(PrivateKey oPrivateKey) {
+			this.oPrivateKey = oPrivateKey;
+		}
+
+		public synchronized String getCertFingerPrint() {
+			return sCertFingerPrint;
+		}
+
+		public synchronized void setCertFingerPrint(String sCertFingerPrint) {
+			this.sCertFingerPrint = sCertFingerPrint;
+		}
+	}
+	
+	
+	/**
+	 * @return the crypto
+	 */
+	public synchronized Crypto getCrypto() {
+		return crypto;
+	}
+	
+//	/**
+//	 * @param crypto the crypto to set
+//	 */
+//	public synchronized void setCrypto(Crypto crypto) {
+//		this.crypto = crypto;
+//	}
+	
+	public synchronized void loadSpecificCrypto(String sWorkingDir, String sKeyStoreName, String sAlias, String sPassword) throws ASelectException {
+		String sMethod = "loadSpecificPrivateKey";
+		StringBuffer sbKeystoreLocation = new StringBuffer(sWorkingDir);
+
+		try {
+
+			sbKeystoreLocation.append(File.separator);
+			sbKeystoreLocation.append("keystores");
+			sbKeystoreLocation.append(File.separator);
+			sbKeystoreLocation.append("partners");
+			sbKeystoreLocation.append(File.separator);
+			sbKeystoreLocation.append(sKeyStoreName);
+			KeyStore ksASelect = KeyStore.getInstance("JKS");
+			ksASelect.load(new FileInputStream(sbKeystoreLocation.toString()), null);
+
+			// convert String to char[]
+			char[] caPassword = sPassword.toCharArray();
+			PrivateKey oPrivateKey = (PrivateKey) ksASelect.getKey(sAlias, caPassword);
+
+			java.security.cert.X509Certificate x509Cert = (java.security.cert.X509Certificate) ksASelect
+					.getCertificate(sAlias);
+
+			byte[] baCert = x509Cert.getEncoded();
+			MessageDigest mdDigest = MessageDigest.getInstance("SHA1");
+			mdDigest.update(baCert);
+			String sCertFingerPrint = Utils.byteArrayToHexString(mdDigest.digest());
+
+			crypto = new Crypto(x509Cert, oPrivateKey, sCertFingerPrint);
+//			crypto.put("signing_cert", x509Cert);
+//			crypto.put("private_key", oPrivateKey);
+//			crypto.put("cert_id", sCertFingerPrint);
+		}
+		catch (Exception e) {
+			throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR, e);
+		}
+
+	}
+	// RH, 20180917, en
 
 	/**
 	 * @return the metadata4partner

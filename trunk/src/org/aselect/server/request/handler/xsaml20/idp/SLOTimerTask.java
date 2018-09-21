@@ -146,8 +146,10 @@ public class SLOTimerTask extends TimerTask
 						throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 					}
 				}
-				sender.sendSoapLogoutRequest(url, issuer, tgtId, "urn:oasis:names:tc:SAML:2.0:logout:admin", pkey); // was:
-				// "Federation initiated logout"
+//				sender.sendSoapLogoutRequest(url, issuer, tgtId, "urn:oasis:names:tc:SAML:2.0:logout:admin", pkey); // was:
+//				// "Federation initiated logout"	// RH, 20180918, o
+				sender.sendSoapLogoutRequest(url, issuer, tgtId, "urn:oasis:names:tc:SAML:2.0:logout:admin", pkey, null); // was:
+				// "Federation initiated logout"	// RH, 20180918, n
 			}
 			catch (ASelectException e) {
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Send failed (but continue): " + e);

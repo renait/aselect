@@ -181,7 +181,26 @@ public class MetaDataManagerSp extends AbstractMetaDataManager
 			}
 			// RH, 20180810, sn
 	
-				
+			// RH, 20180917, sn
+			/////////////////////////////////////////////////
+			// load the specific crypto info
+
+			String keystoreName = Utils.getParamFromSection(_configManager, _systemLogger, idpSection, "keystore", "name", false);
+			if (keystoreName != null) {
+				 String keystorePw = Utils.getParamFromSection(_configManager, _systemLogger, idpSection, "keystore", "password", false);
+				 String keystoreAlias = Utils.getParamFromSection(_configManager, _systemLogger, idpSection, "keystore", "alias", false);
+				 String workingDir = _configManager.getWorkingdir();
+				 try {
+					 idpData.loadSpecificCrypto(workingDir, keystoreName, keystoreAlias, keystorePw);
+				 } catch (ASelectException e) {
+						_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Could not load partner private key from: "+keystoreName+", alias="+keystoreAlias);
+						throw new ASelectConfigException(Errors.ERROR_ASELECT_CONFIG_ERROR, e);
+				 }
+			}	// maybe load defaultprivatekey for every partner without keystorelocation ?
+				// Would make more uniform signing calls
+			// RH, 20180917, sn
+			
+			
 			// Set specific metadata for this partner
 			Object metadataSection = Utils.getSimpleSection(_configManager, _systemLogger, idpSection, "metadata", false);
 			if (metadataSection != null) {

@@ -11,6 +11,7 @@
  */
 package org.aselect.server.request.handler.xsaml20.sp;
 
+import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.Date;
 import java.util.HashMap;
@@ -18,6 +19,7 @@ import java.util.Set;
 import java.util.Vector;
 import java.util.logging.Level;
 
+import org.aselect.server.request.handler.xsaml20.PartnerData;
 import org.aselect.server.request.handler.xsaml20.SoapLogoutRequestSender;
 import org.aselect.server.tgt.TGTManager;
 import org.aselect.server.log.ASelectSystemLogger;
@@ -271,9 +273,23 @@ public class MemoryStorageHandlerTimeOut extends MemoryStorageHandler
 				throw new ASelectStorageException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 			}
 		}
+		
+		// RH, 20180918, sn
+		PartnerData partnerData = null;
+		PartnerData.Crypto specificCrypto = null;
+		try {
+			partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sFederationUrl);
+			if (partnerData != null) {
+				specificCrypto = partnerData.getCrypto();	// might be null
+			}
+		} catch (ASelectException e1) {
+			_oSystemLogger.log(Level.WARNING, MODULE, _sMethod, "Could not get handle to MetaDataManagerSp, not signing with specific private key");
+		}
+		// RH, 20180918, en
+
 		try {
 //			logout.sendSoapLogoutRequest(url, issuerUrl, sNameID, "urn:oasis:names:tc:SAML:2.0:logout:sp-timeout", pkey);	// RH, 20120201, o
-			logout.sendSoapLogoutRequest(url, issuerUrl, sNameID, "urn:oasis:names:tc:SAML:2.0:logout:sp-timeout", pkey, sessionIndexes);	// RH, 20120201, n
+			logout.sendSoapLogoutRequest(url, issuerUrl, sNameID, "urn:oasis:names:tc:SAML:2.0:logout:sp-timeout", pkey, sessionIndexes, specificCrypto);	// RH, 20120201, n
 		}
 		catch (ASelectException e) {
 			_oSystemLogger.log(Level.WARNING, MODULE, _sMethod, "Exception trying to send Logout message", e);

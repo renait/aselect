@@ -12,6 +12,7 @@
 package org.aselect.server.request.handler.xsaml20.sp;
 
 import java.io.PrintWriter;
+import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.HashMap;
 import java.util.logging.Level;
@@ -23,6 +24,7 @@ import javax.servlet.http.HttpServletResponse;
 import org.aselect.server.request.HandlerTools;
 import org.aselect.server.request.RequestState;
 import org.aselect.server.request.handler.xsaml20.LogoutResponseSender;
+import org.aselect.server.request.handler.xsaml20.PartnerData;
 import org.aselect.server.request.handler.xsaml20.Saml20_BaseHandler;
 import org.aselect.server.request.handler.xsaml20.Saml20_RedirectDecoder;
 import org.aselect.server.request.handler.xsaml20.SamlTools;
@@ -280,7 +282,19 @@ public class Xsaml20_SLO_Redirect extends Saml20_BaseHandler
 			logoutResponseLocation = metadataManager.getLocation(issuer,
 					SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME, SAMLConstants.SAML2_REDIRECT_BINDING_URI);
 		}
-		LogoutResponseSender sender = new LogoutResponseSender();
+		// RH, 20180918, sn
+		PrivateKey key = null;
+		LogoutResponseSender sender = null;
+		PartnerData partnerdata = metadataManager.getPartnerDataEntry(issuer);
+		if (partnerdata != null && partnerdata.getCrypto() != null) {
+			sender = new LogoutResponseSender(partnerdata.getCrypto());
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Using specific private key for redirect");
+		} else {
+			sender = new LogoutResponseSender();
+		}
+		// RH, 20180918, en
+
+//		LogoutResponseSender sender = new LogoutResponseSender();	// RH, 20180918, o
 		sender.sendLogoutResponse(logoutResponseLocation, myEntityId, statusCode, logoutRequest.getID(), null,
 				httpRequest, httpResponse);
 	}

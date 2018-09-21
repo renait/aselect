@@ -880,8 +880,10 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 			}
 		}
 		else {  // No assertion signing, sign the complete response
+//			response = (Response)SamlTools.signSamlObject(response, _sReqSigning, 
+//							"true".equals(_sAddKeyName), "true".equals(_sAddCertificate));	// RH, 20180918, o
 			response = (Response)SamlTools.signSamlObject(response, _sReqSigning, 
-							"true".equals(_sAddKeyName), "true".equals(_sAddCertificate));
+					"true".equals(_sAddKeyName), "true".equals(_sAddCertificate), null);	// RH, 20180918, n
 		}
 		//_systemLogger.log(Level.INFO, MODULE, sMethod, "Response signing ======<"+response);
 		
@@ -1442,8 +1444,10 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 			// 20110406, Bauke: added option to only sign the assertion
 			if (_bSignAssertion) {
 				_systemLogger.log(Level.FINER, MODULE, sMethod, "Sign Assertion");
+//				assertion = (Assertion)SamlTools.signSamlObject(assertion, _sReqSigning,
+//						"true".equals(_sAddKeyName), "true".equals(_sAddCertificate));	// RH, 20180918, o
 				assertion = (Assertion)SamlTools.signSamlObject(assertion, _sReqSigning,
-						"true".equals(_sAddKeyName), "true".equals(_sAddCertificate));
+						"true".equals(_sAddKeyName), "true".equals(_sAddCertificate), null);	// RH, 20180918, n
 			}
 		}
 

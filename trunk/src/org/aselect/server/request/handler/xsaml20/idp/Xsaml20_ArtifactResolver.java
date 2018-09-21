@@ -286,10 +286,14 @@ public class Xsaml20_ArtifactResolver extends Saml20_BaseHandler
 							}
 						}
 						if (a.isSigned() || bSignAssertion) {
+//							a = (Assertion)SamlTools.signSamlObject(a, 
+//									(_sReqSigning != null) ?_sReqSigning: _sDefaultSigning ,
+//											(_sAddKeyName != null) ? "true".equals(_sAddKeyName): "true".equals(_sDefaultAddKeyname),
+//													(_sAddCertificate != null) ? "true".equals(_sAddCertificate): "true".equals(_sDefaultAddCertificate));	// RH, 20180918, o
 							a = (Assertion)SamlTools.signSamlObject(a, 
 									(_sReqSigning != null) ?_sReqSigning: _sDefaultSigning ,
 											(_sAddKeyName != null) ? "true".equals(_sAddKeyName): "true".equals(_sDefaultAddKeyname),
-													(_sAddCertificate != null) ? "true".equals(_sAddCertificate): "true".equals(_sDefaultAddCertificate));
+													(_sAddCertificate != null) ? "true".equals(_sAddCertificate): "true".equals(_sDefaultAddCertificate), null);	// RH, 20180918, n
 							_systemLogger.log(Level.FINER, MODULE, sMethod, "Signed the assertion ======<");
 						}
 					}
@@ -316,10 +320,14 @@ public class Xsaml20_ArtifactResolver extends Saml20_BaseHandler
 			if (bSignAssertion) {
 				// only the assertion, was signed previously and/or already in Saml20_SSO
 				if (bSignArtifactResponse) {	// sign the ArtifactResponse anyway
+//					artifactResponse = (ArtifactResponse)SamlTools.signSamlObject(artifactResponse, 
+//							(_sReqSigning != null) ?_sReqSigning: _sDefaultSigning ,
+//									(_sAddKeyName != null) ? "true".equals(_sAddKeyName): "true".equals(_sDefaultAddKeyname),
+//											(_sAddCertificate != null) ? "true".equals(_sAddCertificate): "true".equals(_sDefaultAddCertificate));	// RH, 20180918, o
 					artifactResponse = (ArtifactResponse)SamlTools.signSamlObject(artifactResponse, 
 							(_sReqSigning != null) ?_sReqSigning: _sDefaultSigning ,
 									(_sAddKeyName != null) ? "true".equals(_sAddKeyName): "true".equals(_sDefaultAddKeyname),
-											(_sAddCertificate != null) ? "true".equals(_sAddCertificate): "true".equals(_sDefaultAddCertificate));
+											(_sAddCertificate != null) ? "true".equals(_sAddCertificate): "true".equals(_sDefaultAddCertificate), null);	// RH, 20180918, n
 					_systemLogger.log(Level.FINER, MODULE, sMethod, "Signed the artifactResponse ======<");
 				} else {
 				try {
@@ -334,9 +342,12 @@ public class Xsaml20_ArtifactResolver extends Saml20_BaseHandler
 			}
 			else {  // No assertion signing, sign the complete response
 //				artifactResponse = (ArtifactResponse)SamlTools.signSamlObject(artifactResponse, "sha1", false, false);
+//				artifactResponse = (ArtifactResponse)SamlTools.signSamlObject(artifactResponse,  (_sReqSigning != null) ?_sReqSigning: _sDefaultSigning, 
+//						(_sAddKeyName != null) ? "true".equals(_sAddKeyName): "true".equals(_sDefaultAddKeyname), 
+//								(_sAddCertificate != null) ? "true".equals(_sAddCertificate): "true".equals(_sDefaultAddCertificate));	// RH, 20180918, o
 				artifactResponse = (ArtifactResponse)SamlTools.signSamlObject(artifactResponse,  (_sReqSigning != null) ?_sReqSigning: _sDefaultSigning, 
 						(_sAddKeyName != null) ? "true".equals(_sAddKeyName): "true".equals(_sDefaultAddKeyname), 
-								(_sAddCertificate != null) ? "true".equals(_sAddCertificate): "true".equals(_sDefaultAddCertificate));
+								(_sAddCertificate != null) ? "true".equals(_sAddCertificate): "true".equals(_sDefaultAddCertificate), null);	// RH, 20180918, n
 				_systemLogger.log(Level.FINER, MODULE, sMethod, "Signed the artifactResponse =====<");
 			}
 			Envelope envelope = new SoapManager().buildSOAPMessage(artifactResponse);

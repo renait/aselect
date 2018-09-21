@@ -278,7 +278,8 @@ public class JDBCStorageHandlerTimeOut extends JDBCStorageHandler
 			}
 		}
 		try {  // Sign with our private key!
-			requestSender.sendSoapLogoutRequest(url, _serverUrl, sNameID, "urn:oasis:names:tc:SAML:2.0:logout:sp-timeout", pkey);
+//			requestSender.sendSoapLogoutRequest(url, _serverUrl, sNameID, "urn:oasis:names:tc:SAML:2.0:logout:sp-timeout", pkey);	// RH, 20180918, o
+			requestSender.sendSoapLogoutRequest(url, _serverUrl, sNameID, "urn:oasis:names:tc:SAML:2.0:logout:sp-timeout", pkey, null);	// RH, 20180918, n
 		}
 		catch (ASelectException e) {
 			_oSystemLogger.log(Level.WARNING, MODULE, _sMethod, "IDP - exception trying to send logout request", e);

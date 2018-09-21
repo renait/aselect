@@ -51,6 +51,16 @@ public class LogoutResponseSender
 		privateKey = ASelectConfigManager.getHandle().getDefaultPrivateKey();
 	}
 
+	// RH, 20180918, sn
+	/**
+	 * Instantiates a new logout response sender.
+	 */
+	public LogoutResponseSender(PartnerData.Crypto specificCrypto) {
+		_systemLogger = ASelectSystemLogger.getHandle();
+		privateKey = specificCrypto.getPrivateKey();
+	}
+	// RH, 20180918, en
+
 	/**
 	 * Send Logout Response. <br>
 	 * 
