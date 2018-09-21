@@ -571,20 +571,29 @@ public class SamlTools
 	 * @throws ASelectException
 	 *             the a select exception
 	 */
-	public static SignableSAMLObject signSamlObject(SignableSAMLObject obj)
+	
+//	public static SignableSAMLObject signSamlObject(SignableSAMLObject obj)
+//	public static SignableSAMLObject signSamlObject(SignableSAMLObject obj, PrivateKey specificKey)
+	public static SignableSAMLObject signSamlObject(SignableSAMLObject obj, PartnerData.Crypto specificCrypto)
 	throws ASelectException
 	{
-		return signSamlObject(obj, "sha1");  // default algorithm
+//		return signSamlObject(obj, "sha1");  // default algorithm
+//		return signSamlObject(obj, "sha1", specificKey);  // default algorithm
+		return signSamlObject(obj, "sha1", specificCrypto);  // default algorithm
 	}
 	
 	/*
 	 * @param sAlgo
 	 *            The algorithm to use [ "sha256" | "sha1" ] defaults to "sha1"
 	 */
-	public static SignableSAMLObject signSamlObject(SignableSAMLObject obj, String sAlgo)
+//	public static SignableSAMLObject signSamlObject(SignableSAMLObject obj, String sAlgo)
+//	public static SignableSAMLObject signSamlObject(SignableSAMLObject obj, String sAlgo, PrivateKey specificKey)
+	public static SignableSAMLObject signSamlObject(SignableSAMLObject obj, String sAlgo, PartnerData.Crypto specificCrypto)
 	throws ASelectException
 	{
-		return signSamlObject(obj, sAlgo, false, false);
+//		return signSamlObject(obj, sAlgo, false, false);
+//		return signSamlObject(obj, sAlgo, false, false, specificKey);
+		return signSamlObject(obj, sAlgo, false, false, specificCrypto);
 	}
 
 	/*
@@ -593,8 +602,12 @@ public class SamlTools
 	 * @param    addCertificate         
 	 *            Add the (default) certificate in a KeyInfo element
 	 */
+//	public static SignableSAMLObject signSamlObject(SignableSAMLObject obj, String sAlgo,
+//										boolean addKeyName, boolean addCertificate)
 	public static SignableSAMLObject signSamlObject(SignableSAMLObject obj, String sAlgo,
-										boolean addKeyName, boolean addCertificate)
+//										boolean addKeyName, boolean addCertificate, PrivateKey specificKey)
+										boolean addKeyName, boolean addCertificate, PartnerData.Crypto specificCrypto)
+	
 	throws ASelectException
 	{
 		String sMethod = "sign(SignableSAMLObject obj)";
@@ -604,7 +617,16 @@ public class SamlTools
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "obj->" + obj);
 		if (!obj.isSigned()) {
 			ASelectConfigManager _oASelectConfigManager = ASelectConfigManager.getHandle();
-			PrivateKey privKey = _oASelectConfigManager.getDefaultPrivateKey();
+//			PrivateKey privKey = _oASelectConfigManager.getDefaultPrivateKey();// RH, 20180917, o
+			// RH, 20180917, sn
+			PrivateKey privKey = null;
+			if (specificCrypto != null) {
+				privKey = specificCrypto.getPrivateKey();
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Using specific private key");
+			} else {
+				privKey = _oASelectConfigManager.getDefaultPrivateKey();
+			}
+			// RH, 20180917, en
 			Signature signature = new SignatureBuilder().buildObject();
 			String signingAlgo;
 			if ("RSA".equalsIgnoreCase(privKey.getAlgorithm())) {
@@ -627,12 +649,20 @@ public class SamlTools
 			if (addKeyName || addCertificate) {
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "Adding keyinfo");
 				
-				// Tried KeyInfoGenerator but.generate(credential)  always return null, so 
-				// build keyinfo manually
+				// Tried KeyInfoGenerator but.generate(credential)  always returns null
+				// so build keyinfo manually
 				XMLObjectBuilderFactory builderFactory = Configuration.getBuilderFactory();
 				KeyInfoBuilder keyInfoBuilder = (KeyInfoBuilder) builderFactory.getBuilder(KeyInfo.DEFAULT_ELEMENT_NAME);
 				KeyInfo keyinfo = (KeyInfo)	keyInfoBuilder.buildObject(KeyInfo.DEFAULT_ELEMENT_NAME);
-				java.security.cert.X509Certificate x509Certificate =  _oASelectConfigManager.getDefaultCertificate();
+						// RH, 20180921, sn
+				java.security.cert.X509Certificate x509Certificate = null;
+				if (specificCrypto != null) {
+					x509Certificate = specificCrypto.getX509Cert();
+				} else {
+					x509Certificate =  _oASelectConfigManager.getDefaultCertificate();
+				}
+				// RH, 20180921, en
+//				java.security.cert.X509Certificate x509Certificate =  _oASelectConfigManager.getDefaultCertificate();	// RH, 20180921, o
 				if ( addCertificate ) {
 					try {
 						KeyInfoHelper.addCertificate(keyinfo, x509Certificate);
@@ -643,7 +673,14 @@ public class SamlTools
 					}
 				}
 				if ( addKeyName ) {
-					KeyInfoHelper.addKeyName(keyinfo, _oASelectConfigManager.getDefaultCertId());
+					// RH, 20180921, sn
+					if (specificCrypto != null) {
+						KeyInfoHelper.addKeyName(keyinfo, specificCrypto.getCertFingerPrint());
+					} else {
+						KeyInfoHelper.addKeyName(keyinfo, _oASelectConfigManager.getDefaultCertId());
+					}
+					// RH, 20180921, en
+//					KeyInfoHelper.addKeyName(keyinfo, _oASelectConfigManager.getDefaultCertId());	/ RH, 20180921, o
 				}
 				signature.setKeyInfo(keyinfo);
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "Added keyinfo");

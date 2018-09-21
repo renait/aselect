@@ -13,6 +13,7 @@ package org.aselect.server.request.handler.xsaml20.sp;
 
 import java.io.PrintWriter;
 import java.io.StringReader;
+import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.Arrays;
 import java.util.Enumeration;
@@ -313,11 +314,17 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 				
 				//	RH, 20180528, sn
 				if (partnerData != null) {
+					// RH, 20180918, sn
+					PartnerData.Crypto specificCrypto = partnerData.getCrypto();
+					// RH, 20180918, en
+//					artifactResolve = (ArtifactResolve)SamlTools.signSamlObject(artifactResolve, useSha256? "sha256": "sha1",
+//							"true".equalsIgnoreCase(partnerData.getAddkeyname()), "true".equalsIgnoreCase(partnerData.getAddcertificate()) );	// RH, 20180918, o
 					artifactResolve = (ArtifactResolve)SamlTools.signSamlObject(artifactResolve, useSha256? "sha256": "sha1",
-							"true".equalsIgnoreCase(partnerData.getAddkeyname()), "true".equalsIgnoreCase(partnerData.getAddcertificate()) );
+							"true".equalsIgnoreCase(partnerData.getAddkeyname()), "true".equalsIgnoreCase(partnerData.getAddcertificate()), specificCrypto);	// RH, 20180918, n
 				} else {
 				//	RH, 20180528, en
-					artifactResolve = (ArtifactResolve)SamlTools.signSamlObject(artifactResolve, useSha256? "sha256": "sha1");
+//					artifactResolve = (ArtifactResolve)SamlTools.signSamlObject(artifactResolve, useSha256? "sha256": "sha1");	// RH, 20180918, o
+					artifactResolve = (ArtifactResolve)SamlTools.signSamlObject(artifactResolve, useSha256? "sha256": "sha1", null);	// RH, 20180918, n
 				}	//	RH, 20180528, n
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "Signed the artifactResolve ======<");
 	

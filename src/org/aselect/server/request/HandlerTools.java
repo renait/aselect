@@ -449,7 +449,8 @@ public class HandlerTools
 		assertion = marshallAssertion(assertion, false);
 		if (sign) {
 			systemLogger.log(Level.FINER, MODULE, sMethod, "Sign the final Assertion >======");
-			assertion = (Assertion)SamlTools.signSamlObject(assertion);
+//			assertion = (Assertion)SamlTools.signSamlObject(assertion);	// RH, 20180918, o
+			assertion = (Assertion)SamlTools.signSamlObject(assertion, null);	// RH, 20180918, n
 			systemLogger.log(Level.FINER, MODULE, sMethod, "Signed the Assertion ======<");
 		}
 
@@ -588,7 +589,10 @@ public class HandlerTools
 		if (sign) {
 			systemLogger.log(Level.FINER, MODULE, sMethod, "Sign the final Assertion >======");
 //			assertion = (Assertion)SamlTools.signSamlObject(assertion);
-			assertion = (Assertion)SamlTools.signSamlObject(assertion, null, true, true); // sha1 default algorithm
+//			assertion = (Assertion)SamlTools.signSamlObject(assertion, null, true, true); // sha1 default algorithm	// RH, 20180918, o
+			assertion = (Assertion)SamlTools.signSamlObject(assertion, null, true, true, null); // sha1 default algorithm	// RH, 20180918, n
+			
+
 			systemLogger.log(Level.FINER, MODULE, sMethod, "Signed the Assertion ======<");
 		}
 
@@ -803,7 +807,8 @@ public class HandlerTools
 		refreshedAss = (Assertion) rebuildAssertion(refreshedAss);
 		if (sign) {
 			systemLogger.log(Level.FINER, MODULE, sMethod, "ReSigning the Assertion");
-			Assertion signedAss = (Assertion)SamlTools.signSamlObject(refreshedAss, alg.endsWith("sha256") ? "sha256" : null, adkeyname, addcert); // sha1 default algorithm
+//			Assertion signedAss = (Assertion)SamlTools.signSamlObject(refreshedAss, alg.endsWith("sha256") ? "sha256" : null, adkeyname, addcert); // sha1 default algorithm	// RH, 20180918, o
+			Assertion signedAss = (Assertion)SamlTools.signSamlObject(refreshedAss, alg.endsWith("sha256") ? "sha256" : null, adkeyname, addcert, null); // sha1 default algorithm	// RH, 20180918, n
 			return signedAss;
 		}
 		return refreshedAss;

@@ -12,6 +12,7 @@
 package org.aselect.server.request.handler.xsaml20.sp;
 
 import java.io.StringReader;
+import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.Date;
 import java.util.HashMap;
@@ -25,6 +26,7 @@ import org.apache.xml.serialize.OutputFormat;
 import org.apache.xml.serialize.XMLSerializer;
 import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.server.log.ASelectSystemLogger;
+import org.aselect.server.request.handler.xsaml20.PartnerData;
 import org.aselect.server.request.handler.xsaml20.SamlTools;
 import org.aselect.server.request.handler.xsaml20.SoapManager;
 import org.aselect.server.tgt.TGTManager;
@@ -406,9 +408,23 @@ public class SessionSyncRequestSender
 		authz.setResource(_sFederationUrl);
 		authz.setIssuer(issuer);
 
+		// RH, 20180918, sn
+		PartnerData partnerData = null;
+		PartnerData.Crypto specificCrypto = null;
+		try {
+			partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(_sFederationUrl);
+			if (partnerData != null) {
+				specificCrypto = partnerData.getCrypto();	// might be null
+			}
+		} catch (ASelectException e1) {
+			_oSystemLogger.log(Level.WARNING, MODULE, _sMethod, "Could not get handle to MetaDataManagerSp, not signing with specific private key");
+		}
+		// RH, 20180918, en
+		
 		// Sign the sessionsync
 		_oSystemLogger.log(Level.INFO, MODULE, _sMethod, "Sign the sessionSync >======");
-		authz = (AuthzDecisionQuery) SamlTools.signSamlObject(authz);
+//		authz = (AuthzDecisionQuery) SamlTools.signSamlObject(authz);	// RH, 20180918, o
+		authz = (AuthzDecisionQuery) SamlTools.signSamlObject(authz, specificCrypto);	// RH, 20180918, n
 		_oSystemLogger.log(Level.INFO, MODULE, _sMethod, "Signed the sessionSync ======<");
 
 		SAMLObject saml = authz;

@@ -277,8 +277,10 @@ public class OldMemoryStorageHandlerTimeOut extends OldMemoryStorageHandler
 			}
 		}
 		try {
+//			requestSender.sendSoapLogoutRequest(url, _serverUrl, sNameID,
+//					"urn:oasis:names:tc:SAML:2.0:logout:sp-timeout", pkey);	// RH, 20180918, o
 			requestSender.sendSoapLogoutRequest(url, _serverUrl, sNameID,
-					"urn:oasis:names:tc:SAML:2.0:logout:sp-timeout", pkey);
+					"urn:oasis:names:tc:SAML:2.0:logout:sp-timeout", pkey, null);	// RH, 20180918, o
 		}
 		catch (ASelectException e) {
 			_oSystemLogger.log(Level.WARNING, MODULE, _sMethod, "IDP - exception trying to send logout request", e);

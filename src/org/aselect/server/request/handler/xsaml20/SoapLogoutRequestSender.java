@@ -12,7 +12,9 @@
 package org.aselect.server.request.handler.xsaml20;
 
 import java.io.StringReader;
+import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.util.HashMap;
 import java.util.List;
 import java.util.logging.Level;
 
@@ -72,17 +74,17 @@ public class SoapLogoutRequestSender
 	 *             If sending fails.
 	 */
 
-	@Deprecated
-	   /**
-     * @deprecated
-     * use sendSoapLogoutRequest(String serviceProviderUrl, String issuerUrl, String sNameID, String reason, PublicKey pkey)
-     * 
-     */
-	public void sendSoapLogoutRequest(String serviceProviderUrl, String issuerUrl, String sNameID, String reason)
-	throws ASelectException
-	{
-		sendSoapLogoutRequest(serviceProviderUrl, issuerUrl, sNameID, reason, null);
-	}
+//	@Deprecated
+//	   /**
+//     * @deprecated
+//     * use sendSoapLogoutRequest(String serviceProviderUrl, String issuerUrl, String sNameID, String reason, PublicKey pkey)
+//     * 
+//     */
+//	public void sendSoapLogoutRequest(String serviceProviderUrl, String issuerUrl, String sNameID, String reason)
+//	throws ASelectException
+//	{
+//		sendSoapLogoutRequest(serviceProviderUrl, issuerUrl, sNameID, reason, null);
+//	}
 
 	/**
 	 * Send Logout Request. <br>
@@ -100,10 +102,15 @@ public class SoapLogoutRequestSender
 	 * @throws ASelectException
 	 *             If sending fails.
 	 */
-	public void sendSoapLogoutRequest(String serviceProviderUrl, String issuerUrl, String sNameID, String reason, PublicKey pkey)
-	throws ASelectException
+//	public void sendSoapLogoutRequest(String serviceProviderUrl, String issuerUrl, String sNameID, String reason, PublicKey pkey)
+//	throws ASelectException	// RH, 20180918, o
+//	public void sendSoapLogoutRequest(String serviceProviderUrl, String issuerUrl, String sNameID, String reason, PublicKey pkey, PrivateKey specificKey)
+	public void sendSoapLogoutRequest(String serviceProviderUrl, String issuerUrl, String sNameID, String reason, PublicKey pkey, PartnerData.Crypto specificCrypto)
+	throws ASelectException	// RH, 20180918, n
 	{
-		 sendSoapLogoutRequest(serviceProviderUrl, issuerUrl, sNameID, reason, pkey, null);
+//		 sendSoapLogoutRequest(serviceProviderUrl, issuerUrl, sNameID, reason, pkey, null);	// RH, 20180918, o
+//		 sendSoapLogoutRequest(serviceProviderUrl, issuerUrl, sNameID, reason, pkey, null, specificKey);	// RH, 20180918, o
+		 sendSoapLogoutRequest(serviceProviderUrl, issuerUrl, sNameID, reason, pkey, null, specificCrypto);	// RH, 20180918, o
 	}
 	
 
@@ -127,10 +134,15 @@ public class SoapLogoutRequestSender
 	 *             
 	 * This method is for backward compatibility, better to use sendSoapLogoutRequestWithResult
 	 */
-	public void sendSoapLogoutRequest(String serviceProviderUrl, String issuerUrl, String sNameID, String reason, PublicKey pkey, List<String> sessionindexes)
-	throws ASelectException
+//	public void sendSoapLogoutRequest(String serviceProviderUrl, String issuerUrl, String sNameID, String reason, PublicKey pkey, List<String> sessionindexes)
+//	throws ASelectException	// RH, 20180918, o
+//	public void sendSoapLogoutRequest(String serviceProviderUrl, String issuerUrl, String sNameID, String reason, PublicKey pkey, List<String> sessionindexes, PrivateKey specificKey)
+	public void sendSoapLogoutRequest(String serviceProviderUrl, String issuerUrl, String sNameID, String reason, PublicKey pkey, List<String> sessionindexes, PartnerData.Crypto specificCrypto)
+	throws ASelectException	// RH, 20180918, n
 	{
-		 sendSoapLogoutRequestWithStatus(serviceProviderUrl, issuerUrl, sNameID, reason, pkey, sessionindexes);
+//		 sendSoapLogoutRequestWithStatus(serviceProviderUrl, issuerUrl, sNameID, reason, pkey, sessionindexes);	// RH, 20180918, o
+//		 sendSoapLogoutRequestWithStatus(serviceProviderUrl, issuerUrl, sNameID, reason, pkey, sessionindexes, specificKey);	// RH, 20180918, n
+		 sendSoapLogoutRequestWithStatus(serviceProviderUrl, issuerUrl, sNameID, reason, pkey, sessionindexes, specificCrypto);	// RH, 20180918, n
 	}
 	
 	
@@ -154,9 +166,12 @@ public class SoapLogoutRequestSender
 	 *             If sending fails.
 	 * @return status from the logoutresponse
 	 */
-	public StatusCode sendSoapLogoutRequestWithStatus(String serviceProviderUrl, String issuerUrl, String sNameID, String reason, PublicKey pkey, List<String> sessionindexes)
-	throws ASelectException
-	{
+//	public StatusCode sendSoapLogoutRequestWithStatus(String serviceProviderUrl, String issuerUrl, String sNameID, String reason, PublicKey pkey, List<String> sessionindexes)
+//	throws ASelectException	// RH, 20180918, o
+//	public StatusCode sendSoapLogoutRequestWithStatus(String serviceProviderUrl, String issuerUrl, String sNameID, String reason, PublicKey pkey, List<String> sessionindexes, PrivateKey specificKey)
+	public StatusCode sendSoapLogoutRequestWithStatus(String serviceProviderUrl, String issuerUrl, String sNameID, String reason, PublicKey pkey, List<String> sessionindexes, PartnerData.Crypto specificCrypto)
+			throws ASelectException	// RH, 20180918, n
+			{
 		String sMethod = "sendSoapLogoutRequest";
 		StatusCode statusCode = null;
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "Send backchannel LogoutRequest to " + serviceProviderUrl
@@ -167,7 +182,9 @@ public class SoapLogoutRequestSender
 		
 		// Always sign the logoutRequest
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "Sign the logoutRequest >======");
-		logoutRequest = (LogoutRequest)SamlTools.signSamlObject(logoutRequest);
+//		logoutRequest = (LogoutRequest)SamlTools.signSamlObject(logoutRequest);	// RH, 20180918, o
+//		logoutRequest = (LogoutRequest)SamlTools.signSamlObject(logoutRequest, specificKey);	// RH, 20180918, n
+		logoutRequest = (LogoutRequest)SamlTools.signSamlObject(logoutRequest, specificCrypto);	// RH, 20180918, n
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "Signed the logoutRequest ======<");
 
 		SoapManager soapManager = new SoapManager(sslSocketFactory);	// sslSocketFactory may be null
