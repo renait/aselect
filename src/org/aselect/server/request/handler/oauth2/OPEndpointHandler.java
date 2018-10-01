@@ -725,9 +725,14 @@ public class OPEndpointHandler extends ProtoRequestHandler
 						try {
 							id_token = createIDToken(hmExtractedAttributes, (String)(hmExtractedAttributes.get("uid")), _sMyServerID, saved_client_id, saved_nonce, appidacr );
 							history.put(ID_TOKEN_PREFIX+ generated_authorization_code, id_token);
-						} catch (UnsupportedEncodingException | JoseException e) {
+//						} catch (UnsupportedEncodingException | JoseException e) {	// RH, 20181001, o, 1.6 compliance
+						} catch (UnsupportedEncodingException e) {
 							// should redirect to caller with error
-							_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not create id_token");
+							_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not create id_token, UnsupportedEncodinG");
+							throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR);
+						} catch (JoseException e) {
+							// should redirect to caller with error
+							_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not create id_token, Jose PROBLEM");
 							throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR);
 						}
 					}
