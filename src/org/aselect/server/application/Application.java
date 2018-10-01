@@ -44,6 +44,7 @@
 
 package org.aselect.server.application;
 
+import java.net.URI;
 import java.security.PublicKey;
 import java.util.HashMap;
 import java.util.Set;
@@ -131,6 +132,14 @@ public class Application
 	// Optional application specific for pushing 'attributes' parameter back on upgrade_tgt request
 	private boolean _bPushAttributes = false;	// backwards compatibility
 
+	// RH, 20180904, sn
+	private boolean _bOauth_verify_redirect_uri = true;
+	private boolean _bOauth_verify_client_id = true;
+	private String _sOauth_client_credentials_user = null;	// defaults to client_id
+	private String _sOauth_client_credentials_pwhash = null;
+	private String _sOauth2_client_credentials_pwhash_alg = null;
+	private HashMap<URI,String> _htOauth_redirect_uri = null;	// URI , description
+	// RH, 20180904, en
 	
 	/**
 	 * Constructor which contains the default parameters for an Application <br>
@@ -797,6 +806,62 @@ public class Application
 		this._sApplicationEndpointAudience = _sApplicationEndpointAudience;
 	}
 
+	// RH, 20180904, sn
+	public synchronized boolean isOauth_verify_redirect_uri() {
+		return _bOauth_verify_redirect_uri;
+	}
+
+	public synchronized void setOauth_verify_redirect_uri(
+			boolean _bOauth_verify_redirect_uri) {
+		this._bOauth_verify_redirect_uri = _bOauth_verify_redirect_uri;
+	}
+
+	public synchronized boolean isOauth_verify_client_id() {
+		return _bOauth_verify_client_id;
+	}
+
+	public synchronized void setOauth_verify_client_id(
+			boolean _bOauth_verify_client_id) {
+		this._bOauth_verify_client_id = _bOauth_verify_client_id;
+	}
+
+	public synchronized String getOauth_client_credentials_user() {
+		return _sOauth_client_credentials_user;
+	}
+
+	public synchronized void setOauth_client_credentials_user(
+			String _sOauth_client_credentials_user) {
+		this._sOauth_client_credentials_user = _sOauth_client_credentials_user;
+	}
+
+	public synchronized String getOauth_client_credentials_pwhash() {
+		return _sOauth_client_credentials_pwhash;
+	}
+
+	public synchronized void setOauth_client_credentials_pwhash(
+			String _sOauth_client_credentials_pwhash) {
+		this._sOauth_client_credentials_pwhash = _sOauth_client_credentials_pwhash;
+	}
+
+	public synchronized HashMap<URI,String> getOauth_redirect_uri() {
+		return _htOauth_redirect_uri;
+	}
+
+	public synchronized void setOauth_redirect_uri(
+			HashMap<URI,String> _htOauth_redirect_uri) {
+		this._htOauth_redirect_uri = _htOauth_redirect_uri;
+	}
+	// RH, 20180904, en
+
+	public synchronized String getOauth2_client_credentials_pwhash_alg() {
+		return _sOauth2_client_credentials_pwhash_alg;
+	}
+
+	public synchronized void setOauth2_client_credentials_pwhash_alg(
+			String _sOauth2_client_credentials_pwhash_alg) {
+		this._sOauth2_client_credentials_pwhash_alg = _sOauth2_client_credentials_pwhash_alg;
+	}
+	
 	/**
 	 * @return the _htAdditionalRegex
 	 */
@@ -812,6 +877,5 @@ public class Application
 	{
 		this._htAdditionalRegex = _htAdditionalRegex;
 	}
-
 
 }

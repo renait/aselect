@@ -288,6 +288,14 @@ public class TGTIssuer
 			Utils.copyHashmapValue("oauthsessionid", htTGTContext, htSessionContext);
 			Utils.copyHashmapValue("oauthsessionstate", htTGTContext, htSessionContext);
 			Utils.copyHashmapValue("oauthsessionredirect_uri", htTGTContext, htSessionContext);
+			// 20180830, RH, sn
+			Utils.copyHashmapValue("oauthsessionresp_types", htTGTContext, htSessionContext);
+			Utils.copyHashmapValue("oauthsessionscope", htTGTContext, htSessionContext);
+			Utils.copyHashmapValue("oauthsessionclient_id", htTGTContext, htSessionContext);
+			Utils.copyHashmapValue("oauthsessionnonce", htTGTContext, htSessionContext);
+			
+			// 20180830, RH, en
+
 
 			// RH, 20160627, sn
 			// copy parameters2forward to tgt, 	// htTGTContext != null
@@ -663,6 +671,13 @@ public class TGTIssuer
 			Utils.copyHashmapValue("oauthsessionid", htTGTContext, htSessionContext);
 			Utils.copyHashmapValue("oauthsessionstate", htTGTContext, htSessionContext);
 			Utils.copyHashmapValue("oauthsessionredirect_uri", htTGTContext, htSessionContext);
+			// 20180830, RH, sn
+			Utils.copyHashmapValue("oauthsessionresp_types", htTGTContext, htSessionContext);
+			Utils.copyHashmapValue("oauthsessionscope", htTGTContext, htSessionContext);
+			Utils.copyHashmapValue("oauthsessionclient_id", htTGTContext, htSessionContext);
+			Utils.copyHashmapValue("oauthsessionnonce", htTGTContext, htSessionContext);
+			// 20180830, RH, en
+
 
 			
 			// RH, 20160627, sn
