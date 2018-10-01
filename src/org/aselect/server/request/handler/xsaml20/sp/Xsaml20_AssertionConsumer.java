@@ -1101,28 +1101,52 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 				if (sResultCode.equals(Errors.ERROR_ASELECT_SERVER_CANCEL)
 						|| sResultCode.equals(Errors.ERROR_ASELECT_AUTHSP_COULD_NOT_AUTHENTICATE_USER)) {
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, "Cancel");
+					// RH, 20180924, so
+//					_authenticationLogger.log(new Object[] {
+//						"Saml", Auxiliary.obfuscate(sUID), (String) htServiceRequest.get("client_ip"), sRemoteOrg,
+//						htSessionContext.get("app_id"), "denied", sFederationId, sResultCode
+//					});
+					// RH, 20180924, eo
+					// RH, 20180924, sn
 					_authenticationLogger.log(new Object[] {
 						"Saml", Auxiliary.obfuscate(sUID), (String) htServiceRequest.get("client_ip"), sRemoteOrg,
-						htSessionContext.get("app_id"), "denied", sFederationId, sResultCode
+						htSessionContext.get("app_id"), "denied", sFederationId, sResultCode, htRemoteAttributes.get("authority")
 					});
+					// RH, 20180924, en
 					// Issue 'CANCEL' TGT
 					TGTIssuer tgtIssuer = new TGTIssuer(_sMyServerId);
 					tgtIssuer.issueErrorTGTandRedirect(sLocalRid, htSessionContext, sResultCode, servletResponse);
 				}
 				else { // remote server returned error
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, "Error");
+					// RH, 20180924, so
+//					_authenticationLogger.log(new Object[] {
+//						"Saml", Auxiliary.obfuscate(sUID), (String) htServiceRequest.get("client_ip"), sRemoteOrg,
+//						htSessionContext.get("app_id"), "denied", sFederationId, sResultCode
+//					});
+					// RH, 20180924, eo
+					// RH, 20180924, so
 					_authenticationLogger.log(new Object[] {
 						"Saml", Auxiliary.obfuscate(sUID), (String) htServiceRequest.get("client_ip"), sRemoteOrg,
-						htSessionContext.get("app_id"), "denied", sFederationId, sResultCode
+						htSessionContext.get("app_id"), "denied", sFederationId, sResultCode, htRemoteAttributes.get("authority")
 					});
 					throw new ASelectException(Errors.ERROR_ASELECT_AUTHSP_ACCESS_DENIED);
 				}
 			}
 			else { // No result_code set, log successful authentication
+				// RH, 20180924, so
+//				_authenticationLogger.log(new Object[] {
+//					"Saml", Auxiliary.obfuscate(sUID), (String) htServiceRequest.get("client_ip"), sRemoteOrg,
+//					htSessionContext.get("app_id"), "granted", sFederationId
+//				});
+				// RH, 20180924, eo
+				// RH, 20180924, sn
 				_authenticationLogger.log(new Object[] {
 					"Saml", Auxiliary.obfuscate(sUID), (String) htServiceRequest.get("client_ip"), sRemoteOrg,
-					htSessionContext.get("app_id"), "granted", sFederationId
+					htSessionContext.get("app_id"), "granted", sFederationId, sResultCode, htRemoteAttributes.get("authority")
 				});
+				// RH, 20180924, en
+
 				if ( isLogAuthProof() ) {	// Log auth_proof here if enabled
 					ASelectAuthProofLogger.getHandle().log( sUID, (String) htRemoteAttributes.get("client_ip"), (String)htSessionContext.get("app_id"), (String)null, (String)htRemoteAttributes.get("auth_proof") );
 //					_systemLogger.log(Level.FINEST, MODULE, sMethod, "auth_proof logged after successful authentication=" + 
