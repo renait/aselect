@@ -1136,6 +1136,12 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 							Utils.copyHashmapValue("oauthsessionid", _htTGTContext, _htSessionContext);
 							Utils.copyHashmapValue("oauthsessionstate", _htTGTContext, _htSessionContext);
 							Utils.copyHashmapValue("oauthsessionredirect_uri", _htTGTContext, _htSessionContext);
+							// 20180830, RH, sn
+							Utils.copyHashmapValue("oauthsessionresp_types", _htTGTContext, _htSessionContext);
+							Utils.copyHashmapValue("oauthsessionscope", _htTGTContext, _htSessionContext);
+							Utils.copyHashmapValue("oauthsessionclient_id", _htTGTContext, _htSessionContext);
+							Utils.copyHashmapValue("oauthsessionnonce", _htTGTContext, _htSessionContext);
+							// 20180830, RH, en
 														
 							_tgtManager.updateTGT(sTgt, _htTGTContext);
 							
@@ -1469,6 +1475,14 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 							Utils.copyHashmapValue("oauthsessionid", _htTGTContext, _htSessionContext);
 							Utils.copyHashmapValue("oauthsessionstate", _htTGTContext, _htSessionContext);
 							Utils.copyHashmapValue("oauthsessionredirect_uri", _htTGTContext, _htSessionContext);
+							// 20180830, RH, sn
+							Utils.copyHashmapValue("oauthsessionresp_types", _htTGTContext, _htSessionContext);
+							Utils.copyHashmapValue("oauthsessionscope", _htTGTContext, _htSessionContext);
+							Utils.copyHashmapValue("oauthsessionclient_id", _htTGTContext, _htSessionContext);
+							Utils.copyHashmapValue("oauthsessionnonce", _htTGTContext, _htSessionContext);
+							
+							// 20180830, RH, en
+
 
 							_tgtManager.updateTGT(sTgt, _htTGTContext);
 							_systemLogger.log(Level.INFO, _sModule, sMethod, "REDIR " + sRedirectUrl);

@@ -114,6 +114,7 @@ package org.aselect.server.application;
 
 import java.io.File;
 import java.io.FileInputStream;
+import java.net.URI;
 import java.security.KeyStore;
 import java.security.PublicKey;
 import java.util.HashMap;
@@ -149,6 +150,8 @@ public class ApplicationManager
 	// These could be drawn from saml20 libraries but we don't want this dependency here
 	private static final String AUTHN_CONTEXT_DECL_REF = "AuthnContextDeclRef";
 	private static final String AUTHN_CONTEXT_DECL = "AuthnContextDecl";
+	private static final String DEFAULT_PW_HASH_METHOD = "SHA-256";
+
 
 	// All
 	private HashMap _htApplications;
@@ -412,6 +415,41 @@ public class ApplicationManager
 
 				// Bauke 20101125: For DigiD4Bedrijven:
 				String sUseSsn = ASelectConfigManager.getSimpleParam(oApplication, "use_ssn", false);
+				
+				// RH, 20180904, sn
+				boolean bOauthVerifyClientID = true;
+				String sOauthVerifyClientID = ASelectConfigManager.getParamFromSection(oApplication, "oauth2", "verify_client_id", false);
+				if (sOauthVerifyClientID != null)
+					bOauthVerifyClientID = new Boolean(sOauthVerifyClientID).booleanValue();
+
+				boolean bOauthVerifyRedirectURI = true;
+				String sOauthVerifyRedirectURI = ASelectConfigManager.getParamFromSection(oApplication, "oauth2", "verify_redirect_uri", false);
+				if (sOauthVerifyRedirectURI != null)
+					bOauthVerifyRedirectURI = new Boolean(sOauthVerifyRedirectURI).booleanValue();
+
+				String sOauthClientCredentialsUser = ASelectConfigManager.getParamFromSection(oApplication, "oauth2", "client_credentials_user", false);
+				String sOauthClientCredentialsPwHash = ASelectConfigManager.getParamFromSection(oApplication, "oauth2", "client_credentials_pwhash", false);
+
+				String sOauth2_client_credentials_pwhash_alg = ASelectConfigManager.getParamFromSection(oApplication, sOauthClientCredentialsPwHash, "algorithm", false);
+				if (sOauth2_client_credentials_pwhash_alg == null) {
+					_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config item 'method' found for 'oauth2_client_credentials_pwhash', using default: " + DEFAULT_PW_HASH_METHOD);
+					sOauth2_client_credentials_pwhash_alg = DEFAULT_PW_HASH_METHOD;
+				}
+
+				
+				HashMap<String, String> _htRedirectURI = new HashMap<String, String>();
+				_htRedirectURI = ASelectConfigManager.getTableFromConfig(oApplication, _htRedirectURI,
+						"oauth2", "redirect_uri", "uri",/*->*/null, false/* mandatory */, false/* unique values */);	// we will not use value yet
+				HashMap<URI, String> _htS_URI_RedirectURI = null;
+				if (_htRedirectURI != null && !_htRedirectURI.isEmpty()) {
+					_htS_URI_RedirectURI = new HashMap<URI, String>();
+					for (String suri : _htRedirectURI.keySet()) {
+						URI uri = new URI(suri);
+						_htS_URI_RedirectURI.put(uri, _htRedirectURI.get(suri));
+					}
+				}
+				// RH, 20180904, en
+				
 				application.setUseSsn(sUseSsn);
 
 				// required params
@@ -490,6 +528,17 @@ public class ApplicationManager
 
 				application.setNameIDAttribute(sNameIDAttribute);	// RH, 20171211, n
 
+				// RH, 20180904, sn
+				application.setOauth_verify_client_id(bOauthVerifyClientID);
+				application.setOauth_verify_redirect_uri(bOauthVerifyRedirectURI);
+				application.setOauth_client_credentials_user(sOauthClientCredentialsUser);
+				application.setOauth_client_credentials_pwhash(sOauthClientCredentialsPwHash);
+				application.setOauth_redirect_uri(_htS_URI_RedirectURI);
+				application.setOauth2_client_credentials_pwhash_alg(sOauth2_client_credentials_pwhash_alg);
+				
+				// RH, 20180904, en
+
+				
 				_htApplications.put(sAppId, application);
 				oApplication = _oASelectConfigManager.getNextSection(oApplication);
 			}
