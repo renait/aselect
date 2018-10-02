@@ -11,6 +11,7 @@
  */
 package org.aselect.server.request.handler.xsaml20;
 
+import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.Serializable;
 import java.security.PublicKey;
@@ -23,6 +24,7 @@ import javax.servlet.ServletConfig;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
+import org.aselect.server.request.HandlerTools;
 import org.aselect.server.request.RequestState;
 import org.aselect.server.request.handler.xsaml20.idp.MetaDataManagerIdp;
 import org.aselect.server.request.handler.xsaml20.idp.SLOTimer;
@@ -517,6 +519,8 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 			htTGTContext = tgtManager.getTGT(sNameID);
 		}
 
+		String social_login = null;	// RH, 20181002, save for setting the soacial_login cookie
+		
 		// RM_49_01
 		// List SessionIndexes = logoutRequest.getSessionIndexes();
 		if (htTGTContext != null) {
@@ -651,6 +655,12 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 					return;
 				}
 			}
+			
+			social_login = (String)htTGTContext.get("social_login");	// RH, 20181002, save for setting the soacial_login cookie
+			////////////////////////////
+			social_login = "social_login_from_cookie";	// FOR TESTING
+			////////////////////////////
+			
 			// No saml20 IdP, the TgT goes down the drain
 //			tgtManager.remove(sNameID);	// RH, 20180619, o
 			tgtManager.remove(htTGTContext.get("cookiestgt") != null ? (String)htTGTContext.get("cookiestgt") : sNameID);	// RH, 20180619, n
@@ -687,9 +697,27 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 			}
 		}
 		if (logoutResponseLocation == null) {
-			_systemLogger.log(Level.WARNING, MODULE, sMethod, "No logout ResponseLocation in metadata for "
+//			_systemLogger.log(Level.WARNING, MODULE, sMethod, "No logout ResponseLocation in metadata for "
+//					+ initiatingSP);	// RH,20181002, o
+			// RH, 20181002, sn
+			//////////////////////////////////////////////////////
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "No logout ResponseLocation in metadata for "
 					+ initiatingSP);
-			throw new ASelectException(Errors.ERROR_ASELECT_PARSE_ERROR);
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "Redirecting to: "	+ _sASelectServerUrl);
+			try {
+				if (social_login != null) {
+					HandlerTools.setEncryptedCookie(httpResponse, "social_login", social_login, _configManager.getCookieDomain(), -1/*age*/, _systemLogger);
+				}
+				httpResponse.sendRedirect(_sASelectServerUrl + (_sASelectServerUrl.endsWith("/") ? "" : "/") + "?request=logout&a-select-server="+_sMyServerId);
+				return;
+			}
+			catch (IOException e) {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Error redirecting to: "	+ _sASelectServerUrl);
+				throw new ASelectException(Errors.ERROR_ASELECT_PARSE_ERROR);	// RH, 20181002,o
+			}
+			/////////////////////////////////////////////////////
+			// RH, 20181002, en
+			//	throw new ASelectException(Errors.ERROR_ASELECT_PARSE_ERROR);	// RH, 20181002,o
 		}
 
 		// 20090604, Bauke passed RelayState to sendLogoutResponse
