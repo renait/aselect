@@ -2795,6 +2795,8 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 			// path=/ so applications can access it
 			HandlerTools.delCookieValue(servletResponse, "ssoname", sCookieDomain, "/", _systemLogger);
 			
+			String social_login = null; // RH, 20181002, n
+			
 			if (_htTGTContext != null) {
 				// 20120611, Bauke: added "usi"
 				String sUsi = (String)_htTGTContext.get("usi");
@@ -2803,6 +2805,11 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 				String sAppId = (String)_htTGTContext.get("app_id");
 				if (Utils.hasValue(sAppId))
 					_timerSensor.setTimerSensorAppId(sAppId);
+
+				social_login = (String)_htTGTContext.get("social_login");	// RH, 20181002
+				/////////////////////
+				social_login = "social_login_from_tgt"; // FOR TESTING
+				////////////////////
 
 				_tgtManager.remove(sTgt);
 
@@ -2854,6 +2861,15 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 			// Otherwise present the "loggedout.html" form
 			String sLoggedOutForm = _configManager.getHTMLForm("loggedout", _sUserLanguage, _sUserCountry);
 			sLoggedOutForm = _configManager.updateTemplate(sLoggedOutForm, null/*no session*/, _servletRequest);
+			// RH, 20181002, sn
+			if (social_login == null) {	// try to get it from the cookie
+				social_login = HandlerTools.getEncryptedCookie(_servletRequest, "social_login", _systemLogger);
+			}
+			if (social_login != null) {
+				sLoggedOutForm = Utils.replaceString(sLoggedOutForm, "[social_login]", social_login);
+			}
+			// RH, 20181002, en
+
 			Tools.pauseSensorData(_configManager, _systemLogger, _htSessionContext);  //20111102
 			// no RID _sessionManager.update(sRid, _htSessionContext); // Write session
 			if (_htSessionContext != null) {
