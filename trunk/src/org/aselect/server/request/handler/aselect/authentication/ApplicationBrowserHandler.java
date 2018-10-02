@@ -3438,6 +3438,13 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 		sUserInfoForm = Utils.replaceString(sUserInfoForm, "[app_id]", sTemp);
 		sUserInfoForm = _configManager.updateTemplate(sUserInfoForm, null/*no session*/, _servletRequest);
 
+		// RH, 20181002, sn
+		sTemp = (String) _htTGTContext.get("social_login");
+		if (sTemp == null)
+			sTemp = "[unknown]";
+		sUserInfoForm = Utils.replaceString(sUserInfoForm, "[social_login]", sTemp);
+		// RH, 20181002, en
+		
 		sTemp = (String) _htTGTContext.get("authsp");
 		if (sTemp != null) {
 			try {
