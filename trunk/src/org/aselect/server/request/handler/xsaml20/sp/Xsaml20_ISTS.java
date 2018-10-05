@@ -63,6 +63,8 @@ import org.opensaml.saml2.common.impl.ExtensionsBuilder;
 import org.opensaml.saml2.core.AuthnContextClassRef;
 import org.opensaml.saml2.core.AuthnContextComparisonTypeEnumeration;
 import org.opensaml.saml2.core.AuthnRequest;
+import org.opensaml.saml2.core.IDPEntry;
+import org.opensaml.saml2.core.IDPList;
 import org.opensaml.saml2.core.Issuer;
 import org.opensaml.saml2.core.RequestedAuthnContext;
 import org.opensaml.saml2.core.RequesterID;
@@ -383,7 +385,6 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 				requestedAuthnContext.setComparison(AuthnContextComparisonTypeEnumeration.EXACT);
 
 			// RH, 20171201, sn
-			/////////////////////////////////////////////////////////////////////
 			Scoping scoping = null;
 			boolean suppressscoping = partnerData != null && "true".equalsIgnoreCase(partnerData.getSuppressscoping());	// RH, 20180327, sn
 			if (!suppressscoping) {	// RH, 20180327, en
@@ -402,12 +403,37 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 					_systemLogger.log(Level.FINEST, MODULE, sMethod, "No config item 'authnrequest_requesterid' found");
 				}
 				// RH, 20171201, en
+				
 			// RH, 20180327, sn
 			} else {
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Suppress Scoping enabled" );
 			}
 			// RH, 20180327, en
-			
+
+			// RH, 20181005, sn
+			String sIDPEntryProviderID = partnerData == null ? null : partnerData.getIdpentryproviderid();
+			if (sIDPEntryProviderID != null) {
+				if (scoping == null) {
+					SAMLObjectBuilder<Scoping> scopingtBuilder = null;
+					scopingtBuilder = (SAMLObjectBuilder<Scoping>) builderFactory
+							.getBuilder(Scoping.DEFAULT_ELEMENT_NAME);
+					scoping = scopingtBuilder.buildObject();
+				}
+				SAMLObjectBuilder<IDPList> idpListBuilder = (SAMLObjectBuilder<IDPList>) builderFactory
+						.getBuilder(IDPList.DEFAULT_ELEMENT_NAME);
+				IDPList idpList = idpListBuilder.buildObject();
+				SAMLObjectBuilder<IDPEntry> idpEntryBuilder = (SAMLObjectBuilder<IDPEntry>) builderFactory
+						.getBuilder(IDPEntry.DEFAULT_ELEMENT_NAME);
+				IDPEntry idpEntry = idpEntryBuilder.buildObject();
+				idpEntry.setProviderID(sIDPEntryProviderID);
+				idpList.getIDPEntrys().add(idpEntry);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Setting the idp sIDPEntryProviderID:" + sIDPEntryProviderID);
+				scoping.setIDPList(idpList);
+			} else {
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "No config item 'authnrequest_providerid' found");
+			}
+			// RH, 20181005, en
+
 			// 20120706, Bauke: save in session, must be transferred to TGT and used for Digid4 session_sync mechanism
 			String sst = partnerData.getRedirectSyncTime();
 			if (Utils.hasValue(sst)) {
