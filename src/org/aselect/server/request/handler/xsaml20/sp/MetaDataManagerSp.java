@@ -165,9 +165,14 @@ public class MetaDataManagerSp extends AbstractMetaDataManager
 			// RH, 20180327, sn
 			String suppressscoping = Utils.getSimpleParam(_configManager, _systemLogger, idpSection, "suppressscoping", false);
 			if (suppressscoping != null)
-				idpData.setSuppressscoping(suppressscoping);;
+				idpData.setSuppressscoping(suppressscoping);
 			// RH, 20180327, en
 	
+			// RH, 20181005, sn
+			String idpentryproviderid = Utils.getParamFromSection(_configManager, _systemLogger, idpSection, "authnrequest_scoping", "authnrequest_providerid", false);
+			if (idpentryproviderid != null)
+				idpData.setIdpentryproviderid(idpentryproviderid);
+			// RH, 20181005, en
 
 			// RH, 20180810, sn
 			HashMap<String, String> _htSamlLevels = new HashMap<String, String>(); // contains level -> urn

@@ -53,6 +53,7 @@ public class PartnerData
 	
 	private String logoutSupport = "true";
 	private String suppressscoping = null; // RH, 20180327, n
+	private String idpentryproviderid = null; // RH, 20181005, n
 
 	private String federationurl = null;
 	private SecurityLevelEntry[] securityLevels = null;
@@ -214,6 +215,14 @@ public class PartnerData
 
 	// RH, 20180917, sn
 	
+	public synchronized String getIdpentryproviderid() {
+		return idpentryproviderid;
+	}
+
+	public synchronized void setIdpentryproviderid(String idpentryproviderid) {
+		this.idpentryproviderid = idpentryproviderid;
+	}
+
 	// Simple wrapper for crypto info
 	public class Crypto
 	{
