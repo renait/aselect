@@ -511,7 +511,8 @@ public class SocialAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 
 		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Result="+sResultCode);
 		try {
-			if (_sFailureHandling.equalsIgnoreCase("aselect") || sResultCode.equals(Errors.ERROR_SOCIAL_SUCCESS)) {
+//			if (_sFailureHandling.equalsIgnoreCase("aselect") || sResultCode.equals(Errors.ERROR_SOCIAL_SUCCESS)) {	// RH, 20181004, o
+			if (htSessionContext != null && (_sFailureHandling.equalsIgnoreCase("aselect") || sResultCode.equals(Errors.ERROR_SOCIAL_SUCCESS))) {	// RH, 20181004, n
 				// A-Select handles error or success
 				String sRid = (String)htSessionContext.get("rid");
 				String sAsUrl = (String)htSessionContext.get("as_url");
