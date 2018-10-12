@@ -520,6 +520,7 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 		}
 
 		String social_login = null;	// RH, 20181002, save for setting the soacial_login cookie
+		String app_id = null;	// RH, 20181004, save for setting the soacial_login cookie
 		
 		// RM_49_01
 		// List SessionIndexes = logoutRequest.getSessionIndexes();
@@ -657,9 +658,7 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 			}
 			
 			social_login = (String)htTGTContext.get("social_login");	// RH, 20181002, save for setting the soacial_login cookie
-			////////////////////////////
-			social_login = "social_login_from_cookie";	// FOR TESTING
-			////////////////////////////
+			app_id = (String)htTGTContext.get("app_id");	// RH, 20181004, save for setting the soacial_login cookie
 			
 			// No saml20 IdP, the TgT goes down the drain
 //			tgtManager.remove(sNameID);	// RH, 20180619, o
@@ -707,6 +706,9 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 			try {
 				if (social_login != null) {
 					HandlerTools.setEncryptedCookie(httpResponse, "social_login", social_login, _configManager.getCookieDomain(), -1/*age*/, _systemLogger);
+				}
+				if (app_id != null) {
+					HandlerTools.setEncryptedCookie(httpResponse, "app_id", app_id, _configManager.getCookieDomain(), -1/*age*/, _systemLogger);
 				}
 				httpResponse.sendRedirect(_sASelectServerUrl + (_sASelectServerUrl.endsWith("/") ? "" : "/") + "?request=logout&a-select-server="+_sMyServerId);
 				return;

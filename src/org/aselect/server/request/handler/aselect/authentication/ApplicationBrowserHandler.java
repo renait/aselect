@@ -2796,20 +2796,19 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 			HandlerTools.delCookieValue(servletResponse, "ssoname", sCookieDomain, "/", _systemLogger);
 			
 			String social_login = null; // RH, 20181002, n
+			String sAppId = null;	// RH, 20181004, n
 			
 			if (_htTGTContext != null) {
 				// 20120611, Bauke: added "usi"
 				String sUsi = (String)_htTGTContext.get("usi");
 				if (Utils.hasValue(sUsi))  // overwrite
 					_timerSensor.setTimerSensorId(sUsi);
-				String sAppId = (String)_htTGTContext.get("app_id");
+//				String sAppId = (String)_htTGTContext.get("app_id");	// RH, 20181004, o
+				sAppId = (String)_htTGTContext.get("app_id");	// RH, 20181004, n
 				if (Utils.hasValue(sAppId))
 					_timerSensor.setTimerSensorAppId(sAppId);
 
 				social_login = (String)_htTGTContext.get("social_login");	// RH, 20181002
-				/////////////////////
-				social_login = "social_login_from_tgt"; // FOR TESTING
-				////////////////////
 
 				_tgtManager.remove(sTgt);
 
@@ -2869,7 +2868,16 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 				sLoggedOutForm = Utils.replaceString(sLoggedOutForm, "[social_login]", social_login);
 			}
 			// RH, 20181002, en
-
+			// RH, 20181004, sn
+			if (sAppId == null) {	// try to get it from the cookie
+				sAppId = HandlerTools.getEncryptedCookie(_servletRequest, "app_id", _systemLogger);
+			}
+			if (sAppId != null) {
+				sLoggedOutForm = Utils.replaceString(sLoggedOutForm, "[app_id]", sAppId);
+			}
+			// RH, 20181004, en
+			
+			
 			Tools.pauseSensorData(_configManager, _systemLogger, _htSessionContext);  //20111102
 			// no RID _sessionManager.update(sRid, _htSessionContext); // Write session
 			if (_htSessionContext != null) {
