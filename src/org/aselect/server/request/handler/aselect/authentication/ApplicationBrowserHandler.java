@@ -548,18 +548,23 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 				pwOut.println(sServerInfoForm);
 			}
 		}
-		else if (sRequest.equals("logout")) {
+//		else if (sRequest.equals("logout")) {	// RH, 20181105, o
+		else if (sRequest.equals("logout") || sRequest.equals("logout_nosaml")) {	// RH, 20181105, n
 //			handleLogout(htServiceRequest, _servletResponse, pwOut);	// RH, 20140819, o
 			// RH, 20140819, sn
 			//////////////////////////////////////////////////////
 			boolean doSamlLogout = false;	// true = for testing, get this from e.g. presence of sp_issuer and/or sso_session in tgtcontext
-			doSamlLogout = ( _htTGTContext != null ) && ( _htTGTContext.get("sp_issuer") != null ) &&  ( _htTGTContext.get("sso_session") != null );
-
+			// RH, 20181105, sn
+			if (!sRequest.equals("logout_nosaml")) {// special case if sp does not support logout	// RH, 20181105, n
+				doSamlLogout = ( _htTGTContext != null ) && ( _htTGTContext.get("sp_issuer") != null ) &&  ( _htTGTContext.get("sso_session") != null );
+			}	// RH, 20181105, n
 			if (doSamlLogout) {
-				_systemLogger.log(Level.FINER, _sModule, sMethod, "doSamlLogout, _htTGTContext:" + _htTGTContext);
+//				_systemLogger.log(Level.FINER, _sModule, sMethod, "doSamlLogout, _htTGTContext:" + _htTGTContext);	// RH, 20181105, o
+				_systemLogger.log(Level.FINEST, _sModule, sMethod, "handleSamlLogout, _htTGTContext:" + Auxiliary.obfuscate(_htTGTContext));	// RH, 20181105, n
 				handleSamlLogout(htServiceRequest, _servletRequest, _servletResponse, pwOut);
 			}
 			else {
+				_systemLogger.log(Level.FINEST, _sModule, sMethod, "handleLogout, _htTGTContext:" + Auxiliary.obfuscate(_htTGTContext));	// RH, 20181105, n
 				handleLogout(htServiceRequest, _servletResponse, pwOut);
 			}
 			// RH, 20140819, en
