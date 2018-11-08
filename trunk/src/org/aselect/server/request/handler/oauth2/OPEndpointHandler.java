@@ -19,6 +19,7 @@ import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
 import java.net.URL;
+import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
@@ -644,7 +645,17 @@ public class OPEndpointHandler extends ProtoRequestHandler
 				String finalResult  = verify_credentials(servletRequest, extractedAselect_credentials, sAppId);
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "finalResult after verify_credentials: " + finalResult);
 				
+				
 	    		String extractedAttributes = finalResult.replaceFirst(".*attributes=([^&]*).*$", "$1");
+	    		// RH, 20181108, sn
+				try {
+					extractedAttributes = URLDecoder.decode(extractedAttributes, "UTF-8");
+				} catch (UnsupportedEncodingException e1) {
+					// should not happen
+					_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not URLDecode attributes: " + e1.getMessage());
+					extractedAttributes = "";
+				}	
+	    		// RH, 20181108, en
 	    		HashMap hmExtractedAttributes = Utils.deserializeAttributes(extractedAttributes);
 				
 	    		String extractedResultCode = finalResult.replaceFirst(".*result_code=([^&]*).*$", "$1");
