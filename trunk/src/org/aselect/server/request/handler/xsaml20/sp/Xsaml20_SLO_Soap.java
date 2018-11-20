@@ -15,6 +15,7 @@ import java.io.StringReader;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.HashMap;
+import java.util.List;
 import java.util.logging.Level;
 
 import javax.servlet.ServletConfig;
@@ -170,15 +171,16 @@ public class Xsaml20_SLO_Soap extends Saml20_BaseHandler
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "Do LogoutRequest signature verification=" + is_bVerifySignature());
 			if (is_bVerifySignature()) {
 				// Check signature of LogoutRequest
-				PublicKey pkey = metadataManager.getSigningKeyFromMetadata(logoutRequestIssuer);
-				if (pkey == null) {
+				List<PublicKey> pkeys = metadataManager.getSigningKeyFromMetadata(logoutRequestIssuer);	// RH, 20181119, n
+				if (pkeys == null || pkeys.isEmpty()) {	// RH, 20181119, n
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, "PublicKey for entityId: " + logoutRequestIssuer
 							+ " not found.");
 					throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 				}
 
 				// if (checkSignature(logoutRequest,pkey)) { // We don't need the redirection anymore
-				if (SamlTools.checkSignature(logoutRequest, pkey)) {
+//				if (SamlTools.checkSignature(logoutRequest, pkey)) {	// RH, 20181119, o
+				if (SamlTools.checkSignature(logoutRequest, pkeys)) {	// RH, 20181119, n
 					_systemLogger.log(Level.INFO, MODULE, sMethod, "LogoutRequest was signed OK");
 				}
 				else {

@@ -15,6 +15,7 @@ import java.io.IOException;
 import java.io.PrintWriter;
 import java.security.PublicKey;
 import java.util.HashMap;
+import java.util.List;
 import java.util.logging.Level;
 import javax.servlet.ServletConfig;
 import javax.servlet.http.HttpServletRequest;
@@ -157,12 +158,12 @@ public class Xsaml20_SessionSync extends Saml20_BaseHandler
 				throw new ASelectException(Errors.ERROR_ASELECT_INIT_ERROR);
 			}
 
-			PublicKey pkey = null;
+			List<PublicKey> pkeys = null;	// RH, 20181119, n
 			if (is_bVerifySignature()) {
 				// Check signature of session synchronization here
 				MetaDataManagerSp metadataManager = MetaDataManagerSp.getHandle();
-				pkey = metadataManager.getSigningKeyFromMetadata(sFederationUrl);
-				if (pkey == null || "".equals(pkey)) {
+				pkeys = metadataManager.getSigningKeyFromMetadata(sFederationUrl);	// RH, 20181119, n
+				if (pkeys == null || pkeys.isEmpty()) {	// RH, 20181119, n
 					_systemLogger.log(Level.SEVERE, MODULE, _sMethod, "No public valid key in metadata for: "
 							+ sFederationUrl);
 					throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
@@ -178,7 +179,8 @@ public class Xsaml20_SessionSync extends Saml20_BaseHandler
 				throw new ASelectException(Errors.ERROR_ASELECT_INIT_ERROR);
 			}
 			SessionSyncRequestSender ss_req = new SessionSyncRequestSender(_oSystemLogger, _sSpUrl, updateInterval,
-					_sMessageType, sSessionSyncUrl, pkey, getMaxNotBefore(), getMaxNotOnOrAfter(), is_bVerifyInterval());
+//					_sMessageType, sSessionSyncUrl, pkey, getMaxNotBefore(), getMaxNotOnOrAfter(), is_bVerifyInterval());	// RH, 20181119, o
+					_sMessageType, sSessionSyncUrl, pkeys, getMaxNotBefore(), getMaxNotOnOrAfter(), is_bVerifyInterval());	// RH, 20181119, n
 			errorCode = ss_req.synchronizeSession(sTgT, htTGTContext, true/*updateTgt*/);
 		}
 		else {

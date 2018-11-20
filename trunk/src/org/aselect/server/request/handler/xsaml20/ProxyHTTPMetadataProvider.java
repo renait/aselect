@@ -24,9 +24,11 @@ package org.aselect.server.request.handler.xsaml20;
 import java.io.IOException;
 import java.net.URI;
 import java.net.URISyntaxException;
+import java.util.Timer;
 import java.util.logging.Level;
 
 import org.apache.commons.httpclient.HttpClient;
+import org.apache.commons.httpclient.HttpException;
 import org.apache.commons.httpclient.UsernamePasswordCredentials;
 import org.apache.commons.httpclient.auth.AuthScope;
 import org.apache.commons.httpclient.methods.GetMethod;
@@ -37,8 +39,8 @@ import org.aselect.server.log.ASelectSystemLogger;
 import org.aselect.system.logging.SystemLogger;
 import org.opensaml.saml2.metadata.provider.HTTPMetadataProvider;
 import org.opensaml.saml2.metadata.provider.MetadataProviderException;
-import org.opensaml.xml.XMLObject;
-import org.opensaml.xml.io.UnmarshallingException;
+// import org.opensaml.xml.XMLObject;
+// import org.opensaml.xml.io.UnmarshallingException;
 
 /**
  * @author Remy Hanswijk
@@ -70,7 +72,9 @@ public class ProxyHTTPMetadataProvider extends HTTPMetadataProvider
 	public ProxyHTTPMetadataProvider(String metadataURL, int requestTimeout, String proxyHost, int proxyPort)
 	throws MetadataProviderException {
 
-		super(metadataURL, requestTimeout);
+//		super(metadataURL, requestTimeout);	// RH, 20181116, o
+		super(new Timer(), new HttpClient(), metadataURL);	// RH, 20181116, n
+		
 
 		_systemLogger = ASelectSystemLogger.getHandle();
 		HttpClientParams clientParams = new HttpClientParams();
@@ -157,11 +161,9 @@ public class ProxyHTTPMetadataProvider extends HTTPMetadataProvider
 	 * Fetches the metadata from the remote server and unmarshalls it.
 	 * 
 	 * @return the unmarshalled metadata
-	 * @throws IOException
-	 *             thrown if the metadata can not be fetched from the remote server
-	 * @throws UnmarshallingException
-	 *             thrown if the metadata can not be unmarshalled
 	 */
+	
+	/*
 	@Override
 	protected XMLObject fetchMetadata()
 	throws IOException, UnmarshallingException
@@ -183,5 +185,36 @@ public class ProxyHTTPMetadataProvider extends HTTPMetadataProvider
 		return metadata;
 
 	}
+	*/
+	
+	// Besause of incompatibility between opensaml <=2.3.0 and 2.6.6. we have to change signature of this method
+	@Override
+	protected byte[] fetchMetadata() throws MetadataProviderException
+	{
+		_systemLogger.log(Level.FINEST, "Fetching metadata document from remote server");
+		byte[] metadata = null;
 
+		GetMethod getMethod = new GetMethod(getMetadataURI());
+		if (proxyhttpClient.getState().getCredentials(proxyauthScope) != null) {
+			_systemLogger.log(Level.FINEST, "Using BASIC authentication when retrieving metadata");
+			getMethod.setDoAuthentication(true);
+		}
+		try {
+			proxyhttpClient.executeMethod(getMethod);
+			_systemLogger.log(Level.FINER, "Retrieved the following metadata document\n{}"
+					+ getMethod.getResponseBodyAsString());
+			metadata = getMethod.getResponseBody();
+		} catch (HttpException e) {
+			_systemLogger.log(Level.WARNING, "HTTP Error retrieving metadata", e);
+			throw new MetadataProviderException(e);
+		} catch (IOException e) {
+			_systemLogger.log(Level.WARNING, "IO Error retrieving metadata", e);
+			throw new MetadataProviderException(e);
+		}
+		_systemLogger.log(Level.FINEST, "Retrieved metadata from remote server");
+		return metadata;
+
+	}
+
+	
 }

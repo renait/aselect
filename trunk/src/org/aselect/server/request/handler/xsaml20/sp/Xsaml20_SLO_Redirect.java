@@ -15,6 +15,7 @@ import java.io.PrintWriter;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.HashMap;
+import java.util.List;
 import java.util.logging.Level;
 
 import javax.servlet.ServletConfig;
@@ -167,14 +168,14 @@ public class Xsaml20_SLO_Redirect extends Saml20_BaseHandler
 				}
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "SAML message IS signed.");
 				MetaDataManagerSp metadataManager = MetaDataManagerSp.getHandle();
-				PublicKey publicKey = metadataManager.getSigningKeyFromMetadata(sEntityId);
-				if (publicKey == null) {
+				List<PublicKey> publicKeys = metadataManager.getSigningKeyFromMetadata(sEntityId);	// RH, 20181119, n
+				if (publicKeys == null || publicKeys.isEmpty()) {	// RH, 20181119, n
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, "PublicKey for entityId: " + sEntityId
 							+ " not found.");
 					throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 				}
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "Found PublicKey for entityId: " + sEntityId);
-				if (!SamlTools.verifySignature(publicKey, servletRequest)) {
+				if (!SamlTools.verifySignature(publicKeys, servletRequest)) {	// RH, 20181119, n
 					String errorMessage = "Signing of SAML message is not correct.";
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, errorMessage);
 					pwOut.write(errorMessage);

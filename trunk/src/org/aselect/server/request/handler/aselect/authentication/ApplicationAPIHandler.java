@@ -193,6 +193,7 @@ import java.security.MessageDigest;
 import java.security.PublicKey;
 import java.util.HashMap;
 import java.util.Iterator;
+import java.util.List;
 import java.util.logging.Level;
 
 import javax.servlet.http.HttpServletRequest;
@@ -821,9 +822,9 @@ public class ApplicationAPIHandler extends AbstractAPIRequestHandler
 			String sServerUrl = ASelectConfigManager.getParamFromSection(null, "aselect", "redirect_url", true);
 
 			String verify_signature = (String) htResult.get("verify_signature");
-			PublicKey pKey = null;
+			List <PublicKey> pKeys = null;
 			if ("true".equalsIgnoreCase(verify_signature.trim())) {
-				pKey = _metadataManager.getSigningKeyFromMetadata(sFederationUrl); // 20091029, was:
+				pKeys = _metadataManager.getSigningKeyFromMetadata(sFederationUrl); // 20091029, was:
 				// _configManager.getFederationURL());
 			}
 
@@ -840,7 +841,7 @@ public class ApplicationAPIHandler extends AbstractAPIRequestHandler
 			_systemLogger.log(Level.INFO, _sModule, sMethod, "sFederationUrl=" + sFederationUrl);
 			String sSessionSyncUrl = MetaDataManagerSp.getHandle().getSessionSyncURL(sFederationUrl); // "/saml20_session_sync";
 			SessionSyncRequestSender ss_req = new SessionSyncRequestSender(_systemLogger, sServerUrl, updateInterval,
-					sSamlMessageType, sSessionSyncUrl, pKey, l_max_notbefore, l_max_notonorafter, ("true"
+					sSamlMessageType, sSessionSyncUrl, pKeys, l_max_notbefore, l_max_notonorafter, ("true"
 							.equalsIgnoreCase(verify_interval.trim())) ? true : false);
 			String ssReturn = ss_req.synchronizeSession(sTgT, htTGTContext, true/* updateTGT */);
 			_systemLogger.log(Level.INFO, _sModule, sMethod, "ssReturn=" + ssReturn);

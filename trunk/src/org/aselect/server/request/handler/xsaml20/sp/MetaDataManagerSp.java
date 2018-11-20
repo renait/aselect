@@ -190,11 +190,13 @@ public class MetaDataManagerSp extends AbstractMetaDataManager
 			/////////////////////////////////////////////////
 			// load the specific crypto info
 
+			String workingDir = _configManager.getWorkingdir();	// RH, 20181102, n
+
 			String keystoreName = Utils.getParamFromSection(_configManager, _systemLogger, idpSection, "keystore", "name", false);
 			if (keystoreName != null) {
 				 String keystorePw = Utils.getParamFromSection(_configManager, _systemLogger, idpSection, "keystore", "password", false);
 				 String keystoreAlias = Utils.getParamFromSection(_configManager, _systemLogger, idpSection, "keystore", "alias", false);
-				 String workingDir = _configManager.getWorkingdir();
+//				 String workingDir = _configManager.getWorkingdir();	// RH, 20181102, o
 				 try {
 					 idpData.loadSpecificCrypto(workingDir, keystoreName, keystoreAlias, keystorePw);
 				 } catch (ASelectException e) {
@@ -204,7 +206,19 @@ public class MetaDataManagerSp extends AbstractMetaDataManager
 			}	// maybe load defaultprivatekey for every partner without keystorelocation ?
 				// Would make more uniform signing calls
 			// RH, 20180917, sn
-			
+
+			// RH, 20181102, sn
+			String id_keyfile = Utils.getParamFromSection(_configManager, _systemLogger, idpSection, "polymorf", "id_keyfile", false);
+			idpData.setId_keylocation(workingDir, id_keyfile);
+			String pd_keyfile = Utils.getParamFromSection(_configManager, _systemLogger, idpSection, "polymorf", "pd_keyfile", false);
+			idpData.setPd_keylocation(workingDir, pd_keyfile);
+			String pc_keyfile = Utils.getParamFromSection(_configManager, _systemLogger, idpSection, "polymorf", "pc_keyfile", false);
+			idpData.setPc_keylocation(workingDir, pc_keyfile);
+			String i_point = Utils.getParamFromSection(_configManager, _systemLogger, idpSection, "polymorf", "pi_point", false);
+			idpData.setI_point(i_point);
+			String p_point = Utils.getParamFromSection(_configManager, _systemLogger, idpSection, "polymorf", "pd_point", false);
+			idpData.setP_point(p_point);
+			// RH, 20181102, en
 			
 			// Set specific metadata for this partner
 			Object metadataSection = Utils.getSimpleSection(_configManager, _systemLogger, idpSection, "metadata", false);

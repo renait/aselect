@@ -62,7 +62,13 @@ public class PartnerData
 	private Extensionsdata4Partner extensionsdata4partner = null;
 
 	private Crypto crypto = null;	// RH, 20180917, n
-
+	// RH, 20181102, sn
+	private String id_keylocation = null;
+	private String pd_keylocation = null;
+	private String pc_keylocation = null;
+	private String i_point = null;
+	private String p_point = null;
+	// RH, 20181102, en
 
 	public PartnerData(String sId)
 	{
@@ -282,6 +288,7 @@ public class PartnerData
 //		this.crypto = crypto;
 //	}
 	
+
 	public synchronized void loadSpecificCrypto(String sWorkingDir, String sKeyStoreName, String sAlias, String sPassword) throws ASelectException {
 		String sMethod = "loadSpecificPrivateKey";
 		StringBuffer sbKeystoreLocation = new StringBuffer(sWorkingDir);
@@ -320,6 +327,71 @@ public class PartnerData
 
 	}
 	// RH, 20180917, en
+
+	// RH, 20181102, sn
+	// Polymorf file locations
+	public synchronized String getId_keylocation() {
+		return id_keylocation;
+	}
+
+	public synchronized void setId_keylocation(String sWorkingDir, String id_keyfile) {
+		StringBuffer sbId_keylocation = new StringBuffer(sWorkingDir);
+		sbId_keylocation.append(File.separator);
+		sbId_keylocation.append("keystores");
+		sbId_keylocation.append(File.separator);
+		sbId_keylocation.append("partners");
+		sbId_keylocation.append(File.separator);
+		sbId_keylocation.append(id_keyfile);
+
+		this.id_keylocation = sbId_keylocation.toString();
+	}
+
+	public synchronized String getI_point() {
+		return i_point;
+	}
+
+	public synchronized void setI_point(String i_point) {
+		this.i_point = i_point;
+	}
+
+	public synchronized String getPd_keylocation() {
+		return pd_keylocation;
+	}
+
+	public synchronized void setPd_keylocation(String sWorkingDir, String pd_keyfile) {
+		StringBuffer sbPd_keylocation = new StringBuffer(sWorkingDir);
+		sbPd_keylocation.append(File.separator);
+		sbPd_keylocation.append("keystores");
+		sbPd_keylocation.append(File.separator);
+		sbPd_keylocation.append("partners");
+		sbPd_keylocation.append(File.separator);
+		sbPd_keylocation.append(pd_keyfile);
+		this.pd_keylocation = sbPd_keylocation.toString();
+	}
+
+	public synchronized String getPc_keylocation() {
+		return pc_keylocation;
+	}
+
+	public synchronized void setPc_keylocation(String sWorkingDir, String pc_keyfile) {
+		StringBuffer sbPc_keylocation = new StringBuffer(sWorkingDir);
+		sbPc_keylocation.append(File.separator);
+		sbPc_keylocation.append("keystores");
+		sbPc_keylocation.append(File.separator);
+		sbPc_keylocation.append("partners");
+		sbPc_keylocation.append(File.separator);
+		sbPc_keylocation.append(pc_keyfile);
+		this.pc_keylocation = sbPc_keylocation.toString();
+	}
+	// RH, 20181102, en
+	
+	public synchronized String getP_point() {
+		return p_point;
+	}
+
+	public synchronized void setP_point(String p_point) {
+		this.p_point = p_point;
+	}
 
 	/**
 	 * @return the metadata4partner

@@ -169,12 +169,13 @@ public class Xsaml20_ArtifactResolver extends Saml20_BaseHandler
 							"For signature verification the received message must have an Issuer");
 					throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 				}
-				PublicKey pkey = metadataManager.getSigningKeyFromMetadata(artifactResolveIssuer);
-				if (pkey == null || "".equals(pkey)) {
+//				PublicKey pkey = metadataManager.getSigningKeyFromMetadata(artifactResolveIssuer);	// RH, 20181116, o
+				List <PublicKey> pkeys = metadataManager.getSigningKeyFromMetadata(artifactResolveIssuer);	// RH, 20181116, n
+				if (pkeys == null || pkeys.isEmpty()) {	// RH, 20181116, n
 					_systemLogger.log(Level.SEVERE, MODULE, sMethod, "No public valid key in metadata");
 					throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 				}
-				if (checkSignature(artifactResolve, pkey)) {
+				if (checkSignature(artifactResolve, pkeys)) {	// RH, 20181116, n
 					_systemLogger.log(Level.INFO, MODULE, sMethod, "artifactResolve was signed OK");
 				}
 				else {

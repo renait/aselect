@@ -28,9 +28,11 @@ import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Set;
+import java.util.Timer;
 import java.util.concurrent.ConcurrentHashMap;
 import java.util.logging.Level;
 
+import org.apache.commons.httpclient.HttpClient;
 import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.server.log.ASelectSystemLogger;
 import org.aselect.system.error.Errors;
@@ -202,7 +204,9 @@ public abstract class AbstractMetaDataManager
 				urlProvider = new ProxyHTTPMetadataProvider(metadataURL, 1000 * 5, proxyHost, proxyPort);
 			}
 			else { // RH, 20090615, en
-				urlProvider = new HTTPMetadataProvider(metadataURL, 1000 * 5);
+//				urlProvider = new HTTPMetadataProvider(metadataURL, 1000 * 5);
+				urlProvider = new HTTPMetadataProvider(new Timer(), new HttpClient(), metadataURL);
+				
 			} // RH, 20090615, n
 
 			urlProvider.setParserPool(ppMgr);
@@ -265,7 +269,8 @@ public abstract class AbstractMetaDataManager
 		// Result has been stored in myMetadataProvider
 
 		// Add to the SSODescriptor
-		addMetadata(myMetadataProvider);
+//		addMetadata(myMetadataProvider);	// RH, 20180829, n
+		addMetadata(myMetadataProvider, entityId);	// RH, 20180829, o
 	}
 
 	/**
@@ -361,6 +366,13 @@ public abstract class AbstractMetaDataManager
 		}
 	}
 
+	// RH, 20180829, sn
+	protected void addMetadata(ChainingMetadataProvider myMetadataProvider)
+	throws ASelectException
+	{
+		addMetadata(myMetadataProvider, null);
+	}
+	// RH, 20180829, en
 	/**
 	 * Get issuer(entityID) and metadata file location from application.
 	 * Put these values in SSODescriptors.
@@ -370,7 +382,8 @@ public abstract class AbstractMetaDataManager
 	 *            the Metadata provider
 	 * @throws ASelectException
 	 */
-	protected void addMetadata(ChainingMetadataProvider myMetadataProvider)
+//	protected void addMetadata(ChainingMetadataProvider myMetadataProvider)	// RH, 20180829, o
+	protected void addMetadata(ChainingMetadataProvider myMetadataProvider, String entityId)	// RH, 20180829, n
 	throws ASelectException
 	{
 		String sMethod = "addMetadata";
@@ -382,11 +395,13 @@ public abstract class AbstractMetaDataManager
 		for (MetadataProvider metadataEntityId : metadataProviderArray) {
 			try {
 				EntityDescriptor entityDescriptorValue = null;
+				if (entityId == null) {	// RH, 20180829, n
 				XMLObject domdoc = metadataEntityId.getMetadata();
 
 				Element domDescriptor = marshallDescriptor(domdoc);
-				String entityId = domDescriptor.getAttribute("entityID");
-
+//				String entityId = domDescriptor.getAttribute("entityID");	// RH, 20180829, o
+				entityId = domDescriptor.getAttribute("entityID");	// RH, 20180829, n
+				}	// RH, 20180829, n
 				// We will get and fill SSODescriptors
 				entityDescriptorValue = metadataEntityId.getEntityDescriptor(entityId);
 
@@ -437,43 +452,63 @@ public abstract class AbstractMetaDataManager
 	{
 		String sMethod = "checkKeyDescriptorCertificate";
 		List<KeyDescriptor> keyDescriptors = descriptor.getKeyDescriptors();
-
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "CheckCerts=" + getCheckCertificates());
+		int validCertsFound = 0;
+//		_systemLogger.log(Level.INFO, MODULE, sMethod, "CheckCerts=" + getCheckCertificates());
 		for (KeyDescriptor keydescriptor : keyDescriptors) {
 			UsageType useType = keydescriptor.getUse();
-			if (!useType.name().equalsIgnoreCase("SIGNING")) {
-				_systemLogger.log(Level.INFO, MODULE, sMethod, "Use type: " + useType + " != SIGNING");
+//			if (!useType.name().equalsIgnoreCase("SIGNING")) {
+//			if (useType != UsageType.SIGNING) {
+			if (useType != UsageType.SIGNING && useType != UsageType.UNSPECIFIED) {	// we'll allow UNSPECIFIED as SIGNING
+				_systemLogger.log(Level.INFO, MODULE, sMethod, "Invalid UsageType: " + useType + " , ignored");
 				continue; // skip
 			}
 
 			org.opensaml.xml.signature.KeyInfo keyinfo = keydescriptor.getKeyInfo();
-			X509Data x509Data = keyinfo.getX509Datas().get(0);
-
-			List<X509Certificate> certs = x509Data.getX509Certificates();
-			if (!certs.isEmpty()) {
-				X509Certificate cert = certs.get(0);
-				try {
-					java.security.cert.X509Certificate javaCert = SamlTools.getCertificate(cert);
-					if (javaCert != null) {
-						if (checkCertificate("", javaCert)) {
-							_systemLogger.log(Level.FINER, MODULE, sMethod, "OK "
-									+ javaCert.getSubjectX500Principal().getName() + " - Issuer="
-									+ javaCert.getIssuerX500Principal().getName());
-							return true;
+//			X509Data x509Data = keyinfo.getX509Datas().get(0);
+			List<X509Data> x509Datas = keyinfo.getX509Datas();
+			if (x509Datas != null && !x509Datas.isEmpty()) {
+				for (X509Data x509Data : x509Datas) {
+					List<X509Certificate> certs = x509Data.getX509Certificates();
+					if (certs != null && !certs.isEmpty()) {
+						for (X509Certificate cert : certs) {
+		//				X509Certificate cert = certs.get(0);
+							try {
+								java.security.cert.X509Certificate javaCert = SamlTools.getCertificate(cert);
+								if (javaCert != null) {
+									if (checkCertificate("", javaCert)) {
+										_systemLogger.log(Level.FINER, MODULE, sMethod, "OK "
+												+ javaCert.getSubjectX500Principal().getName() + " - Issuer="
+												+ javaCert.getIssuerX500Principal().getName());
+//										return true;
+										validCertsFound++;
+									} else {
+										_systemLogger.log(Level.INFO, MODULE, sMethod, "NOT OK "
+											+ javaCert.getSubjectX500Principal().getName() + " - Issuer="
+											+ javaCert.getIssuerX500Principal().getName());
+									}
+								}
+							}
+							catch (CertificateException e) {
+//								_systemLogger.log(Level.WARNING, MODULE, sMethod, "Cannot retrieve the public key from metadata: ",e);
+								_systemLogger.log(Level.WARNING, MODULE, sMethod, "Cannot retrieve the public key from metadata: " +
+										e.getMessage() + ", continuing");
+	//							return false;
+								continue;
+							}
 						}
-						_systemLogger.log(Level.INFO, MODULE, sMethod, "NOT OK "
-								+ javaCert.getSubjectX500Principal().getName() + " - Issuer="
-								+ javaCert.getIssuerX500Principal().getName());
+					} else {
+						_systemLogger.log(Level.WARNING, MODULE, sMethod,
+								"Cannot retrieve X509Certificate from metadata, continuing next X509Data");
 					}
 				}
-				catch (CertificateException e) {
-					_systemLogger.log(Level.WARNING, MODULE, sMethod, "Cannot retrieve the public key from metadata: ",e);
-					return false;
-				}
+			} else {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod,
+						"Cannot retrieve X509Data from metadata, continuing next KeyDescriptor");
 			}
 		}
-		_systemLogger.log(Level.WARNING, MODULE, sMethod, "No valid signing certificate found");
-		return false;
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "Number of valid certs found: " + validCertsFound);
+//		return false;
+		return (validCertsFound > 0);
 	}
 
 	/**
@@ -569,6 +604,7 @@ public abstract class AbstractMetaDataManager
 	 *            the entity id
 	 * @return PublicKey, is null on errors.
 	 */
+	/*
 	public PublicKey getSigningKeyFromMetadata(String entityId)
 	{
 		String sMethod = "getSigningKeyFromMetadata";
@@ -623,7 +659,95 @@ public abstract class AbstractMetaDataManager
 		}
 		return null;
 	}
+	 */
 	
+	/**
+	 * Retrieve a List of the signing keys from SSODescriptors for the given entity id from the metadata cache.
+	 * 
+	 * @param entityId
+	 *            the entity id
+	 * @return List<PublicKey>, is null on errors.
+	 */
+	public List<PublicKey> getSigningKeyFromMetadata(String entityId)
+	{
+		String sMethod = "getSigningKeyFromMetadata";
+		List<PublicKey> pubKeys = new ArrayList<PublicKey>();
+
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "myRole="+getMyRole()+" entityId=" + entityId);
+		try {
+			ensureMetadataPresence(entityId);
+		}
+		catch (ASelectException e) {
+			return null;
+		}
+
+		SSODescriptor descriptor = SSODescriptors.get(makeEntityKey(entityId, null));
+		if (descriptor == null) {
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Entity id: " + entityId + " not in SSODescriptors: "+SSODescriptors);
+			return null;
+		}
+		
+		List<KeyDescriptor> keyDescriptors = descriptor.getKeyDescriptors();
+		for (KeyDescriptor keydescriptor : keyDescriptors) {
+			UsageType useType = keydescriptor.getUse();
+//			if (!useType.name().equalsIgnoreCase("SIGNING")) {
+//			if (useType != UsageType.SIGNING) {
+			if (useType != UsageType.SIGNING && useType != UsageType.UNSPECIFIED) {	// we'll allow UNSPECIFIED as SIGNING
+
+//				_systemLogger.log(Level.FINE, MODULE, sMethod, "Use type: " + useType + " != SIGNING");	// RH, 20160512, o
+//				_systemLogger.log(Level.FINE, MODULE, sMethod, "Use type: " + useType + " != SIGNING, trying next if present");	// RH, 20160512, n	// RH, 20181120, o
+//				_systemLogger.log(Level.FINE, MODULE, sMethod, "Use type: " + useType + " != " + UsageType.SIGNING + " , trying next if present");	// RH, 20160512, n	// 20181120, n
+				_systemLogger.log(Level.FINE, MODULE, sMethod, "Invalid UsageType found: " + useType + ", ignored");	// RH, 20160512, n	// 20181120, n
+				
+//				return null;	// RH, 20160512, o
+				continue;	// RH, 20160512, n
+			}
+
+			org.opensaml.xml.signature.KeyInfo keyinfo = keydescriptor.getKeyInfo();
+//			X509Data x509Data = keyinfo.getX509Datas().get(0);
+			List<X509Data> x509Datas = keyinfo.getX509Datas();
+			if (x509Datas != null && !x509Datas.isEmpty()) {
+				for (X509Data x509Data : x509Datas) {
+	
+					List<X509Certificate> certs = x509Data.getX509Certificates();
+					if (certs != null && !certs.isEmpty()) {
+						for (X509Certificate cert : certs) {
+//						X509Certificate cert = certs.get(0);
+							try {
+								java.security.cert.X509Certificate javaCert = SamlTools.getCertificate(cert);
+								if (javaCert != null) {
+									_systemLogger.log(Level.FINER, MODULE, sMethod, "Cert: "
+											+ javaCert.getSubjectX500Principal().getName() + " - Issuer="
+											+ javaCert.getIssuerX500Principal().getName());
+//									return javaCert.getPublicKey();
+									pubKeys.add(javaCert.getPublicKey());
+								}
+								else {
+									_systemLogger.log(Level.WARNING, MODULE, sMethod,
+											"Cannot retrieve the public key one of X509Certificate from metadata for entity id : " 
+													+ entityId + " , continuing nextX509Certificate ");
+								}
+							}
+							catch (CertificateException e) {
+								_systemLogger.log(Level.WARNING, MODULE, sMethod, "Cannot retrieve the public key from metadata: " 
+										+ e.getMessage() + " , continuing next X509Certificate " );
+							}
+						}
+					} else {
+						_systemLogger.log(Level.WARNING, MODULE, sMethod,
+								"Cannot retrieve X509Certificate from metadata for entity id : " + entityId + " , continuing next X509Data");
+					}
+				}
+			} else {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod,
+						"Cannot retrieve X509Data from metadata for entity id : " + entityId + " , continuing next KeyDescriptor");
+			}
+		}
+//		return null;	// RH, 20181119, o
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "Number of pubKeys found: "  + pubKeys.size());
+		return pubKeys;	// RH, 20181119, n
+	}
+
 	// 20110406, Bauke: added
 	/**
 	 * Gets the attribute from metadata.

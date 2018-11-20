@@ -268,10 +268,10 @@ public class OldMemoryStorageHandlerTimeOut extends OldMemoryStorageHandler
 		String url = metadataManager.getLocation(urlSp, SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME,
 				SAMLConstants.SAML2_SOAP11_BINDING_URI);
 
-		PublicKey pkey = null;
+		List <PublicKey> pkeys = null;	// RH, 20181116, n
 		if (is_bVerifySignature()) {
-			pkey = metadataManager.getSigningKeyFromMetadata(urlSp);
-			if (pkey == null || "".equals(pkey)) {
+			pkeys = metadataManager.getSigningKeyFromMetadata(urlSp);	// RH, 20181116, n
+			if (pkeys == null || pkeys.isEmpty()) {	// RH, 20181116, n
 				_oSystemLogger.log(Level.SEVERE, MODULE, _sMethod, "No valid public key in metadata");
 				throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 			}
@@ -280,7 +280,8 @@ public class OldMemoryStorageHandlerTimeOut extends OldMemoryStorageHandler
 //			requestSender.sendSoapLogoutRequest(url, _serverUrl, sNameID,
 //					"urn:oasis:names:tc:SAML:2.0:logout:sp-timeout", pkey);	// RH, 20180918, o
 			requestSender.sendSoapLogoutRequest(url, _serverUrl, sNameID,
-					"urn:oasis:names:tc:SAML:2.0:logout:sp-timeout", pkey, null);	// RH, 20180918, o
+//					"urn:oasis:names:tc:SAML:2.0:logout:sp-timeout", pkey, null);	// RH, 20180918, o	// RH, 20181116, o
+					"urn:oasis:names:tc:SAML:2.0:logout:sp-timeout", pkeys, null);	// RH, 20180918, o	// RH, 20181116, n
 		}
 		catch (ASelectException e) {
 			_oSystemLogger.log(Level.WARNING, MODULE, _sMethod, "IDP - exception trying to send logout request", e);

@@ -176,6 +176,7 @@ public class SamlTools
 	 * @throws MessageDecodingException
 	 *             the message decoding exception
 	 */
+	/*
 	public static boolean verifySignature(PublicKey key, HttpServletRequest httpRequest)
 	throws MessageDecodingException
 	{
@@ -258,6 +259,109 @@ public class SamlTools
 			throw new MessageDecodingException("Unable to verify  signature", e);
 		}
 	}
+	*/
+
+	/**
+	 * Helper method to verify the Signature of a HTTP GET request.
+	 * 
+	 * @param key
+	 *            List<PublicKey>
+	 * @param httpRequest
+	 *            HttpServletRequest
+	 * @return boolean
+	 * @throws MessageDecodingException
+	 *             the message decoding exception
+	*/
+	
+	public static boolean verifySignature(List<PublicKey> keys, HttpServletRequest httpRequest)
+	throws MessageDecodingException
+	{
+		String sMethod = "verifySignature";
+		
+		ASelectSystemLogger systemLogger = ASelectSystemLogger.getHandle();
+		boolean signatureOK = false;
+		for (PublicKey key : keys) {	// This loop must be tighter but then we have to move the "key instanceof RSA.... also"
+			systemLogger.log(Level.INFO, MODULE, sMethod, "Public key=" + key + " hashcode=" + key.hashCode());
+	
+			String signingAlgo;
+			if (key instanceof RSAPublicKey) {
+				signingAlgo = "SHA1withRSA";
+			}
+			else {
+				signingAlgo = "SHA1withDSA";
+			}
+	
+			// The signature was set on the complete query string, except the Signature parameter
+			// RH, 20140310, Now following SAML specs
+			try {
+				String sQuery = httpRequest.getQueryString();// use query string because original urlencoded values must be used
+															// do not url re-encode because url-encoding is not canonical
+															// (other party may have different, though equally valid, url-encoding algoritm
+				StringTokenizer tokenizer = new StringTokenizer(sQuery, "&");
+				String sData = "";
+				String[] verifyData = new String[3];
+				while (tokenizer.hasMoreTokens()) {
+					String s = tokenizer.nextToken();
+					systemLogger.log(Level.FINEST, MODULE, sMethod, "Token=[" + s + "]");
+					String sDecoded = URLDecoder.decode(s, "UTF-8");
+					// RH, 20140307, so
+	//				if (sDecoded.equals("RelayState=[RelayState]"))
+	//					///////////////// empty RelayState should not be have been send, so we'll ignore it
+	//					; // 20091118, Bauke: ignore "empty" RelayState (came from logout_info.html)
+	//				else if (!s.startsWith("Signature=") && !s.startsWith("consent=")) {
+	//					sData += s + "&";
+	//				}
+					// RH, 20140307, eo
+					// RH, 20140307, sn
+					if (sDecoded.equals("RelayState=[RelayState]"))
+						continue; // 20091118, Bauke: ignore "empty" RelayState (came from logout_info.html)
+									// keep this for backward compatibility
+					
+					// SAMLRequest=value&RelayState=value&SigAlg=value
+					// SAMLResponse=value&RelayState=value&SigAlg=value
+					if (s.startsWith("SAMLRequest=")) {
+						verifyData[0] = s;
+					} else if (s.startsWith("SAMLResponse=")) {
+						verifyData[0] = s;
+					} else if (s.startsWith("RelayState=")) {
+						verifyData[1] = s;
+					} else if (s.startsWith("SigAlg=")) {
+						verifyData[2] = s;
+						String sigAlgDecoded = URLDecoder.decode(s, "UTF-8");
+						if ( (key instanceof RSAPublicKey) 
+								&& (sigAlgDecoded.contains(SignatureConstants.ALGO_ID_SIGNATURE_RSA_SHA256)) ) {
+							signingAlgo = "SHA256withRSA";	// Allow for SHA256
+						}
+						
+					}
+					// RH, 20140307, en
+				}
+				
+	//			sData = sData.substring(0, sData.length() - 1); // Delete the last '&'
+				sData = verifyData[0] + "&" + (verifyData[1] != null ? verifyData[1] + "&" : "") + verifyData[2];
+				systemLogger.log(Level.FINE, MODULE, sMethod, "Check [" + sData + "]");
+	
+				java.security.Signature signature = java.security.Signature.getInstance(signingAlgo);
+				// RM_50_01
+				signature.initVerify(key);
+	//			byte[] bData = sData.getBytes();	// RH, 20140307, o
+				byte[] bData = sData.getBytes("UTF-8");	// RH, 20140307, o
+				signature.update(bData);
+	
+				String sSig = httpRequest.getParameter("Signature");
+				if (sSig == null)
+					systemLogger.log(Level.SEVERE, MODULE, sMethod, "Signature NOT PRESENT");
+				byte[] bSig = Base64.decode(sSig);
+				signatureOK = signature.verify(bSig);
+				if (signatureOK) break;
+			}
+			catch (Exception e) {
+				throw new MessageDecodingException("Unable to verify  signature", e);
+			}
+			
+		}
+		return signatureOK;
+	}
 
 	// For the new opensaml20 library
 	/**
@@ -265,12 +369,12 @@ public class SamlTools
 	 * 
 	 * @param ssObject
 	 *            the SAML object to be checked
-	 * @param publicKey
-	 *            the public key
+	 * @param List<publicKey>
+	 *            list of public keys to verify against
 	 * @return true, if successful
 	 * @throws ASelectException
 	 */
-	public static boolean checkSignature(SignableSAMLObject ssObject, PublicKey publicKey)
+	public static boolean checkSignature(SignableSAMLObject ssObject, List <PublicKey> publicKeys)
 	throws ASelectException
 	{
 		String sMethod = "checkSignature";
@@ -278,11 +382,11 @@ public class SamlTools
 		ASelectSystemLogger _systemLogger = ASelectSystemLogger.getHandle();
 		Signature sig = ssObject.getSignature();
 	
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "publicKey=" + publicKey + " signature=" + sig);
 		if (sig == null) {
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, "No signature found in SAML object");
 			return false;
 		}
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Trying publicKey(s)=" + publicKeys);
 	
 		SAMLSignatureProfileValidator profileValidator = new SAMLSignatureProfileValidator();
 		try {
@@ -290,22 +394,34 @@ public class SamlTools
 		}
 		catch (ValidationException e) {
 			// Indicates signature did not conform to SAML Signature profile
-			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Cannot validate signature, signature did not conform to SAML Signature profile", e);
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Cannot validate signature, signature did not conform to SAML Signature profile: " + e.getMessage());
 			return false;
 		}
+		boolean signature_valid = false;
+		for (PublicKey publicKey : publicKeys) {
 
-		BasicCredential credential = new BasicCredential();
-		credential.setPublicKey(publicKey);
-	
-		SignatureValidator sigValidator = new SignatureValidator(credential);
-		try {
-			sigValidator.validate(sig);
+			BasicCredential credential = new BasicCredential();
+			credential.setPublicKey(publicKey);
+		
+			SignatureValidator sigValidator = new SignatureValidator(credential);
+			try {
+				sigValidator.validate(sig);
+			}
+			catch (ValidationException e) {
+//				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Cannot verify signature, signature was not cryptographically valid");
+				_systemLogger.log(Level.INFO, MODULE, sMethod, "Cannot verify signature on this attempt, signature was not cryptographically valid, trying next");
+//				return false;
+				continue;
+			}
+			_systemLogger.log(Level.FINER, MODULE, sMethod, "Valid signature found for pubKey=" + publicKey);
+			signature_valid = true;
+			break;
 		}
-		catch (ValidationException e) {
+//		return true;
+		if (!signature_valid) {
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Cannot verify signature, signature was not cryptographically valid");
-			return false;
 		}
-		return true;
+		return signature_valid;
 	}
 
 	/**
