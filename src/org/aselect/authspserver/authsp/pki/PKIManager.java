@@ -61,7 +61,8 @@ import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.bouncycastle.asn1.ASN1InputStream;
 import org.bouncycastle.asn1.ASN1OctetString;
-import org.bouncycastle.asn1.DERObject;
+// DERObject changed name to ASN1Primitive from BouncyCastle 1.47 onwards
+import org.bouncycastle.asn1.ASN1Primitive;
 import org.bouncycastle.asn1.DEROctetString;
 import org.bouncycastle.asn1.DERSequence;
 import org.bouncycastle.asn1.DERTaggedObject;
@@ -764,7 +765,7 @@ public class PKIManager
 	private Vector getOctetValues(byte[] baExtensionValue)
 	throws ASelectException
 	{
-		return getOctetValues(getDERObject(baExtensionValue));
+		return getOctetValues(getASN1Primitive(baExtensionValue));
 	}
 
 	/**
@@ -777,10 +778,10 @@ public class PKIManager
 	 * @throws ASelectException
 	 *             the a select exception
 	 */
-	private DERObject getDERObject(byte[] baExtensionValue)
+	private ASN1Primitive getASN1Primitive(byte[] baExtensionValue)
 	throws ASelectException
 	{
-		String sMethod = "getDERObject";
+		String sMethod = "getASN1Primitive";
 		try {
 			ASN1InputStream oInputStream = new ASN1InputStream(new ByteArrayInputStream(baExtensionValue));
 			byte[] baExtOctets = ((ASN1OctetString) oInputStream.readObject()).getOctets();
@@ -803,10 +804,10 @@ public class PKIManager
 	 * @throws ASelectException
 	 *             the a select exception
 	 */
-	private Vector getOctetValues(DERObject derObject)
+	private Vector getOctetValues(ASN1Primitive derObject)
 	throws ASelectException
 	{
-		String sMethod = "getOctetValues(DERObject derObject)";
+		String sMethod = "getOctetValues(ASN1Primitive derObject)";
 		Vector vDerValues = new Vector();
 
 		if (derObject == null) {
@@ -817,7 +818,7 @@ public class PKIManager
 			Enumeration enumDerObjects = ((DERSequence) derObject).getObjects();
 
 			while (enumDerObjects.hasMoreElements()) {
-				DERObject nestedDerObject = (DERObject) enumDerObjects.nextElement();
+				ASN1Primitive nestedDerObject = (ASN1Primitive) enumDerObjects.nextElement();
 
 				vDerValues.addAll(getOctetValues(nestedDerObject));
 			}
@@ -826,7 +827,7 @@ public class PKIManager
 			DERTaggedObject derTaggedObject = (DERTaggedObject) derObject;
 
 			if (derTaggedObject.isExplicit() && !derTaggedObject.isEmpty()) {
-				DERObject nestedDerObject = derTaggedObject.getObject();
+				ASN1Primitive nestedDerObject = derTaggedObject.getObject();
 				vDerValues = getOctetValues(nestedDerObject);
 			}
 			else {
