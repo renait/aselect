@@ -23,7 +23,10 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
+import java.security.PrivateKey;
 import java.util.ArrayList;
+import java.util.Arrays;
+import java.util.Base64;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.StringTokenizer;
@@ -734,7 +737,10 @@ public class OPEndpointHandler extends ProtoRequestHandler
 					if (saved_scope != null && saved_scope.contains("openid")) {
 						//	generate the id_token using extractedAttributes
 						try {
-							id_token = createIDToken(hmExtractedAttributes, (String)(hmExtractedAttributes.get("uid")), _sMyServerID, saved_client_id, saved_nonce, appidacr );
+//							id_token = createIDToken(hmExtractedAttributes, (String)(hmExtractedAttributes.get("uid")), _sMyServerID, saved_client_id, saved_nonce, appidacr );	// RH, 20181114, o
+							id_token = createIDToken(hmExtractedAttributes, (String)(hmExtractedAttributes.get("uid")), _sMyServerID, 
+									saved_client_id, saved_nonce, appidacr, ASelectConfigManager.getHandle().getDefaultPrivateKey(), 
+									saved_resp_types.contains("id_token") ? generated_authorization_code : null );	// RH, 20181114, n
 							history.put(ID_TOKEN_PREFIX+ generated_authorization_code, id_token);
 //						} catch (UnsupportedEncodingException | JoseException e) {	// RH, 20181001, o, 1.6 compliance
 						} catch (UnsupportedEncodingException e) {
@@ -1023,7 +1029,10 @@ public class OPEndpointHandler extends ProtoRequestHandler
 		OPEndpointHandler._client_ids = _client_ids;
 	}
 
-	public String createIDToken(HashMap attributes, String subject, String issuer, String audience, String nonce, String appidacr) throws UnsupportedEncodingException, JoseException {
+
+//	public String createIDToken(HashMap attributes, String subject, String issuer, String audience, String nonce, String appidacr) throws UnsupportedEncodingException, JoseException {	// RH, 20181114, o
+		public String createIDToken(HashMap attributes, String subject, String issuer, String audience, String nonce, String appidacr, 
+				PrivateKey pk, String code) throws UnsupportedEncodingException, JoseException {	// RH, 20181114, n
 		
 		// JSON Web Tokens (JWTs) and public key cryptography, RSA 256
         JwtClaims claims = new JwtClaims();
@@ -1037,6 +1046,33 @@ public class OPEndpointHandler extends ProtoRequestHandler
         claims.setStringClaim("nonce", nonce);
         claims.setStringClaim("ver", "1.0");
         claims.setStringClaim("appidacr", appidacr);
+        String c_hash = null;
+        if (code != null) {
+ //       	calculate the c_hash over the code, 3.3.2.11. ID Token
+        	// AlgorithmIdentifiers.RSA_USING_SHA256 so SHA-256
+        	String algorithm = "SHA-256";
+        	String charset = "US-ASCII";
+			MessageDigest md;
+			try {
+				md = MessageDigest.getInstance(algorithm);
+		        md.update(code.getBytes(charset));
+//		        byte[] b64data = Base64.encodeBase64URLSafe(byteData);	// if we want to use apache
+		        // take left-most ( first 128 bits for SHA-256 )
+		        byte byteData[] = Arrays.copyOf(md.digest(), 16);
+		        c_hash = Base64.getUrlEncoder()
+	            .withoutPadding()
+	            .encodeToString(byteData);
+			}
+			catch (NoSuchAlgorithmException e) {
+				c_hash = null;
+			}
+			catch (UnsupportedEncodingException e) {
+				c_hash = null;
+			}
+        }
+        if (c_hash != null) {
+            claims.setStringClaim("c_hash", c_hash);        	
+        }
         
         Set<String> attrNames = (Set<String>)(attributes.keySet());
         for (String attrName : attrNames) {
@@ -1056,8 +1092,11 @@ public class OPEndpointHandler extends ProtoRequestHandler
         jws.setAlgorithmHeaderValue(AlgorithmIdentifiers.RSA_USING_SHA256);
 //        jws.setKey(key);
         // Sign using the private key
-        jws.setKey(ASelectConfigManager.getHandle().getDefaultPrivateKey());
+//        jws.setKey(ASelectConfigManager.getHandle().getDefaultPrivateKey());	// RH, 20181114, o
+        jws.setKey(pk);	// RH, 20181114, n
 
         return jws.getCompactSerialization();
     }
+		
+
 }
