@@ -11,6 +11,7 @@
  */
 package org.aselect.server.request.handler.xsaml20.sp;
 
+import java.io.File;
 import java.io.PrintWriter;
 import java.io.StringReader;
 import java.security.PrivateKey;
@@ -35,6 +36,7 @@ import javax.xml.parsers.DocumentBuilderFactory;
 
 import org.aselect.server.application.ApplicationManager;
 import org.aselect.server.config.ASelectConfigManager;
+import org.aselect.server.crypto.PolyKeyUtil;
 import org.aselect.server.log.ASelectAuthProofLogger;
 import org.aselect.server.log.ASelectAuthenticationLogger;
 import org.aselect.server.request.HandlerTools;
@@ -88,6 +90,9 @@ import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.xml.sax.InputSource;
+
+import nl.logius.resource.pp.PolyPseudoException;
+import nl.logius.resource.pp.util.DecryptUtil;
 
 /**
  * SAML2.0 AssertionConsumer for A-Select (Service Provider side). <br>
@@ -405,13 +410,13 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 						throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 					}
 					
-					PublicKey pkey = metadataManager.getSigningKeyFromMetadata(artifactResponseIssuer);
-					if (pkey == null || "".equals(pkey)) {
+					List<PublicKey> pkeys = metadataManager.getSigningKeyFromMetadata(artifactResponseIssuer);	// RH, 20181119, n
+					if (pkeys == null || pkeys.isEmpty()) {	// RH, 20181119, n
 						_systemLogger.log(Level.SEVERE, MODULE, sMethod, "No valid public key in metadata");
 						throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 					}
 	
-					if (SamlTools.checkSignature(artifactResponse, pkey)) {
+					if (SamlTools.checkSignature(artifactResponse, pkeys)) {	// RH, 20181119, n
 						_systemLogger.log(Level.INFO, MODULE, sMethod, "artifactResponse was signed OK");
 					}
 					else {
@@ -495,13 +500,13 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 						throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 					}
 					
-					PublicKey pkey = metadataManager.getSigningKeyFromMetadata(responseIssuer);
-					if (pkey == null || "".equals(pkey)) {
+					List<PublicKey> pkeys = metadataManager.getSigningKeyFromMetadata(responseIssuer);	// RH, 20181119, n
+					if (pkeys == null || pkeys.isEmpty()) {	// RH, 20181119, n
 						_systemLogger.log(Level.SEVERE, MODULE, sMethod, "No valid public key in metadata");
 						throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 					}
 	
-					if (SamlTools.checkSignature(samlResponse, pkey)) {
+					if (SamlTools.checkSignature(samlResponse, pkeys)) {	// RH, 20181119, n
 						_systemLogger.log(Level.INFO, MODULE, sMethod, "Response was signed OK");
 					}
 					else {
@@ -550,12 +555,12 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 						}
 						
 //						MetaDataManagerSp metadataManager = MetaDataManagerSp.getHandle();	// RH, 20121205, n
-						PublicKey pkey = metadataManager.getSigningKeyFromMetadata(sAssertIssuer);
-						if (pkey == null || "".equals(pkey)) {
+						List<PublicKey> pkeys = metadataManager.getSigningKeyFromMetadata(sAssertIssuer);	// RH, 20181119, n
+						if (pkeys == null || pkeys.isEmpty()) {	// RH, 20181119, n
 							_systemLogger.log(Level.SEVERE, MODULE, sMethod, "No valid public key in metadata");
 							throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 						}
-						if (!SamlTools.checkSignature(samlAssertion, pkey)) {
+						if (!SamlTools.checkSignature(samlAssertion, pkeys)) {	// RH, 20181119, n
 							_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Assertion was NOT signed OK");
 							throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 						}
@@ -594,6 +599,56 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 						_systemLogger.log(Level.FINE, MODULE, sMethod, "NameID:" + Auxiliary.obfuscate(sNameID));
 						sNameIDQualifier = nameid.getNameQualifier();
 						_systemLogger.log(Level.FINE, MODULE, sMethod, "NameIDQualifier:" + sNameIDQualifier);
+						// RH, 20181030, sn
+						if ("urn:etoegang:1.12:EntityConcernedID:BSN".equals(sNameIDQualifier)) {	// polymorf Identity
+							_systemLogger.log(Level.FINER, MODULE, sMethod, "Decrypting:" + "urn:etoegang:1.12:EntityConcernedID:BSN");
+							Issuer issuer = samlResponse.getIssuer();
+							String sIssuer = (issuer == null)? null: issuer.getValue();
+							if (sIssuer != null) {
+								PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sIssuer);
+								if (partnerData != null) {
+									PolyKeyUtil keys = new PolyKeyUtil(partnerData.getId_keylocation(), partnerData.getI_point(), null, null, null); 
+									if (keys.getDecryptKey() != null) {	// loading of keys went well
+										try {
+											sNameID = DecryptUtil.getIdentity(sNameID,keys.getDecryptKey(), keys.getVerifiers());
+										} catch (PolyPseudoException pex) {
+											_systemLogger.log(Level.WARNING, MODULE, sMethod, "Error polymorf decrypting: " + pex.getMessage());
+										}
+									} else {
+										_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not load necessary key(s), no polymorf decryption done");
+									}
+								} else {
+									_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not load necessary key(s), no partnerdata for Issuer, no polymorf decryption done");
+								}
+							} else {
+								_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not load necessary key(s), no issuer in Response, no polymorf decryption done");
+							}
+						} else if ("urn:etoegang:1.12:EntityConcernedID:PseudoID".equals(sNameIDQualifier)) {	// polymorf Pseudonym
+							_systemLogger.log(Level.FINER, MODULE, sMethod, "Decrypting:" + "urn:etoegang:1.12:EntityConcernedID:PseudoID");
+							Issuer issuer = samlResponse.getIssuer();
+							String sIssuer = (issuer == null)? null: issuer.getValue();
+							if (sIssuer != null) {
+								PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sIssuer);
+								if (partnerData != null) {
+									PolyKeyUtil keys = new PolyKeyUtil(null, null, partnerData.getPd_keylocation(), partnerData.getPc_keylocation(), partnerData.getP_point()); 
+									if (keys.getPDecryptKey() != null && keys.getPClosingKey() != null) {	// loading of keys went well
+										try {
+											sNameID = DecryptUtil.getPseudonym(sNameID, keys.getPDecryptKey(), keys.getPClosingKey(), keys.getPVerifiers());
+										} catch (PolyPseudoException pex) {
+											_systemLogger.log(Level.WARNING, MODULE, sMethod, "Error polymorf decrypting: " + pex.getMessage());
+										}
+									} else {
+										_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not load necessary key(s), no polymorf decryption done");
+									}
+								} else {
+									_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not load necessary key(s), no partnerdata for Issuer, no polymorf decryption done");
+								}
+							} else {
+								_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not load necessary key(s), no issuer in Response, no polymorf decryption done");
+							}
+						}
+						// RH, 20181030, sn
+							
 					} else {
 						_systemLogger.log(Level.WARNING, MODULE, sMethod, "No NameID found:");
 						sNameID = "";

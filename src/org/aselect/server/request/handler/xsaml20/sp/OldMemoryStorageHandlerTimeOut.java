@@ -15,6 +15,7 @@ import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.Date;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Set;
 import java.util.Vector;
 import java.util.logging.Level;
@@ -253,10 +254,10 @@ public class OldMemoryStorageHandlerTimeOut extends OldMemoryStorageHandler
 			throw new ASelectStorageException(Errors.ERROR_ASELECT_INTERNAL_ERROR);
 		}
 		String issuerUrl = _serverUrl;
-		PublicKey pkey = null;
+		List<PublicKey> pkeys = null;	// RH, 20181119, n
 		if (is_bVerifySignature()) {
-			pkey = metadataManager.getSigningKeyFromMetadata(sFederationUrl);
-			if (pkey == null || "".equals(pkey)) {
+			pkeys = metadataManager.getSigningKeyFromMetadata(sFederationUrl);	// RH, 20181119, n
+			if (pkeys == null || pkeys.isEmpty()) {	// RH, 20181119, n
 				_oSystemLogger.log(Level.SEVERE, MODULE, _sMethod, "No valid public key in metadata");
 				throw new ASelectStorageException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 			}
@@ -280,8 +281,8 @@ public class OldMemoryStorageHandlerTimeOut extends OldMemoryStorageHandler
 //					.sendSoapLogoutRequest(url, issuerUrl, sNameID, "urn:oasis:names:tc:SAML:2.0:logout:sp-timeout",
 //							pkey);		// RH, 20120201, o
 //			logout.sendSoapLogoutRequest(url, issuerUrl, sNameID, "urn:oasis:names:tc:SAML:2.0:logout:sp-timeout", pkey, sessionIndexes);	// RH, 20120201, n	// RH, 20180918, o
-			logout.sendSoapLogoutRequest(url, issuerUrl, sNameID, "urn:oasis:names:tc:SAML:2.0:logout:sp-timeout", pkey, sessionIndexes, specificCrypto);	// RH, 20120201, n	// RH, 20180918, n
-
+//			logout.sendSoapLogoutRequest(url, issuerUrl, sNameID, "urn:oasis:names:tc:SAML:2.0:logout:sp-timeout", pkey, sessionIndexes, specificCrypto);	// RH, 20120201, n	// RH, 20180918, n	// RH, 20181119, o
+			logout.sendSoapLogoutRequest(url, issuerUrl, sNameID, "urn:oasis:names:tc:SAML:2.0:logout:sp-timeout", pkeys, sessionIndexes, specificCrypto);	// RH, 20120201, n	// RH, 20180918, n	// RH, 20181119, o
 		}
 		catch (ASelectException e) {
 			_oSystemLogger.log(Level.WARNING, MODULE, _sMethod, "exception trying to send Logout message", e);

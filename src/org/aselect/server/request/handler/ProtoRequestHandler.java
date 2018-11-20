@@ -27,6 +27,7 @@ import java.util.Calendar;
 import java.util.Date;
 import java.util.HashMap;
 import java.util.LinkedList;
+import java.util.List;
 import java.util.Set;
 import java.util.Vector;
 import java.util.logging.Level;
@@ -1227,13 +1228,14 @@ public abstract class ProtoRequestHandler extends AbstractRequestHandler
 	{
 		String sMethod = "getKeyAndCheckSignature";
 		
-		PublicKey pkey = retrievePublicSigningKey(sIssuer);
-		if (pkey == null || "".equals(pkey)) {
+//		PublicKey pkey = retrievePublicSigningKey(sIssuer);	// RH, 20181116, o
+		List <PublicKey> pkeys = retrievePublicSigningKey(sIssuer);	// RH, 20181116, n
+		if (pkeys == null || pkeys.isEmpty()) {	// RH, 20181116, n
 			_systemLogger.log(Level.SEVERE, MODULE, sMethod, "No valid public key in metadata for "+sIssuer);
 			throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 		}
 		
-		if (checkSignature(samlObject, pkey)) {
+		if (checkSignature(samlObject, pkeys)) {	// RH, 20181116, n
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "Message was signed OK");
 		}
 		else {
@@ -1248,14 +1250,17 @@ public abstract class ProtoRequestHandler extends AbstractRequestHandler
 	 * @return
 	 * @throws ASelectException
 	 */
-	public PublicKey retrievePublicSigningKey(String sEntityId)
+//	public PublicKey retrievePublicSigningKey(String sEntityId)	// RH, 20181116, o
+	public List <PublicKey> retrievePublicSigningKey(String sEntityId)	// RH, 20181116, n
 	throws ASelectException
 	{
 		String sMethod = "retrievePublicSigningKey";
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "Get Metadata Key for: "+sEntityId);
 		MetaDataManagerIdp metadataManager = MetaDataManagerIdp.getHandle();
-		PublicKey publicKey = metadataManager.getSigningKeyFromMetadata(sEntityId);
-		return publicKey;
+//		PublicKey publicKey = metadataManager.getSigningKeyFromMetadata(sEntityId);	// RH, 20181116, o
+		List <PublicKey> publicKeys = metadataManager.getSigningKeyFromMetadata(sEntityId);	// RH, 20181116, n
+//		return publicKey;	// RH, 20181116, o
+		return publicKeys;	// RH, 20181116, n
 	}
 
 	// For the new opensaml20 library
@@ -1269,10 +1274,12 @@ public abstract class ProtoRequestHandler extends AbstractRequestHandler
 	 * @return true, if successful
 	 * @throws ASelectException
 	 */
-	public boolean checkSignature(SignableSAMLObject ssObject, PublicKey pKey)
+//	public boolean checkSignature(SignableSAMLObject ssObject, PublicKey pKey)	// RH, 20161116, o
+	public boolean checkSignature(SignableSAMLObject ssObject, List<PublicKey> pKeys)	// RH, 20161116, n
 	throws ASelectException
 	{
-		return SamlTools.checkSignature(ssObject, pKey);
+//		return SamlTools.checkSignature(ssObject, pKey);	// RH, 20161116, o
+		return SamlTools.checkSignature(ssObject, pKeys);	// RH, 20161116, n
 	}
 
 	// For the new opensaml20 library

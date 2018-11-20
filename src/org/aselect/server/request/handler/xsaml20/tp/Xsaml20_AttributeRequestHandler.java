@@ -15,7 +15,9 @@ import java.security.KeyStoreException;
 import java.security.NoSuchAlgorithmException;
 import java.security.PublicKey;
 import java.security.cert.CertificateException;
+import java.util.ArrayList;
 import java.util.HashMap;
+import java.util.List;
 import java.util.logging.Level;
 
 import javax.servlet.ServletConfig;
@@ -239,7 +241,12 @@ public class Xsaml20_AttributeRequestHandler extends Saml20_BaseHandler
 				}
 				if (assertion.isSigned()) {
 					// if (!SamlTools.checkSignature(assertion, getPublicKey(ks, "fippg"))) {
-					if (!SamlTools.checkSignature(assertion, _configManager.getDefaultCertificate().getPublicKey())) {
+//					if (!SamlTools.checkSignature(assertion, _configManager.getDefaultCertificate().getPublicKey())) {// RH, 20181119, so
+					// RH, 20181119, sn
+					List<PublicKey> keys = new ArrayList<PublicKey>();
+					keys.add(_configManager.getDefaultCertificate().getPublicKey());
+					if (!SamlTools.checkSignature(assertion, keys)) {
+						// RH, 20181119, en
 						_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Signature not valid!");
 						throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 					}

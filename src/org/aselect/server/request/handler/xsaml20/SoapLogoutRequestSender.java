@@ -105,12 +105,14 @@ public class SoapLogoutRequestSender
 //	public void sendSoapLogoutRequest(String serviceProviderUrl, String issuerUrl, String sNameID, String reason, PublicKey pkey)
 //	throws ASelectException	// RH, 20180918, o
 //	public void sendSoapLogoutRequest(String serviceProviderUrl, String issuerUrl, String sNameID, String reason, PublicKey pkey, PrivateKey specificKey)
-	public void sendSoapLogoutRequest(String serviceProviderUrl, String issuerUrl, String sNameID, String reason, PublicKey pkey, PartnerData.Crypto specificCrypto)
+//	public void sendSoapLogoutRequest(String serviceProviderUrl, String issuerUrl, String sNameID, String reason, PublicKey pkey, PartnerData.Crypto specificCrypto)	// RH, 20181116, o
+	public void sendSoapLogoutRequest(String serviceProviderUrl, String issuerUrl, String sNameID, String reason, List <PublicKey> pkeys, PartnerData.Crypto specificCrypto)	// RH, 20181116, n
 	throws ASelectException	// RH, 20180918, n
 	{
 //		 sendSoapLogoutRequest(serviceProviderUrl, issuerUrl, sNameID, reason, pkey, null);	// RH, 20180918, o
 //		 sendSoapLogoutRequest(serviceProviderUrl, issuerUrl, sNameID, reason, pkey, null, specificKey);	// RH, 20180918, o
-		 sendSoapLogoutRequest(serviceProviderUrl, issuerUrl, sNameID, reason, pkey, null, specificCrypto);	// RH, 20180918, o
+//		 sendSoapLogoutRequest(serviceProviderUrl, issuerUrl, sNameID, reason, pkey, null, specificCrypto);	// RH, 20180918, o	// RH, 20181116, o
+		 sendSoapLogoutRequest(serviceProviderUrl, issuerUrl, sNameID, reason, pkeys, null, specificCrypto);	// RH, 20180918, o	// RH, 20181116, n
 	}
 	
 
@@ -137,12 +139,14 @@ public class SoapLogoutRequestSender
 //	public void sendSoapLogoutRequest(String serviceProviderUrl, String issuerUrl, String sNameID, String reason, PublicKey pkey, List<String> sessionindexes)
 //	throws ASelectException	// RH, 20180918, o
 //	public void sendSoapLogoutRequest(String serviceProviderUrl, String issuerUrl, String sNameID, String reason, PublicKey pkey, List<String> sessionindexes, PrivateKey specificKey)
-	public void sendSoapLogoutRequest(String serviceProviderUrl, String issuerUrl, String sNameID, String reason, PublicKey pkey, List<String> sessionindexes, PartnerData.Crypto specificCrypto)
+//	public void sendSoapLogoutRequest(String serviceProviderUrl, String issuerUrl, String sNameID, String reason, PublicKey pkey, List<String> sessionindexes, PartnerData.Crypto specificCrypto)// RH, 20181116, o
+	public void sendSoapLogoutRequest(String serviceProviderUrl, String issuerUrl, String sNameID, String reason, List <PublicKey> pkeys, List<String> sessionindexes, PartnerData.Crypto specificCrypto)	// RH, 20181116, n
 	throws ASelectException	// RH, 20180918, n
 	{
 //		 sendSoapLogoutRequestWithStatus(serviceProviderUrl, issuerUrl, sNameID, reason, pkey, sessionindexes);	// RH, 20180918, o
 //		 sendSoapLogoutRequestWithStatus(serviceProviderUrl, issuerUrl, sNameID, reason, pkey, sessionindexes, specificKey);	// RH, 20180918, n
-		 sendSoapLogoutRequestWithStatus(serviceProviderUrl, issuerUrl, sNameID, reason, pkey, sessionindexes, specificCrypto);	// RH, 20180918, n
+//		 sendSoapLogoutRequestWithStatus(serviceProviderUrl, issuerUrl, sNameID, reason, pkey, sessionindexes, specificCrypto);	// RH, 20180918, n	// RH, 20181116, o
+		 sendSoapLogoutRequestWithStatus(serviceProviderUrl, issuerUrl, sNameID, reason, pkeys, sessionindexes, specificCrypto);	// RH, 20180918, n	// RH, 20181116, n
 	}
 	
 	
@@ -169,7 +173,8 @@ public class SoapLogoutRequestSender
 //	public StatusCode sendSoapLogoutRequestWithStatus(String serviceProviderUrl, String issuerUrl, String sNameID, String reason, PublicKey pkey, List<String> sessionindexes)
 //	throws ASelectException	// RH, 20180918, o
 //	public StatusCode sendSoapLogoutRequestWithStatus(String serviceProviderUrl, String issuerUrl, String sNameID, String reason, PublicKey pkey, List<String> sessionindexes, PrivateKey specificKey)
-	public StatusCode sendSoapLogoutRequestWithStatus(String serviceProviderUrl, String issuerUrl, String sNameID, String reason, PublicKey pkey, List<String> sessionindexes, PartnerData.Crypto specificCrypto)
+//	public StatusCode sendSoapLogoutRequestWithStatus(String serviceProviderUrl, String issuerUrl, String sNameID, String reason, PublicKey pkey, List<String> sessionindexes, PartnerData.Crypto specificCrypto)	// RH, 20181116, o
+	public StatusCode sendSoapLogoutRequestWithStatus(String serviceProviderUrl, String issuerUrl, String sNameID, String reason, List <PublicKey> pkeys, List<String> sessionindexes, PartnerData.Crypto specificCrypto)	// RH, 20181116, n
 			throws ASelectException	// RH, 20180918, n
 			{
 		String sMethod = "sendSoapLogoutRequest";
@@ -227,8 +232,10 @@ public class SoapLogoutRequestSender
 
 			LogoutResponse logoutResponse = (LogoutResponse) unmarshaller.unmarshall((Element) eltArtifactResolve);
 
-			if (pkey != null) { // if there is a key supplied by the calling class, check it
-				if (SamlTools.checkSignature(logoutResponse, pkey)) {
+//			if (pkey != null) { // if there is a key supplied by the calling class, check it
+			if (pkeys != null && !pkeys.isEmpty()) { // if there is a key supplied by the calling class, check it
+//				if (SamlTools.checkSignature(logoutResponse, pkey)) {
+				if (SamlTools.checkSignature(logoutResponse, pkeys)) {
 					_systemLogger.log(Level.INFO, MODULE, sMethod, "LogoutResponse was signed OK");
 				}
 				else {

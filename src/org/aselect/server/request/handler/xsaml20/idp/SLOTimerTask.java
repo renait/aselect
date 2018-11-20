@@ -138,18 +138,20 @@ public class SLOTimerTask extends TimerTask
 				// Unfortunately we have no handle to the aselect configuration
 				// so we have no way to know whether we should verify the signature
 				// RM_44_01
-				PublicKey pkey = null;
+				List <PublicKey> pkeys = null;// RH, 20181116, n
 				if (is_bVerifySignature()) {
-					pkey = metadataManager.getSigningKeyFromMetadata(sp);
-					if (pkey == null || "".equals(pkey)) {
+					pkeys = metadataManager.getSigningKeyFromMetadata(sp);// RH, 20181116, n
+					if (pkeys == null || pkeys.isEmpty()) {// RH, 20181116, n
 						_systemLogger.log(Level.SEVERE, MODULE, sMethod, "No valid public key in metadata");
 						throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 					}
 				}
 //				sender.sendSoapLogoutRequest(url, issuer, tgtId, "urn:oasis:names:tc:SAML:2.0:logout:admin", pkey); // was:
 //				// "Federation initiated logout"	// RH, 20180918, o
-				sender.sendSoapLogoutRequest(url, issuer, tgtId, "urn:oasis:names:tc:SAML:2.0:logout:admin", pkey, null); // was:
-				// "Federation initiated logout"	// RH, 20180918, n
+//				sender.sendSoapLogoutRequest(url, issuer, tgtId, "urn:oasis:names:tc:SAML:2.0:logout:admin", pkey, null); // was:
+				// "Federation initiated logout"	// RH, 20180918, n	// RH, 20181116, o
+				sender.sendSoapLogoutRequest(url, issuer, tgtId, "urn:oasis:names:tc:SAML:2.0:logout:admin", pkeys, null);	// RH, 20181116, n
+
 			}
 			catch (ASelectException e) {
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Send failed (but continue): " + e);

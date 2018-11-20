@@ -13,6 +13,7 @@ package org.aselect.server.request.handler.xsaml20.sp;
 
 import java.io.PrintWriter;
 import java.security.PublicKey;
+import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -291,6 +292,7 @@ public class Xsaml20_Receiver extends Saml20_BrowserHandler
 	 * @return - the public key
 	 * @throws ASelectException
 	 */
+	/*
 	public PublicKey retrievePublicSigningKey(String sEntityId)
 	throws ASelectException
 	{
@@ -298,6 +300,27 @@ public class Xsaml20_Receiver extends Saml20_BrowserHandler
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "Get Application Key for: "+sEntityId);
 		return ApplicationManager.getHandle().getSigningKey(sEntityId);
 	}
+	*/
+
+	// RH, 20181119, sn
+	/**
+	 * Override ProtoRequestHandler version to use signing key from Application
+	 * 
+	 * @param sEntityId - to retrieve key for
+	 * @return - the public key
+	 * @throws ASelectException
+	 */
+	public List<PublicKey> retrievePublicSigningKey(String sEntityId)
+	throws ASelectException
+	{
+		String sMethod = "retrievePublicSigningKey";
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "Get Application Key for: "+sEntityId);
+		List<PublicKey> pkeys = new ArrayList<PublicKey>();
+		pkeys.add(ApplicationManager.getHandle().getSigningKey(sEntityId));
+//		return ApplicationManager.getHandle().getSigningKey(sEntityId);
+		return pkeys;
+	}
+	// RH, 20181119, en
 
 	/* (non-Javadoc)
 	 * @see org.aselect.server.request.handler.xsaml20.Saml20_BrowserHandler#retrieveIssuer(java.lang.String, org.opensaml.common.SignableSAMLObject)

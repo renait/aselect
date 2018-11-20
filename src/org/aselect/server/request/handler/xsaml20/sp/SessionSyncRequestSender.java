@@ -77,7 +77,8 @@ public class SessionSyncRequestSender
 
 	private ASelectSystemLogger _oSystemLogger;
 	private final String MODULE = "SessionSyncRequestSender";
-	private PublicKey _pkey = null;
+//	private PublicKey _pkey = null;
+	private List <PublicKey> _pkeys = null;
 	// RM_56_01
 	private Long _maxNotBefore = null;
 	private Long _maxNotOnOrAfter = null;
@@ -123,8 +124,8 @@ public class SessionSyncRequestSender
 	 *            the pkey
 	 */
 	public SessionSyncRequestSender(ASelectSystemLogger systemLogger, String redirectUrl, long updateInterval,
-			String samlMessageType, String federationUrl, PublicKey pkey) {
-		this(systemLogger, redirectUrl, updateInterval, samlMessageType, federationUrl, pkey, null, null, false);
+			String samlMessageType, String federationUrl, List <PublicKey> pkeys) {
+		this(systemLogger, redirectUrl, updateInterval, samlMessageType, federationUrl, pkeys, null, null, false);
 	}
 
 	/**
@@ -150,7 +151,7 @@ public class SessionSyncRequestSender
 	 *            the check validity interval
 	 */
 	public SessionSyncRequestSender(ASelectSystemLogger systemLogger, String redirectUrl, long updateInterval,
-			String samlMessageType, String federationUrl, PublicKey pkey, Long maxNotBefore, Long maxNotOnOrAfter,
+			String samlMessageType, String federationUrl, List<PublicKey> pkeys, Long maxNotBefore, Long maxNotOnOrAfter,
 			boolean checkValidityInterval) {
 		String sMethod = "SessionSyncRequestSender";
 
@@ -159,12 +160,12 @@ public class SessionSyncRequestSender
 		_lUpdateInterval = updateInterval;
 		_sSamlMessageType = samlMessageType;
 		_sFederationUrl = federationUrl;
-		_pkey = pkey;
+		_pkeys = pkeys;
 
 		_maxNotBefore = maxNotBefore;
 		_maxNotOnOrAfter = maxNotOnOrAfter;
 		_checkValidityInterval = checkValidityInterval;
-		_oSystemLogger.log(Level.INFO, MODULE, sMethod, "Url=" + _sFederationUrl + " _pkey:" + getPkey()
+		_oSystemLogger.log(Level.INFO, MODULE, sMethod, "Url=" + _sFederationUrl + " _pkeys:" + getPkeys()
 				+ " _maxNotBefore:" + get_maxNotBefore() + "_maxNotOnOrAfter:" + get_maxNotOnOrAfter()
 				+ "_checkValidityInterval:" + is_checkValidityInterval());
 	}
@@ -648,8 +649,8 @@ public class SessionSyncRequestSender
 			UnmarshallerFactory factory = Configuration.getUnmarshallerFactory();
 			Unmarshaller unmarshaller = factory.getUnmarshaller((Element) eltArtifactResolve);
 			response = (Response) unmarshaller.unmarshall((Element) eltArtifactResolve);
-			if (getPkey() != null) { // If pkey supplied from calling method then check signature
-				if (SamlTools.checkSignature(response, getPkey())) {
+			if (getPkeys() != null) { // If pkey supplied from calling method then check signature
+				if (SamlTools.checkSignature(response, getPkeys())) {
 					_oSystemLogger.log(Level.INFO, MODULE, _sMethod, "response was signed OK");
 				}
 				else {
@@ -861,9 +862,9 @@ public class SessionSyncRequestSender
 	 * 
 	 * @return the pkey
 	 */
-	public synchronized PublicKey getPkey()
+	public synchronized List <PublicKey> getPkeys()
 	{
-		return _pkey;
+		return _pkeys;
 	}
 
 	/**
@@ -872,9 +873,9 @@ public class SessionSyncRequestSender
 	 * @param pkey
 	 *            the new pkey
 	 */
-	public synchronized void setPkey(PublicKey pkey)
+	public synchronized void setPkeys(List <PublicKey> pkeys)
 	{
-		this._pkey = pkey;
+		this._pkeys = pkeys;
 	}
 
 	/**

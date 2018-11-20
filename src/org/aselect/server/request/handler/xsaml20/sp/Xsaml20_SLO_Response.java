@@ -15,6 +15,7 @@ import java.io.PrintWriter;
 import java.io.StringReader;
 import java.security.PublicKey;
 import java.util.HashMap;
+import java.util.List;
 import java.util.logging.Level;
 
 import javax.servlet.ServletConfig;
@@ -186,14 +187,15 @@ public class Xsaml20_SLO_Response extends Saml20_BaseHandler
 
 				String sEntityId = issuer.getValue();
 				MetaDataManagerSp metadataManager = MetaDataManagerSp.getHandle();
-				PublicKey publicKey = metadataManager.getSigningKeyFromMetadata(sEntityId);
-				if (publicKey == null) {
+				List<PublicKey> publicKeys = metadataManager.getSigningKeyFromMetadata(sEntityId);	// RH, 20181119, n
+				if (publicKeys == null || publicKeys.isEmpty()) {	// RH, 20181119, n
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, "PublicKey for entityId: " + sEntityId
 							+ " not found.");
 					throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 				}
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "Found PublicKey for entityId: " + sEntityId);
-				if (!SamlTools.verifySignature(publicKey, servletRequest)) {
+//				if (!SamlTools.verifySignature(publicKey, servletRequest)) {	// RH, 20181119, n	// RH, 20181119, o
+				if (!SamlTools.verifySignature(publicKeys, servletRequest)) {	// RH, 20181119, n	// RH, 20181119, n
 					String errorMessage = "Signing of SAML message is not correct.";
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, errorMessage);
 					pwOut.write(errorMessage);
@@ -336,14 +338,15 @@ public class Xsaml20_SLO_Response extends Saml20_BaseHandler
 			if (is_bVerifySignature()) {
 				// Bauke, 20091008: changed from MetaDataManagerIdp to ...Sp
 				MetaDataManagerSp metadataManager = MetaDataManagerSp.getHandle();
-				PublicKey pkey = metadataManager.getSigningKeyFromMetadata(initiatingSP);
-				if (pkey == null) {
+				List<PublicKey> pkeys = metadataManager.getSigningKeyFromMetadata(initiatingSP);	// RH, 20181119, n
+				if (pkeys == null || pkeys.isEmpty()) {	// RH, 20181119, n
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, "PublicKey for entityId: " + initiatingSP
 							+ " not found.");
 					throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 				}
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "Found PublicKey for entityId: " + initiatingSP);
-				if (checkSignature(logoutResponse, pkey)) {
+//				if (checkSignature(logoutResponse, pkey)) {	// RH, 20181119, o
+				if (checkSignature(logoutResponse, pkeys)) {	// RH, 20181119, n
 					_systemLogger.log(Level.INFO, MODULE, sMethod, "logoutResponse was signed OK");
 				}
 				else {

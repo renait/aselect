@@ -356,14 +356,16 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 					}
 					_systemLogger.log(Level.INFO, MODULE, sMethod, "SAML GET message IS signed.");
 	
-					PublicKey publicKey = retrievePublicSigningKey(sEntityId);
-					if (publicKey == null) {
+//					PublicKey publicKey = retrievePublicSigningKey(sEntityId);	// RH, 20181119, o
+					List<PublicKey> publicKeys = retrievePublicSigningKey(sEntityId);	// RH, 20181119, n
+					if (publicKeys == null || publicKeys.isEmpty()) {	// RH, 20181119, n
 						_systemLogger.log(Level.WARNING, MODULE, sMethod, "PublicKey for entityId: "+sEntityId+" not found.");
 						throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 					}
 					_systemLogger.log(Level.INFO, MODULE, sMethod, "Found PublicKey for entityId: "+sEntityId);
 	
-					if (!SamlTools.verifySignature(publicKey, httpRequest)) {
+//					if (!SamlTools.verifySignature(publicKey, httpRequest)) {	// RH, 20181119, o
+					if (!SamlTools.verifySignature(publicKeys, httpRequest)) {	// RH, 20181119, n
 						_systemLogger.log(Level.WARNING, MODULE, sMethod, "SAML message signature is not correct.");
 						throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 					}

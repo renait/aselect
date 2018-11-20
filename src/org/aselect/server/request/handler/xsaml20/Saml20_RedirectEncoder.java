@@ -62,12 +62,12 @@ public class Saml20_RedirectEncoder extends HTTPRedirectDeflateEncoder
 
         SAMLMessageContext samlMsgCtx = (SAMLMessageContext) messageContext;
 
-        String endpointURL = getEndpointURL(samlMsgCtx);
-        _systemLogger.log(Level.INFO, MODULE, sMethod, "endpointURL="+endpointURL);
+//        String endpointURL = getEndpointURL(samlMsgCtx);
+//        _systemLogger.log(Level.INFO, MODULE, sMethod, "endpointURL="+endpointURL);
 
         // Because of incompatibility between opensaml <= v. 2.3.0 and > v. 2.3.0 in getEndpointURL(samlMsgCtx) we must
-//        String endpointURL = getEndpointURL(samlMsgCtx).buildURL();	// RH, 20140710, n, fix for opensaml 2.6.1
-//        _systemLogger.log(Level.INFO, MODULE, sMethod, "endpointURL="+endpointURL);
+        String endpointURL = getEndpointURL(samlMsgCtx).buildURL();	// RH, 20140710, n, fix for opensaml > 2.3.0
+        _systemLogger.log(Level.INFO, MODULE, sMethod, "endpointURL="+endpointURL);
 
 
         setResponseDestination(samlMsgCtx.getOutboundSAMLMessage(), endpointURL);

@@ -269,17 +269,18 @@ public class JDBCStorageHandlerTimeOut extends JDBCStorageHandler
 		String url = metadataManager.getLocation(urlSp, SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME,
 				SAMLConstants.SAML2_SOAP11_BINDING_URI);
 
-		PublicKey pkey = null;
+		List <PublicKey> pkeys = null;
 		if (is_bVerifySignature()) {
-			pkey = metadataManager.getSigningKeyFromMetadata(urlSp);
-			if (pkey == null || "".equals(pkey)) {
+			pkeys = metadataManager.getSigningKeyFromMetadata(urlSp);
+//			if (pkey == null || "".equals(pkey)) {
+			if (pkeys == null || pkeys.isEmpty()) {
 				_oSystemLogger.log(Level.SEVERE, MODULE, _sMethod, "No valid public key in metadata");
 				throw new ASelectStorageException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 			}
 		}
 		try {  // Sign with our private key!
 //			requestSender.sendSoapLogoutRequest(url, _serverUrl, sNameID, "urn:oasis:names:tc:SAML:2.0:logout:sp-timeout", pkey);	// RH, 20180918, o
-			requestSender.sendSoapLogoutRequest(url, _serverUrl, sNameID, "urn:oasis:names:tc:SAML:2.0:logout:sp-timeout", pkey, null);	// RH, 20180918, n
+			requestSender.sendSoapLogoutRequest(url, _serverUrl, sNameID, "urn:oasis:names:tc:SAML:2.0:logout:sp-timeout", pkeys, null);	// RH, 20180918, n	// RH, 20181116, n
 		}
 		catch (ASelectException e) {
 			_oSystemLogger.log(Level.WARNING, MODULE, _sMethod, "IDP - exception trying to send logout request", e);

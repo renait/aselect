@@ -18,6 +18,7 @@ import java.security.GeneralSecurityException;
 import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Set;
 import java.util.Vector;
 import java.util.logging.Level;
@@ -581,17 +582,19 @@ public abstract class Saml20_BaseHandler extends ProtoRequestHandler
 
 		_systemLogger.log(Level.FINEST, MODULE, _sMethod, "Found audience url = " + url);
 
-		PublicKey pkey = null;
+		List<PublicKey> pkeys = null;	// RH, 20181119, n
 		if (is_bVerifySignature()) {
-			pkey = metadataManager.getSigningKeyFromMetadata(entityID);
-			if (pkey == null || "".equals(pkey)) {
+			pkeys = metadataManager.getSigningKeyFromMetadata(entityID);	// RH, 20181119, n
+			if (pkeys == null || pkeys.isEmpty()) {	// RH, 20181119, n
 				_systemLogger.log(Level.SEVERE, MODULE, _sMethod, "No valid public key in metadata");
 				throw new ASelectStorageException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 			}
 		}
 		try {
 //			StatusCode statuscode = requestSender.sendSoapLogoutRequestWithStatus(url, _sServerUrl, sNameID, reason, pkey, null);	// RH, 20180918, o
-			StatusCode statuscode = requestSender.sendSoapLogoutRequestWithStatus(url, _sServerUrl, sNameID, reason, pkey, null, null);	// RH, 20180918, n
+//			StatusCode statuscode = requestSender.sendSoapLogoutRequestWithStatus(url, _sServerUrl, sNameID, reason, pkey, null, null);	// RH, 20180918, n	// RH, 20181119, o
+			StatusCode statuscode = requestSender.sendSoapLogoutRequestWithStatus(url, _sServerUrl, sNameID, reason, pkeys, null, null);	// RH, 20180918, n	// RH, 20181119, n
+			
 			status = statuscode.getValue();
 		}
 		catch (ASelectException e) {
