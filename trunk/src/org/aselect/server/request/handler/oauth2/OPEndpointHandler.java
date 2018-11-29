@@ -251,7 +251,7 @@ public class OPEndpointHandler extends ProtoRequestHandler
 		// we should verify the redirect_uri against the saved_redirect_uri here, if there is a saved_redirect_uri
 
 		String appidacr = "0"; // We have not authenticated the client yet 
-		if (grant_type != null && code != null) {	// Token rquest
+		if (grant_type != null && code != null) {	// Token request
 			
 			// Token request, should be POST
 			if ( "POST".equalsIgnoreCase(servletRequest.getMethod()) ) {
@@ -329,18 +329,21 @@ public class OPEndpointHandler extends ProtoRequestHandler
 				   		if (client_may_pass) {	// All well
 		
 							// Also retrieve the id_token if there is one (Must have been requested with scope parameter in earlier Auth request
-							String id_token = (String)history.get(ID_TOKEN_PREFIX + code);
-							if (id_token != null) {
-								// we should generate new id_token with proper appidacr
-					   			return_parameters.put("id_token", id_token );
-					   			try {
-					   				history.remove(ID_TOKEN_PREFIX + code);	// we'll have to handle if there would be a problem with remove
-									_systemLogger.log(Level.FINEST, MODULE, sMethod, "Removed id token from local storage using auth code: " + Auxiliary.obfuscate(code));
-					   			} catch (ASelectStorageException ase2) {
-									_systemLogger.log(Level.WARNING, MODULE, sMethod, "Ignoring problem removing id token from temp storage: " + ase2.getMessage());
-					   			}
-							}
-		
+							String saved_scope = (String)tgt.get("oauthsessionscope");
+
+				   			if (saved_scope != null && saved_scope.contains("openid")) {
+								String id_token = (String)history.get(ID_TOKEN_PREFIX + code);
+								if (id_token != null) {
+									// we should generate new id_token with proper appidacr
+						   			return_parameters.put("id_token", id_token );
+						   			try {
+						   				history.remove(ID_TOKEN_PREFIX + code);	// we'll have to handle if there would be a problem with remove
+										_systemLogger.log(Level.FINEST, MODULE, sMethod, "Removed id token from local storage using auth code: " + Auxiliary.obfuscate(code));
+						   			} catch (ASelectStorageException ase2) {
+										_systemLogger.log(Level.WARNING, MODULE, sMethod, "Ignoring problem removing id token from temp storage: " + ase2.getMessage());
+						   			}
+								}
+				   			}
 							
 				   			return_parameters.put("access_token", access_token );
 				   			return_parameters.put("token_type", "bearer" );
@@ -681,7 +684,7 @@ public class OPEndpointHandler extends ProtoRequestHandler
 						throw new ASelectCommunicationException(Errors.ERROR_ASELECT_IO);
 					}
 		        }
-		        String return_url = null;
+//		        String return_url = null;	// RH, 20181126, o
 				String saved_state = (String)htTGTContext.get("oauthsessionstate");
 				String saved_client_id = (String)htTGTContext.get("oauthsessionclient_id");
 				String saved_nonce = (String)htTGTContext.get("oauthsessionnonce");
@@ -691,6 +694,8 @@ public class OPEndpointHandler extends ProtoRequestHandler
 				if (saved_redirect_uri == null) {	// we did receive a redirect_url upon authentication so use registered one
 					saved_redirect_uri = ApplicationManager.getHandle().getApplication(sAppId).getOauth_redirect_uri().keySet().iterator().next().toString();
 				}
+				String sep = saved_redirect_uri.contains("?") ? "&" : "?";	// RH, 20181126, n
+		        StringBuffer return_url = new StringBuffer(saved_redirect_uri);	// RH, 20181126, n
 		        if (authenticatedAndApproved) {
 					// If authenticatedAndApproved then send off the user with redirect
 
@@ -715,16 +720,29 @@ public class OPEndpointHandler extends ProtoRequestHandler
 						access_token = b64enc.encode(extractedAselect_credentials.getBytes("UTF-8"));
 					}
 					catch (UnsupportedEncodingException e) {
-						_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Could not URLEncode to UTF-8, this should not happen!");
-						String error_redirect = null;
+//						_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Could not URLEncode to UTF-8, this should not happen!");	// RH, 20181126, o
+						_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Unsupported charset UTF-8, this should not happen!");	// RH, 20181126, n
+//						String error_redirect = null;	// RH, 20181126, o
 						try {
-						        	String error = "server_error";
-//						        			error_redirect = getOauth2_redirect_uri() + (getOauth2_redirect_uri().contains("?") ? "&" : "?") + "error=" + error ;
-						        	error_redirect = saved_redirect_uri + (saved_redirect_uri.contains("?") ? "&" : "?") + "error=" + error ;
-							servletResponse.sendRedirect(error_redirect);
+							// RH, 20181126, so
+//						        	String error = "server_error";
+////						        			error_redirect = getOauth2_redirect_uri() + (getOauth2_redirect_uri().contains("?") ? "&" : "?") + "error=" + error ;
+//						        	error_redirect = saved_redirect_uri + (saved_redirect_uri.contains("?") ? "&" : "?") + "error=" + error ;
+//							servletResponse.sendRedirect(error_redirect);
+							// RH, 20181126, eo
+							// RH, 20181126, sn
+				        	String error = "server_error_" + "Unsupported_charset_UTF-8" ;
+				        	return_url.append(sep).append("error=" + error);
+				        	sep = "&";
+				        	if (saved_state != null) {
+				        		return_url.append(sep).append("state=" + saved_state);
+				        	}
+							servletResponse.sendRedirect(return_url.toString());
+							// RH, 20181126, en
 							return null;
 						} catch (IOException iox){
-							_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not redirect user to: " + error_redirect);
+//							_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not redirect user to: " + error_redirect);	// RH, 20181126, o
+							_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not redirect user to: " + return_url);	// RH, 20181126, n
 							throw new ASelectCommunicationException(Errors.ERROR_ASELECT_IO);
 						}
 					}
@@ -740,8 +758,14 @@ public class OPEndpointHandler extends ProtoRequestHandler
 //							id_token = createIDToken(hmExtractedAttributes, (String)(hmExtractedAttributes.get("uid")), _sMyServerID, saved_client_id, saved_nonce, appidacr );	// RH, 20181114, o
 							id_token = createIDToken(hmExtractedAttributes, (String)(hmExtractedAttributes.get("uid")), _sMyServerID, 
 									saved_client_id, saved_nonce, appidacr, ASelectConfigManager.getHandle().getDefaultPrivateKey(), 
-									saved_resp_types.contains("id_token") ? generated_authorization_code : null );	// RH, 20181114, n
-							history.put(ID_TOKEN_PREFIX+ generated_authorization_code, id_token);
+//									saved_resp_types.contains("id_token") ? generated_authorization_code : null );	// RH, 20181114, n	// RH, 20181129, o
+									saved_resp_types.contains("code") ? generated_authorization_code : null );	// RH, 20181114, n	// RH, 20181129, n
+//							history.put(ID_TOKEN_PREFIX+ generated_authorization_code, id_token);	// RH, 20181129, n
+							// RH, 20181129, sn
+							if (saved_resp_types.contains("code")) {	// only store the id_token for later retrieval if code requested
+								history.put(ID_TOKEN_PREFIX+ generated_authorization_code, id_token);
+							}
+							// RH, 20181129, en
 //						} catch (UnsupportedEncodingException | JoseException e) {	// RH, 20181001, o, 1.6 compliance
 						} catch (UnsupportedEncodingException e) {
 							// should redirect to caller with error
@@ -755,22 +779,47 @@ public class OPEndpointHandler extends ProtoRequestHandler
 					}
 		        	
 					// if response_type included id_token, also return the token as id_token parameter
-					return_url = saved_redirect_uri + (saved_redirect_uri.contains("?") ? "&" : "?") + "code=" + generated_authorization_code 
-							+ ( ( saved_state != null ) ? ("&state=" + saved_state) : "") ;
+					// RH, 20181126, so
+//					return_url = saved_redirect_uri + (saved_redirect_uri.contains("?") ? "&" : "?") + "code=" + generated_authorization_code 
+//							+ ( ( saved_state != null ) ? ("&state=" + saved_state) : "") ;
+//					if (saved_resp_types.contains("id_token")) {
+//						// include id_token in response
+//						return_url += "&id_token=" + id_token;
+//					}
+					// RH, 20181126, eo
+					// RH, 20181126, sn
+					if (saved_resp_types.contains("code")) {
+						return_url.append(sep).append("code=" + generated_authorization_code);
+						sep = "&";
+					}
 					if (saved_resp_types.contains("id_token")) {
 						// include id_token in response
-						return_url += "&id_token=" + id_token;
+						return_url.append(sep).append("id_token=" + id_token);
+						sep = "&";
 					}
-
+					if (saved_state != null) {
+						return_url.append(sep).append("state=" + saved_state);
+					}
+					// RH, 20181126, en
 		        } else {	// only happy flow implemented
 		        	String error = "access_denied";
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not authenticate user, authentication failed with resultcode: " + extractedResultCode);
-					return_url = saved_redirect_uri + (saved_redirect_uri.contains("?") ? "&" : "?") + "error=" + error 
-							+ ( ( saved_state != null ) ? ("&state=" + saved_state) : "");
+					// RH, 20181126, so
+//					return_url = saved_redirect_uri + (saved_redirect_uri.contains("?") ? "&" : "?") + "error=" + error 
+//							+ ( ( saved_state != null ) ? ("&state=" + saved_state) : "");
+					// RH, 20181126, eo
+					// RH, 20181126, sn
+					return_url.append(sep).append("error=" + error );
+					sep = "&";
+					if (saved_state != null) {
+						return_url.append(sep).append("state=" + saved_state);
+					}
+					// RH, 20181126, en
 		        }
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "Redirecting to:  " + return_url);
 	        	try {
-					servletResponse.sendRedirect(return_url);
+//					servletResponse.sendRedirect(return_url);	// RH, 20181126, o
+					servletResponse.sendRedirect(return_url.toString());	// RH, 20181126, n
 				}
 				catch (IOException e) {
 					_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Could not URLEncode to UTF-8, this should not happen!");
