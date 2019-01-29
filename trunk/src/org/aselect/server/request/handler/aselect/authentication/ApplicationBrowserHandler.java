@@ -1468,7 +1468,8 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 								}
 								ServiceProvider sp = new ServiceProvider(spIssuer);
 								ssoSession.addServiceProvider(sp);
-								_systemLogger.log(Level.INFO, _sModule, sMethod, "UPD SSO session " + ssoSession);
+//								_systemLogger.log(Level.INFO, _sModule, sMethod, "UPD SSO session " + ssoSession);	// RH, 20190129, o
+								_systemLogger.log(Level.INFO, _sModule, sMethod, "UPD SSO session " + Auxiliary.obfuscate(ssoSession));	// RH, 20190129, n
 								_htTGTContext.put("sso_session", ssoSession);
 							}
 
