@@ -1161,11 +1161,14 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 				} else	if ((anyValue instanceof Iterable)) {
 						aValues = (Iterable)anyValue;
 				} else {
-					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Non Iterable attribute found, skipping:  "+sKey+"="+aValues);
+//					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Non Iterable attribute found, skipping:  "+sKey+"="+aValues);	// RH, 20190129, o
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Non Iterable attribute found, skipping:  "+sKey+"="+Auxiliary.obfuscate(aValues));	// RH, 20190129, n
+					
 					continue;
 				}
 
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Setting Attr "+sKey+"="+aValues);
+//				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Setting Attr "+sKey+"="+aValues);	// RH, 20190129, o
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Setting Attr "+sKey+"="+Auxiliary.obfuscate(aValues));	// RH, 20190129, n
 
 				Attribute theAttribute = attributeBuilder.buildObject();
 				for ( Object oValue : aValues) {
@@ -1173,7 +1176,8 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 					if ((oValue instanceof String)) {
 						sValue = (String)oValue;
 					} else {
-						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Non String attribute found, skipping:  "+sKey+"="+aValues);
+//						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Non String attribute found, skipping:  "+sKey+"="+aValues);	// RH, 20190129, o
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Non String attribute found, skipping:  "+sKey+"="+Auxiliary.obfuscate(aValues));	// RH, 20190129, n
 						continue;
 					}
 					
