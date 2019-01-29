@@ -557,7 +557,8 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 			for (ServiceProvider sp : spList) {
 				String serviceProvider = sp.getServiceProviderUrl();
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "initiatingSP=" + initiatingSP + " initiatingID="
-						+ initiatingID + " thisSP=" + serviceProvider + " session=" + sso);
+//						+ initiatingID + " thisSP=" + serviceProvider + " session=" + sso);	// RH, 20190129, o
+						+ initiatingID + " thisSP=" + serviceProvider + " session=" + Auxiliary.obfuscate(sso));	// RH, 20190129, o
 
 				if (initiatingSP != null && serviceProvider.equals(initiatingSP)) {
 					_systemLogger.log(Level.INFO, MODULE, sMethod, "SKIP initiatingSP=" + initiatingSP);
