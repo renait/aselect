@@ -35,6 +35,7 @@ public class AttributeSetter
 
 	Pattern pMatchingPattern = null;
 	String sReplacementString = null;
+	String sOperator = null;
 
 	public String getDest() { return sDest; }
 	public String getSrc() { return sSrc; }
@@ -46,15 +47,19 @@ public class AttributeSetter
 
 	public Pattern getMatchingPattern() { return pMatchingPattern; }
 	public String getReplacementString() { return sReplacementString; }
+	public String getOperator() { return sOperator; }
 
 
 	// Creator
 	public AttributeSetter(String sDest, String sSrc, String sSep, String sName, int iIndex, boolean bDestTgt, boolean bSrcTgt)
 	{
-		this(sDest, sSrc, sSep, sName, iIndex, bDestTgt, bSrcTgt, null, null);
+//		this(sDest, sSrc, sSep, sName, iIndex, bDestTgt, bSrcTgt, null, null);
+		this(sDest, sSrc, sSep, sName, iIndex, bDestTgt, bSrcTgt, null, null, null);
 	}
 	// Creator
-	public AttributeSetter(String sDest, String sSrc, String sSep, String sName, int iIndex, boolean bDestTgt, boolean bSrcTgt, Pattern pMatchingPattern, String sReplacementString )
+//	public AttributeSetter(String sDest, String sSrc, String sSep, String sName, int iIndex, boolean bDestTgt, boolean bSrcTgt, Pattern pMatchingPattern, String sReplacementString )
+	public AttributeSetter(String sDest, String sSrc, String sSep, String sName, int iIndex, boolean bDestTgt, boolean bSrcTgt, 
+			Pattern pMatchingPattern, String sReplacementString, String sOperator )
 	{
 		this.sDest = sDest;
 		this.sSrc = sSrc;
@@ -66,6 +71,7 @@ public class AttributeSetter
 
 		this.pMatchingPattern = pMatchingPattern;
 		this.sReplacementString = sReplacementString;
+		this.sOperator = sOperator;
 	}
 
 	/**
@@ -131,13 +137,18 @@ public class AttributeSetter
 			}
 			// RH, 20160229, en
 
+			// RH, 20190208, sn
+			String sOperator = ASelectConfigManager.getSimpleParam(oSetAttr, "operator", false);
+			// RH, 20190208, en
+
 			int iIndex = -1;
 			try {
 				iIndex = Integer.valueOf(sIndex);
 			} catch (Exception e) { }
 			sysLogger.log(Level.INFO, MODULE, sMethod, (bDestTgt?"tgt_":"")+"dest="+sDest+" "+(bSrcTgt?"tgt_":"")+"src="+sSrc+" name="+sName+" sep="+sSep+" index="+sIndex);
 //			attributeSetters.add(new AttributeSetter(sDest, sSrc, sSep, sName, iIndex, bDestTgt, bSrcTgt));
-			attributeSetters.add(new AttributeSetter(sDest, sSrc, sSep, sName, iIndex, bDestTgt, bSrcTgt, pMatchingPattern, sReplacementString));
+//			attributeSetters.add(new AttributeSetter(sDest, sSrc, sSep, sName, iIndex, bDestTgt, bSrcTgt, pMatchingPattern, sReplacementString));
+			attributeSetters.add(new AttributeSetter(sDest, sSrc, sSep, sName, iIndex, bDestTgt, bSrcTgt, pMatchingPattern, sReplacementString, sOperator));
 			
 			// Obtain handle to the next requestor
 			try {
@@ -238,6 +249,24 @@ public class AttributeSetter
 					sysLog.log(Level.FINEST, MODULE, sMethod, "New value="+Auxiliary.obfuscate(sValue));
 				}
 				// RH, 20160229, en
+				
+				// RH, 20190208, sn
+				if (setter.getOperator() != null) {
+					String slValue = sValue;
+					sysLog.log(Level.FINEST, MODULE, sMethod, "Using Operator="+setter.getOperator());
+					Object orValue = (setter.isDestTgt())? htTGTContext.get(sDest): hmAttributes.get(sDest);
+					if (orValue == null)
+						continue;
+					String srValue = orValue.toString();
+					if (!Utils.hasValue(srValue))
+						continue;
+					if ("==".equals(setter.getOperator())) {
+						sValue = Boolean.toString(slValue.equals(srValue));
+						sysLog.log(Level.FINEST, MODULE, sMethod, "Comparing:" + sSrc + " with:" + sDest + " results:" + sValue);
+					}
+				}
+				// RH, 20190208, en
+				
 				
 				if (setter.isDestTgt()) {
 					sysLog.log(Level.FINEST, MODULE, sMethod, "Tgt: "+sDest+"="+Auxiliary.obfuscate(sValue));
