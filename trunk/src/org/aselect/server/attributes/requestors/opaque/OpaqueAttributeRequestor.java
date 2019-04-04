@@ -108,8 +108,7 @@ public class OpaqueAttributeRequestor extends GenericAttributeRequestor
 
 		try {
 			String sUID = (String)(_bFromTgt? htTGTContext: hmAttributes).get(_sUseKey);
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "vAttr="+vAttributes+" hmAttr="+hmAttributes+" "+_sUseKey+"="+Auxiliary.obfuscate(sUID)+" fromTgt="+_bFromTgt);
-
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "vAttr="+vAttributes+" hmAttr="+Auxiliary.obfuscate(hmAttributes)+" "+_sUseKey+"="+Auxiliary.obfuscate(sUID)+" fromTgt="+_bFromTgt);
 			if (!Utils.hasValue(sUID)) {
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Attribute '"+_sUseKey+"' not found, from_tgt="+_bFromTgt);
 				return null;
@@ -177,8 +176,8 @@ public class OpaqueAttributeRequestor extends GenericAttributeRequestor
 				return null;
 				// RH, 20180628, en
 			} else {
-			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Unable to generate opaque handle", e);
-			throw new ASelectAttributesException(Errors.ERROR_ASELECT_INTERNAL_ERROR);
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Unable to generate opaque handle", e);
+				throw new ASelectAttributesException(Errors.ERROR_ASELECT_INTERNAL_ERROR);
 			}
 		}
 	}
