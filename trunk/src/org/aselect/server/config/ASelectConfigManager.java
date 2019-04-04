@@ -1215,6 +1215,13 @@ public class ASelectConfigManager extends ConfigManager
 		// End  authsp's subselect
 		// RH, 20180712, en
 
+		// RH, 20181127, sn
+		// Start wsfed logout cleanup form
+		if (sForm.startsWith("wsfed"))
+			return Utils.loadTemplateFromFile(_systemLogger, getWorkingdir(), null, sForm, sLanguage, _sOrgFriendlyName, Version.getVersion());
+		// End wsfed logout cleanup
+		// RH, 20181127, en
+
 		return "Form '" + sForm + "' not found, not a standard form";
 	}
 	

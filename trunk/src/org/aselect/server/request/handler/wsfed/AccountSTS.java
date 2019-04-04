@@ -15,6 +15,8 @@
  */
 package org.aselect.server.request.handler.wsfed;
 
+import java.io.IOException;
+import java.io.PrintWriter;
 import java.net.URL;
 import java.net.URLDecoder;
 import java.util.HashMap;
@@ -30,13 +32,13 @@ import javax.servlet.http.HttpServletResponse;
 import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.server.request.HandlerTools;
 import org.aselect.server.request.RequestState;
-import org.aselect.server.request.handler.*;
+import org.aselect.server.request.handler.ProtoRequestHandler;
 import org.aselect.server.tgt.TGTManager;
 import org.aselect.server.utils.Utils;
 import org.aselect.system.communication.client.IClientCommunicator;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectException;
-import org.aselect.system.utils.*;
+import org.aselect.system.utils.Tools;
 import org.aselect.system.utils.crypto.Auxiliary;
 import org.opensaml.SAMLException;
 import org.opensaml.SAMLSubject;
@@ -76,7 +78,7 @@ public class AccountSTS extends ProtoRequestHandler
 	
 	private Integer _iMinLevelProcess = null;
 	private Integer _iMinLevelProcessReturn = null;
-
+	private boolean _doCleanup = false;
 
 	// protected HashMap _htSP_ErrorUrl;
 
@@ -200,7 +202,13 @@ public class AccountSTS extends ProtoRequestHandler
 			if (_sMinLevelProcessReturn != null) {
 				_iMinLevelProcessReturn = Integer.valueOf(_sMinLevelProcessReturn);
 			}
-
+			// RH, 20181127, sn
+			// This is for pilot testing, we should have a cleanup file per identity provider
+			String _sDoCleanup = ASelectConfigManager.getSimpleParam(oConfig, "docleanup", false);
+			if (_sDoCleanup != null) {
+				_doCleanup = Boolean.parseBoolean(_sDoCleanup);
+			}
+			// RH, 20181127, en
 			
 		}
 		catch (ASelectException e) {
@@ -231,11 +239,17 @@ public class AccountSTS extends ProtoRequestHandler
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "Path=" + sPathInfo);
 		HandlerTools.logCookies(servletRequest, _systemLogger);
 
+		String sPwa = servletRequest.getParameter("wa"); // action	// RH, 20181127, n
+
 		if (sPathInfo.endsWith(RETURN_SUFFIX)) {
+			// This is for pilot testing, we should have a cleanup file per identity provider
+			if (_doCleanup && sPwa != null && sPwa.equals("wsignout1.0")) {	// This is a return from wsfed wsignoutcleanup html 
+				return processSignout(servletRequest, servletResponse);
+			}
 			return processReturn(servletRequest, servletResponse);
 		}
 
-		String sPwa = servletRequest.getParameter("wa"); // action
+//		String sPwa = servletRequest.getParameter("wa"); // action	// RH, 20181127, o
 		String sPwreply = servletRequest.getParameter("wreply"); // response redirect URL, not given by ADFS!
 		String sPwctx = servletRequest.getParameter("wctx"); // context value, pass unchanged
 		// String sPwct = request.getParameter("wct"); // current time
@@ -246,8 +260,13 @@ public class AccountSTS extends ProtoRequestHandler
 		
 		
 
-		if (sPwa != null && sPwa.equals("wsignout1.0"))
+		if (sPwa != null && sPwa.equals("wsignout1.0"))	{
+			if (_doCleanup) {
+				// Show the wsfed_cleaunup page to the user (should contain "autoreturn" to this handler _return with a wa=wsignout1.0 
+				return showCleanupForm(servletRequest, servletResponse, sPwreply);
+			}
 			return processSignout(servletRequest, servletResponse);
+		}
 
 		if (sPwa == null || !sPwa.equals("wsignin1.0")) {
 			_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Unknown or missing \"wa\" in call");
@@ -667,10 +686,14 @@ public class AccountSTS extends ProtoRequestHandler
 		String sWtRealm = null;
 		// if (htCredentialsParams != null) {sWtRealm
 		// String sTgt = (String)htCredentialsParams.get("tgt");
+		String saved_wreply = null;	// RH, 20181204, n
 		if (sTgt != null) {
 			HashMap htTGTContext = getContextFromTgt(sTgt, false); // Don't check expiration
 			if (htTGTContext != null) { // Valid TGT context found
 				sWtRealm = (String) htTGTContext.get("wtrealm");
+				if (_doCleanup) {	// RH, 20181204, sn
+					saved_wreply = (String) htTGTContext.get("wsfed_accountsts_wreply");
+				}	// RH, 20181204, en
 				_oTGTManager.remove(sTgt);
 			}
 		}
@@ -689,10 +712,20 @@ public class AccountSTS extends ProtoRequestHandler
 			}
 			String sReply = (String) _htSP_LogoutReturn.get(sWtRealm);
 			// RH, 20151026, sn
-			if (sReply != null & sReply.length() > 0 && sReply.endsWith("*")) {	// add wreply query string to logout return url
+//			if (sReply != null & sReply.length() > 0 && sReply.endsWith("*")) {	// add wreply query string to logout return url	// RH, 20190115, o
+			if (sReply != null && sReply.length() > 0 && sReply.endsWith("*")) {	// add wreply query string to logout return url	// RH, 20190115, n
 				StringBuffer s = new StringBuffer();
 				s.append(sReply.substring(0, sReply.length() - 1));	// snap off the "*"
-				String wreply = request.getParameter("wreply");	// contains url encoded url
+//				String wreply = request.getParameter("wreply");	// contains url encoded url	// RH, 20181204, o
+				// RH, 20181204, sn
+				String wreply = null;
+				if (_doCleanup) {
+					wreply = saved_wreply;
+				}
+				if (wreply == null) {
+					wreply = request.getParameter("wreply");	// contains url encoded url	// RH, 20181204, o
+				}
+				// RH, 20181204, en
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Handling  wreply: " + wreply);
 				if (wreply != null && wreply.length() > 0) {
 					wreply = URLDecoder.decode(wreply, "UTF-8");
@@ -728,6 +761,62 @@ public class AccountSTS extends ProtoRequestHandler
 		}
 	}
 
+	// RH, 20181127, sn
+	// This is for pilot testing, we should have a cleanup file per identity provider
+	private RequestState showCleanupForm (HttpServletRequest _servletRequest, HttpServletResponse _servletResponse, String wreply) throws ASelectException {
+		String sMethod = "showCleanupForm";
+
+		PrintWriter pwOut = null;
+
+		try {
+			pwOut = org.aselect.system.utils.Utils.prepareForHtmlOutput(_servletRequest, _servletResponse);
+	
+			String sTgt = getCredentialsFromCookie(_servletRequest);
+			if (sTgt != null) {
+				HashMap htTGTContext = getContextFromTgt(sTgt, false); // Do not check expiration
+				if ( htTGTContext != null ) {
+					htTGTContext.put("wsfed_accountsts_wreply", wreply);
+					// Valid TGT context found, Update TGT wsfed_accountsts_wreply
+					_oTGTManager.updateTGT(sTgt, htTGTContext);
+				}
+			}
+			String sCleanupOutForm = _configManager.getHTMLForm("wsfed_cleanup", _sUserLanguage, _sUserCountry);
+			sCleanupOutForm = _configManager.updateTemplate(sCleanupOutForm, null/*no session*/, _servletRequest);
+	
+			// We should pause and restart the timersensor
+			pwOut.println(sCleanupOutForm);
+		}
+		catch (ASelectException ae) {
+//			_timerSensor.setTimerSensorType(0);
+//			showErrorPage(ae.getMessage(), htServiceRequest, pwOut);
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "IO Exception", ae);
+			throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR, ae);
+		}
+		catch (IOException ioe) {
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "IO Exception", ioe);
+			throw new ASelectException(Errors.ERROR_ASELECT_IO, ioe);
+		}
+		catch (Exception e) {
+			// produces a stack trace on FINEST level, when 'e' is given as a separate argument to log()
+			_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Internal error: "+e);
+			throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR, e);
+		}
+		finally {
+			if (pwOut != null)
+				pwOut.close();
+//			try {
+//				if (_timerSensor.getTimerSensorLevel() >= 1) {  // used
+//					_timerSensor.timerSensorFinish(bSuccess);
+//					SendQueue.getHandle().addEntry(_timerSensor.timerSensorPack());
+//				}
+//			}
+//			catch (Exception e) { }
+		}
+		return new RequestState(null);
+
+	}
+	// RH, 20181127, en
+	
 	/* (non-Javadoc)
 	 * @see org.aselect.server.request.handler.ProtoRequestHandler#destroy()
 	 */
