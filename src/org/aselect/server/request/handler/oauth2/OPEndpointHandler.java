@@ -75,7 +75,7 @@ import org.jose4j.lang.JoseException;
  */
 public class OPEndpointHandler extends ProtoRequestHandler
 {
-	private final static String MODULE = "AuthorizationEndpointHandler";
+	private final static String MODULE = "OPEndpointHandler";
 	private final static String AUTH_CODE_PREFIX = "AUTH_CODE";
 	private final static String ID_TOKEN_PREFIX = "ID_TOKEN";
 	
@@ -97,6 +97,9 @@ public class OPEndpointHandler extends ProtoRequestHandler
 	// we might use this in future for client_secret when implementing auth_type "implicit"
 	private String secretKey = null;
 	private	String loginrequest = null;
+
+	private static HashMap<String, String> _forced_app_ids = null;	// RH 20181129, n
+	private	String _forced_app_parameter = null;
 
 
 	/* @param oServletConfig
@@ -205,7 +208,23 @@ public class OPEndpointHandler extends ProtoRequestHandler
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config item 'loginrequest' found, using default");
 				setLoginrequest( "login1");	// default
 			}
-			
+
+			// RH, 20181203, sn
+			try {
+				set_forced_app_parameter(_configManager.getParam(oConfig, "forced_app_parameter"));
+			}
+			catch (ASelectConfigException e) {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config item 'forced_app_parameter' found, using default none");
+			}
+
+			HashMap<String, String> _htForced_app_ids = new HashMap<String, String>(); // contains mapping to app_id
+			_htForced_app_ids = ASelectConfigManager.getTableFromConfig(oConfig,  _htForced_app_ids, "forced_applications",
+					"application", "forced_app_id",/*->*/"app_id", false/* mandatory */, false/* unique values */);
+			if (_htForced_app_ids != null) {
+				set_forced_app_ids(_htForced_app_ids);
+			}
+			// RH, 20181203, en
+
 		}
 		catch (ASelectException e) {
 			throw e;
@@ -414,12 +433,26 @@ public class OPEndpointHandler extends ProtoRequestHandler
 	    		String response_type = servletRequest.getParameter("response_type");
 	       		String scope	 =  servletRequest.getParameter("scope");
 	       		String state	 =  servletRequest.getParameter("state");
-	
+
 				ArrayList<String> resp_types = new ArrayList<String>();
 
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Received client_id/redirect_uri/scope/state: " + 
-						client_id + "/" + redirect_uri + "/" + scope + "/" + state);
+	       		String forced_app_id = null;
+	       		if (_forced_app_parameter != null && _forced_app_parameter.length() > 0) {
+	       			forced_app_id	 =  servletRequest.getParameter(_forced_app_parameter);
+	       		}
+
+//				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Received client_id/redirect_uri/scope/state: " + 
+//						client_id + "/" + redirect_uri + "/" + scope + "/" + state);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Received client_id/redirect_uri/scope/state" +
+						(_forced_app_parameter != null ? ("/" + _forced_app_parameter) : "") + ": " + 
+						client_id + "/" + redirect_uri + "/" + scope + "/" + state + (forced_app_id != null ? ("/" + forced_app_id) : ""));
+				//////////////////////////
     	   		String sAppId = getClientIds().get(client_id);
+    	   		String sForcedAppId = null;
+				if (forced_app_id != null) {
+					sAppId = get_forced_app_ids().get(forced_app_id);
+				}
+				////////////////////////////
         		// Handle unconfigured app_id here
     	   		if (sAppId == null) {	//	unconfigured app_id
     				_systemLogger.log(Level.WARNING, MODULE, sMethod, "No app_id for client_id: " + client_id);
@@ -1072,6 +1105,22 @@ public class OPEndpointHandler extends ProtoRequestHandler
 
 	public static HashMap<String, String> getClientIds() {
 		return _client_ids;
+	}
+
+	public static synchronized HashMap<String, String> get_forced_app_ids() {
+		return _forced_app_ids;
+	}
+
+	public synchronized String get_forced_app_parameter() {
+		return _forced_app_parameter;
+	}
+
+	public synchronized void set_forced_app_parameter(String _forced_app_parameter) {
+		this._forced_app_parameter = _forced_app_parameter;
+	}
+
+	public static synchronized void set_forced_app_ids(HashMap<String, String> _forced_app_ids) {
+		OPEndpointHandler._forced_app_ids = _forced_app_ids;
 	}
 
 	public static void setClientIds(HashMap<String, String> _client_ids) {
