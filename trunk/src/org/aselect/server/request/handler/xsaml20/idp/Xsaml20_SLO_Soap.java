@@ -166,7 +166,8 @@ public class Xsaml20_SLO_Soap extends Saml20_BaseHandler
 			String initiatingSP = logoutRequest.getIssuer().getValue();
 			if (is_bVerifySignature()) {
 				MetaDataManagerIdp metadataManager = MetaDataManagerIdp.getHandle();
-				List <PublicKey> pkeys = metadataManager.getSigningKeyFromMetadata(initiatingSP);	// RH, 20181116, n
+//				List <PublicKey> pkeys = metadataManager.getSigningKeyFromMetadata(initiatingSP);	// RH, 20181116, n	// RH, 20190325, o
+				List <PublicKey> pkeys = metadataManager.getSigningKeyFromMetadata(_sResourceGroup, initiatingSP);	// RH, 20181116, n	// RH, 20190325, o
 				if (pkeys == null || pkeys.isEmpty()) {	// RH, 20181116, n
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, "PublicKey for entityId: " + initiatingSP + " not found.");
 					throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);

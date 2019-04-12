@@ -11,6 +11,7 @@
  */
 package org.aselect.server.request.handler.xsaml20.sp;
 
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.HashMap;
 import java.util.Hashtable;
@@ -96,7 +97,8 @@ public class MetaDataManagerSp extends AbstractMetaDataManager
 	 * @throws ASelectConfigException
 	 * @throws ASelectException
 	 */
-	public void processResourceSection(Object idpSection)
+//	public void processResourceSection(Object idpSection)	// RH, 20190321, o
+	public void processResourceSection(String sResourceGroup, Object idpSection)	// RH, 20190321, n
 	throws ASelectConfigException, ASelectException
 	{
 		String sMethod = "sp.processResourceSection";
@@ -216,7 +218,14 @@ public class MetaDataManagerSp extends AbstractMetaDataManager
 			idpData.setPc_keylocation(workingDir, pc_keyfile);
 			String i_point = Utils.getParamFromSection(_configManager, _systemLogger, idpSection, "polymorf", "pi_point", false);
 			idpData.setI_point(i_point);
-			String p_point = Utils.getParamFromSection(_configManager, _systemLogger, idpSection, "polymorf", "pd_point", false);
+			// RH, 20190314, sn
+			String p_point = Utils.getParamFromSection(_configManager, _systemLogger, idpSection, "polymorf", "pp_point", false);
+			if (p_point == null) {	// backwards compatibility, pd_point is not a well chosen name, should be pp_point
+				p_point = Utils.getParamFromSection(_configManager, _systemLogger, idpSection, "polymorf", "pd_point", false);
+			}
+			// RH, 20190314, en
+			// RH, 20190314, sn
+//			String p_point = Utils.getParamFromSection(_configManager, _systemLogger, idpSection, "polymorf", "pd_point", false);// RH, 20190314, o
 			idpData.setP_point(p_point);
 			// RH, 20181102, en
 			
@@ -571,7 +580,8 @@ public class MetaDataManagerSp extends AbstractMetaDataManager
 			
 			
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "id=" + sId + "<>" + idpData);
-			storeAllIdPData.put(sId, idpData);
+//			storeAllIdPData.put(sId, idpData);	// RH, 20190321, o
+			storeAllIdPData.put(new AbstractMap.SimpleEntry<>(sResourceGroup ,sId), idpData);	// RH, 20190321, n
 		}
 		catch (ASelectConfigException e) {
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Metadata retrieval failed", e);

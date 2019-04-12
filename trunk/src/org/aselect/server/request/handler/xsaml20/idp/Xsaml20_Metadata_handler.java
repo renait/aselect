@@ -11,7 +11,6 @@
  */
 package org.aselect.server.request.handler.xsaml20.idp;
 
-import java.io.UnsupportedEncodingException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.logging.Level;
@@ -46,7 +45,6 @@ import org.opensaml.xml.signature.KeyName;
 import org.opensaml.xml.signature.X509Certificate;
 import org.opensaml.xml.signature.X509Data;
 import org.opensaml.xml.signature.XMLSignatureBuilder;
-import org.opensaml.xml.signature.impl.KeyNameBuilder;
 import org.opensaml.xml.signature.impl.X509CertificateBuilder;
 import org.opensaml.xml.signature.impl.X509DataBuilder;
 import org.w3c.dom.Node;
@@ -96,7 +94,17 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 		Object oHandler = null;
 		super.aselectReader();
 
-		setSingleSignOnServiceTarget("saml20_sso"); // Preliminary default
+//		setSingleSignOnServiceTarget("saml20_sso"); // Preliminary default	// RH, 20190311, o
+		// RH, 20190311, sn
+		// cleaunup old values
+		setSingleSignOnServiceTarget(null);
+		setArtifactResolverTarget(null);
+		setIdpSloHttpLocation(null);
+		setIdpSloHttpResponse(null);
+		setIdpSloSoapLocation(null);
+		setIdpSloSoapResponse(null);
+		setIdpSSSoapLocation(null);
+		// RH, 20190311, sn
 		try {
 			oRequest = _configManager.getSection(null, "requests");
 			oHandlers = _configManager.getSection(oRequest, "handlers");
@@ -107,52 +115,112 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 			for (; oHandler != null; oHandler = _configManager.getNextSection(oHandler)) {
 				try {
 					String sId = _configManager.getParam(oHandler, "id");
-					if (!sId.startsWith("saml20_")) {
+//					if (!sId.startsWith("saml20_")) {	// RH, 20190311, o
+					if (!sId.contains("saml20_")) {	// RH, 20190311, n
 						continue;
 					}
-					String sTarget = _configManager.getParam(oHandler, "target");
-					String sLocalUrl = Utils.getSimpleParam(_configManager, _systemLogger, oHandler, "local_url", false);
-					_systemLogger.log(Level.INFO, MODULE, sMethod, "id=" + sId + " target=" + sTarget + "local_url="+sLocalUrl);
-					sTarget = sTarget.replace("\\", "");
-					sTarget = sTarget.replace(".*", "");
-
-					if (sId.equals("saml20_sso")) {
-						setSingleSignOnServiceTarget(sTarget);
-						setIdpSsoUrl((sLocalUrl != null) ? sLocalUrl : sRedirectUrl);
-					}
-					else if (sId.equals("saml20_artifactresolver")) {
-						setArtifactResolverTarget(sTarget);
-						setIdpArtifactResolverUrl(((sLocalUrl != null) ? sLocalUrl : sRedirectUrl));
-					}
-					else if (sId.equals("saml20_idp_slo_http_request")) {
-						setIdpSloHttpLocation(sTarget);
-						setIdpSloHttpRequestUrl(((sLocalUrl != null) ? sLocalUrl : sRedirectUrl));
-					}
-					else if (sId.equals("saml20_idp_slo_http_response")) {
-						setIdpSloHttpResponse(sTarget);
-						setIdpSloHttpResponseUrl(((sLocalUrl != null) ? sLocalUrl : sRedirectUrl));
-					}
-					else if (sId.equals("saml20_idp_slo_soap_request")) {
-						setIdpSloSoapLocation(sTarget);
-						setIdpSloSoapRequestUrl(((sLocalUrl != null) ? sLocalUrl : sRedirectUrl));
-					}
-					else if (sId.equals("saml20_idp_slo_soap_response")) {
-						setIdpSloSoapResponse(sTarget);
-						setIdpSloSoapResponseUrl(((sLocalUrl != null) ? sLocalUrl : sRedirectUrl));
-					}
-					else if (sId.equals("saml20_idp_session_sync")) {
-						setIdpSSSoapLocation(sTarget);
-						setIdpSyncUrl(((sLocalUrl != null) ? sLocalUrl : sRedirectUrl));
-					}
+					String groupid = getRequestedGroupId();
+					if (groupid != null) {
+						String sGroup = null;
+						try {
+							sGroup = _configManager.getParam(oHandler, "resourcegroup");
+						} catch (ASelectConfigException ace) {
+							_systemLogger.log(Level.WARNING, MODULE, sMethod, "No 'resourcegroup' found for handler id:" + sId + ", continuing");
+							continue;
+						}
+						if (!groupid.equals(sGroup)) {
+							_systemLogger.log(Level.FINEST, MODULE, sMethod, "Handler not belonging to requested 'groupid':" + groupid + ", continuing");
+							continue;
+						} else {
+							String sTarget = _configManager.getParam(oHandler, "target");
+							String sLocalUrl = Utils.getSimpleParam(_configManager, _systemLogger, oHandler, "local_url", false);
+							_systemLogger.log(Level.INFO, MODULE, sMethod, "id=" + sId + " target=" + sTarget + "local_url="+sLocalUrl);
+							sTarget = sTarget.replace("\\", "");
+							sTarget = sTarget.replace(".*", "");
+		
+							if (sId.contains("saml20_sso")) {
+								setSingleSignOnServiceTarget(sTarget);
+								setIdpSsoUrl((sLocalUrl != null) ? sLocalUrl : sRedirectUrl);
+							}
+							else if (sId.contains("saml20_artifactresolver")) {
+								setArtifactResolverTarget(sTarget);
+								setIdpArtifactResolverUrl(((sLocalUrl != null) ? sLocalUrl : sRedirectUrl));
+							}
+							else if (sId.contains("saml20_idp_slo_http_request")) {
+								setIdpSloHttpLocation(sTarget);
+								setIdpSloHttpRequestUrl(((sLocalUrl != null) ? sLocalUrl : sRedirectUrl));
+							}
+							else if (sId.contains("saml20_idp_slo_http_response")) {
+								setIdpSloHttpResponse(sTarget);
+								setIdpSloHttpResponseUrl(((sLocalUrl != null) ? sLocalUrl : sRedirectUrl));
+							}
+							else if (sId.contains("saml20_idp_slo_soap_request")) {
+								setIdpSloSoapLocation(sTarget);
+								setIdpSloSoapRequestUrl(((sLocalUrl != null) ? sLocalUrl : sRedirectUrl));
+							}
+							else if (sId.contains("saml20_idp_slo_soap_response")) {
+								setIdpSloSoapResponse(sTarget);
+								setIdpSloSoapResponseUrl(((sLocalUrl != null) ? sLocalUrl : sRedirectUrl));
+							}
+							else if (sId.contains("saml20_idp_session_sync")) {
+								setIdpSSSoapLocation(sTarget);
+								setIdpSyncUrl(((sLocalUrl != null) ? sLocalUrl : sRedirectUrl));
+							}
+						}
+					} else {	// what we used to do	// RH, 20190311, en	
+					// RH, 20190311, so
+//					try {
+//						String sId = _configManager.getParam(oHandler, "id");
+//						if (!sId.startsWith("saml20_")) {
+//							continue;
+//						}
+					// RH, 20190311, eo
+						String sTarget = _configManager.getParam(oHandler, "target");
+						String sLocalUrl = Utils.getSimpleParam(_configManager, _systemLogger, oHandler, "local_url", false);
+						_systemLogger.log(Level.INFO, MODULE, sMethod, "id=" + sId + " target=" + sTarget + "local_url="+sLocalUrl);
+						sTarget = sTarget.replace("\\", "");
+						sTarget = sTarget.replace(".*", "");
+	
+						if (sId.equals("saml20_sso")) {
+							setSingleSignOnServiceTarget(sTarget);
+							setIdpSsoUrl((sLocalUrl != null) ? sLocalUrl : sRedirectUrl);
+						}
+						else if (sId.equals("saml20_artifactresolver")) {
+							setArtifactResolverTarget(sTarget);
+							setIdpArtifactResolverUrl(((sLocalUrl != null) ? sLocalUrl : sRedirectUrl));
+						}
+						else if (sId.equals("saml20_idp_slo_http_request")) {
+							setIdpSloHttpLocation(sTarget);
+							setIdpSloHttpRequestUrl(((sLocalUrl != null) ? sLocalUrl : sRedirectUrl));
+						}
+						else if (sId.equals("saml20_idp_slo_http_response")) {
+							setIdpSloHttpResponse(sTarget);
+							setIdpSloHttpResponseUrl(((sLocalUrl != null) ? sLocalUrl : sRedirectUrl));
+						}
+						else if (sId.equals("saml20_idp_slo_soap_request")) {
+							setIdpSloSoapLocation(sTarget);
+							setIdpSloSoapRequestUrl(((sLocalUrl != null) ? sLocalUrl : sRedirectUrl));
+						}
+						else if (sId.equals("saml20_idp_slo_soap_response")) {
+							setIdpSloSoapResponse(sTarget);
+							setIdpSloSoapResponseUrl(((sLocalUrl != null) ? sLocalUrl : sRedirectUrl));
+						}
+						else if (sId.equals("saml20_idp_session_sync")) {
+							setIdpSSSoapLocation(sTarget);
+							setIdpSyncUrl(((sLocalUrl != null) ? sLocalUrl : sRedirectUrl));
+						}
+					}	// RH, 20190311, n
 				}
 				catch (ASelectConfigException e) {
-					_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config next section 'handler' found", e);
+//						_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config next section 'handler' found", e);
+					_systemLogger.log(Level.WARNING, MODULE, sMethod, "No 'id' found in config next section 'handler'", e);
 					throw new ASelectException(Errors.ERROR_ASELECT_INIT_ERROR, e);
 				}
 			}
 		}
 		catch (ASelectConfigException e) {
-			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not find 'aselect' config section in config file", e);
+//			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not find 'aselect' config section in config file", e);
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not find one of 'requests', 'handlers' or 'handler' in 'aselect' config section in config file", e);
 			throw new ASelectException(Errors.ERROR_ASELECT_INIT_ERROR, e);
 		}
 	}

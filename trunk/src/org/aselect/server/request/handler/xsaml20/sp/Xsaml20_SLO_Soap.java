@@ -160,7 +160,9 @@ public class Xsaml20_SLO_Soap extends Saml20_BaseHandler
 			LogoutRequest logoutRequest = (LogoutRequest) unmarshaller.unmarshall((Element) eltLogoutRequest);
 
 			MetaDataManagerSp metadataManager = MetaDataManagerSp.getHandle();
-			String sASelectServerUrl = metadataManager.getLocation(_sServerUrl,
+//			String sASelectServerUrl = metadataManager.getLocation(_sServerUrl,	// RH, 20190322, o
+			// For now we take the resourcegroup from the config but we should first try from the tgt federation_group
+			String sASelectServerUrl = metadataManager.getLocation(_sResourceGroup, _sServerUrl,	// RH, 20190322, o
 					LogoutRequest.DEFAULT_ELEMENT_LOCAL_NAME, SAMLConstants.SAML2_SOAP11_BINDING_URI);
 			String logoutRequestIssuer = (logoutRequest.getIssuer() == null || // avoid nullpointers
 					logoutRequest.getIssuer().getValue() == null ||
@@ -171,7 +173,9 @@ public class Xsaml20_SLO_Soap extends Saml20_BaseHandler
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "Do LogoutRequest signature verification=" + is_bVerifySignature());
 			if (is_bVerifySignature()) {
 				// Check signature of LogoutRequest
-				List<PublicKey> pkeys = metadataManager.getSigningKeyFromMetadata(logoutRequestIssuer);	// RH, 20181119, n
+//				List<PublicKey> pkeys = metadataManager.getSigningKeyFromMetadata(logoutRequestIssuer);	// RH, 20181119, n	// RH, 20190322, o
+				// For now we take the resourcegroup from the config but we should first try from the tgt federation_group
+				List<PublicKey> pkeys = metadataManager.getSigningKeyFromMetadata(_sResourceGroup, logoutRequestIssuer);	// RH, 20181119, n	// RH, 20190322, o
 				if (pkeys == null || pkeys.isEmpty()) {	// RH, 20181119, n
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, "PublicKey for entityId: " + logoutRequestIssuer
 							+ " not found.");
@@ -217,7 +221,9 @@ public class Xsaml20_SLO_Soap extends Saml20_BaseHandler
 				String sp_audience = (String)found.get("sp_audience");
 				try {
 					_systemLogger.log(Level.INFO, MODULE, sMethod, "Logout to audience: " + sp_audience);
-					statusCode = sendLogoutRequestToSpAudience(sNameID, sp_audience, reason);
+					// For now we take the resourcegroup from the config but we should first try from the tgt federation_group
+//					statusCode = sendLogoutRequestToSpAudience(sNameID, sp_audience, reason);	// RH, 20190322, o
+					statusCode = sendLogoutRequestToSpAudience(_sResourceGroup, sNameID, sp_audience, reason);	// RH, 20190322, n
 				} catch (ASelectException e) {	// we don't want to interrupt the idp logout process
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, "Logout to audience failed: " + e.getMessage());
 					statusCode = StatusCode.PARTIAL_LOGOUT_URI;
@@ -236,7 +242,9 @@ public class Xsaml20_SLO_Soap extends Saml20_BaseHandler
 			LogoutResponse logoutResponse = SamlTools.buildLogoutResponse(myEntityId, statusCode, logoutRequest.getID());
 
 			// RH, 20180918, sn
-			PartnerData partnerData = metadataManager.getPartnerDataEntry(logoutRequestIssuer);
+			// For now we take the resourcegroup from the config but we should first try from the tgt federation_group
+//			PartnerData partnerData = metadataManager.getPartnerDataEntry(logoutRequestIssuer);	// RH, 20190322, o
+			PartnerData partnerData = metadataManager.getPartnerDataEntry(_sResourceGroup, logoutRequestIssuer);	// RH, 20190322, o
 			PartnerData.Crypto specificCyrpto = null;
 			if (partnerData != null) {
 				specificCyrpto = partnerData.getCrypto();	// might be null

@@ -818,13 +818,16 @@ public class ApplicationAPIHandler extends AbstractAPIRequestHandler
 			String sSamlMessageType = (String) htResult.get("message_type");
 			// Bauke 20091029, take federation url from TGT
 			String sFederationUrl = (String) htTGTContext.get("federation_url");
+			String sFederationGroup = (String) htTGTContext.get("federation_group");	// RH, 20190322, n
+			
 			// if (sFederationUrl == null) sFederationUrl = (String)htResult.get("federation_url");
 			String sServerUrl = ASelectConfigManager.getParamFromSection(null, "aselect", "redirect_url", true);
 
 			String verify_signature = (String) htResult.get("verify_signature");
 			List <PublicKey> pKeys = null;
 			if ("true".equalsIgnoreCase(verify_signature.trim())) {
-				pKeys = _metadataManager.getSigningKeyFromMetadata(sFederationUrl); // 20091029, was:
+//				pKeys = _metadataManager.getSigningKeyFromMetadata(sFederationUrl); // 20091029, was:	// RH, 20190322, o
+				pKeys = _metadataManager.getSigningKeyFromMetadata(sFederationGroup, sFederationUrl); // 20091029, was:	// RH, 20190322, n
 				// _configManager.getFederationURL());
 			}
 
@@ -839,7 +842,9 @@ public class ApplicationAPIHandler extends AbstractAPIRequestHandler
 				l_max_notonorafter = Long.parseLong((String) htResult.get("max_notonorafter"));
 
 			_systemLogger.log(Level.INFO, _sModule, sMethod, "sFederationUrl=" + sFederationUrl);
-			String sSessionSyncUrl = MetaDataManagerSp.getHandle().getSessionSyncURL(sFederationUrl); // "/saml20_session_sync";
+//			String sSessionSyncUrl = MetaDataManagerSp.getHandle().getSessionSyncURL(sFederationUrl); // "/saml20_session_sync";	// RH, 20190322, o
+			String sSessionSyncUrl = MetaDataManagerSp.getHandle().getSessionSyncURL(sFederationGroup, sFederationUrl); // "/saml20_session_sync";	// RH, 20190322, o
+			
 			SessionSyncRequestSender ss_req = new SessionSyncRequestSender(_systemLogger, sServerUrl, updateInterval,
 					sSamlMessageType, sSessionSyncUrl, pKeys, l_max_notbefore, l_max_notonorafter, ("true"
 							.equalsIgnoreCase(verify_interval.trim())) ? true : false);

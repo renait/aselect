@@ -108,6 +108,7 @@ public class Xsaml20_HandleMetadata extends AbstractRequestHandler
 			else {
 				String sList = servletRequest.getParameter("list");
 				String entityId = servletRequest.getParameter("metadata");
+				String resourceGroup = servletRequest.getParameter("metadata_group");	// RH, 20190322, n
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "list="+sList+" entityId=" + entityId);
 	
 				if (sList == null && entityId == null) {
@@ -115,7 +116,8 @@ public class Xsaml20_HandleMetadata extends AbstractRequestHandler
 				}
 				else {
 					MetaDataManagerIdp metadataMgr = MetaDataManagerIdp.getHandle();
-					metadataMgr.handleMetadataProvider(pwOut, entityId, sList != null);
+//					metadataMgr.handleMetadataProvider(pwOut, entityId, sList != null);	// RH, 20190322, o
+					metadataMgr.handleMetadataProvider(pwOut, resourceGroup, entityId, sList != null);	// RH, 20190322, n
 				}
 			}
 		}

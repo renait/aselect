@@ -17,6 +17,7 @@ import java.security.KeyStore;
 import java.security.MessageDigest;
 import java.security.PrivateKey;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
@@ -24,6 +25,9 @@ import java.util.Map;
 import java.util.Vector;
 import java.util.logging.Level;
 
+import org.apache.commons.lang.builder.ReflectionToStringBuilder;
+import org.apache.commons.lang.builder.StandardToStringStyle;
+import org.apache.commons.lang.builder.ToStringStyle;
 import org.aselect.server.request.handler.xsaml20.SecurityLevel.SecurityLevelEntry;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectConfigException;
@@ -37,6 +41,7 @@ import org.aselect.system.utils.Utils;
  */
 public class PartnerData
 {
+
 	private String partnerID = null;
 	private String metadataUrl = null;
 	private String sessionSyncUrl = null;
@@ -75,11 +80,31 @@ public class PartnerData
 		partnerID = sId;
 	}
 
+	
+	@Override
 	public String toString()
 	{
 		return "IdPData["+partnerID+"] meta="+metadataUrl+" sync="+sessionSyncUrl+" spec="+specialSettings+" acsi="+assertionconsumerserviceindex;
+		
+//		return "PartnerData:" + new ReflectionToStringBuilder( this, new StandardToStringStyle()).toString();
+
+		  
 	}
 
+	/*
+	@Override
+	public String toString() {
+		return String.format(
+				"PartnerData [partnerID=%s, metadataUrl=%s, sessionSyncUrl=%s, specialSettings=%s, sRedirectSyncTime=%s, sRedirectPostForm=%s, localIssuer=%s, destination=%s, assertionconsumerserviceindex=%s, attributeconsumerserviceindex=%s, addkeyname=%s, addcertificate=%s, logoutSupport=%s, suppressscoping=%s, idpentryproviderid=%s, federationurl=%s, securityLevels=%s, metadata4partner=%s, testdata4partner=%s, extensionsdata4partner=%s, crypto=%s, id_keylocation=%s, pd_keylocation=%s, pc_keylocation=%s, i_point=%s, p_point=%s]",
+				partnerID, metadataUrl, sessionSyncUrl, specialSettings, sRedirectSyncTime, sRedirectPostForm,
+				localIssuer, destination, assertionconsumerserviceindex, attributeconsumerserviceindex, addkeyname,
+				addcertificate, logoutSupport, suppressscoping, idpentryproviderid, federationurl,
+				Arrays.toString(securityLevels), metadata4partner, testdata4partner, extensionsdata4partner, crypto,
+				id_keylocation, pd_keylocation, pc_keylocation, i_point, p_point);
+	}
+*/
+
+	
 	public String getPartnerID() {
 		return partnerID;
 	}
@@ -232,6 +257,14 @@ public class PartnerData
 	// Simple wrapper for crypto info
 	public class Crypto
 	{
+		@Override
+		public String toString() {
+			return String.format("Crypto [x509Cert=%s, sCertFingerPrint=%s]", x509Cert, sCertFingerPrint);
+			
+//			return "Crypto:" + new ReflectionToStringBuilder( this, new StandardToStringStyle()).toString();
+
+		}
+
 		private java.security.cert.X509Certificate x509Cert = null;
 		private PrivateKey oPrivateKey = null;
 		private String sCertFingerPrint = null;
@@ -442,6 +475,15 @@ public class PartnerData
 
 		}
 
+		@Override
+		public String toString() {
+//			return String.format(
+//					"HandlerInfo [type=%s, binding=%s, isdefault=%s, index=%s, responselocation=%s, location=%s, services=%s, attributes=%s]",
+//					type, binding, isdefault, index, responselocation, location, services, attributes);
+			return "HandlerInfo:" + new ReflectionToStringBuilder( this, new StandardToStringStyle()).toString();
+
+		}
+
 		/**
 		 * @return the type
 		 */
@@ -531,6 +573,13 @@ public class PartnerData
 			this.attributes = attributes;
 		}
 
+		@Override
+		public String toString() {
+//			return String.format("NamespaceInfo [prefix=%s, uri=%s, attributes=%s]", prefix, uri, attributes);
+			return "NamespaceInfo:" + new ReflectionToStringBuilder( this, new StandardToStringStyle()).toString();
+			
+		}
+
 		/**
 		 * @return the prefix
 		 */
@@ -589,6 +638,19 @@ public class PartnerData
 		
 		private Vector<NamespaceInfo> namespaces = new Vector<NamespaceInfo>();
 		
+		@Override
+		public String toString() {
+//			return String.format(
+//					"Metadata4Partner [addkeyname=%s, addcertificate=%s, includesigningcertificate=%s, includeencryptioncertificate=%s, includesigningkeyname=%s, includeencryptionkeyname=%s, specialsettings=%s, handlers=%s, metaorgname=%s, metaorgnamelang=%s, metaorgdisplname=%s, metaorgdisplnamelang=%s, metaorgurl=%s, metaorgurllang=%s, metacontacttype=%s, metacontactname=%s, metacontactsurname=%s, metacontactemail=%s, metacontactephone=%s, namespaces=%s]",
+//					addkeyname, addcertificate, includesigningcertificate, includeencryptioncertificate,
+//					includesigningkeyname, includeencryptionkeyname, specialsettings, handlers, metaorgname,
+//					metaorgnamelang, metaorgdisplname, metaorgdisplnamelang, metaorgurl, metaorgurllang,
+//					metacontacttype, metacontactname, metacontactsurname, metacontactemail, metacontactephone,
+//					namespaces);
+			return "Metadata4Partner:" + new ReflectionToStringBuilder( this, new StandardToStringStyle()).toString();
+
+		}
+
 		// Set Organization info, only change values if not null
 		public void setOrganizationInfo(		String metaorgname, String metaorgnamelang,
 																		String metaorgdisplname, String metaorgdisplnamelang,
@@ -865,6 +927,7 @@ public class PartnerData
 	// SImple wrapper class for Extensions data 
 	public class Extensionsdata4Partner {
 		 
+
 		private Integer QualityAuthenticationAssuranceLevel= null;	// will be set based on application requirement
 		private String spSector= null;
 		private String spInstitution = null;
@@ -875,21 +938,33 @@ public class PartnerData
 		private Boolean eIDCrossBorderShare = null;
 		private List<Map<String, Object>> requestedAttributes = null;	// probably use ArrayList implementation
 
+//		@Override
+//		public String toString()
+//		{
+//			return "QualityAuthenticationAssuranceLevel=" + QualityAuthenticationAssuranceLevel
+//				+ ", spSector=" + spSector
+//				+ ", spInstitution=" + spInstitution
+//				+ ", spApplication=" + spApplication
+//				+ ", pCountry=" + spCountry
+//				+ ", eIDSectorShare=" + eIDSectorShare
+//				+ ", eIDCrossSectorShare=" + eIDCrossSectorShare
+//				+ ", eIDCrossBorderShare=" + eIDCrossBorderShare
+//				+ ", requestedAttributes=" + requestedAttributes
+//			;			
+//		}
+
 		@Override
-		public String toString()
-		{
-			return "QualityAuthenticationAssuranceLevel=" + QualityAuthenticationAssuranceLevel
-				+ ", spSector=" + spSector
-				+ ", spInstitution=" + spInstitution
-				+ ", spApplication=" + spApplication
-				+ ", pCountry=" + spCountry
-				+ ", eIDSectorShare=" + eIDSectorShare
-				+ ", eIDCrossSectorShare=" + eIDCrossSectorShare
-				+ ", eIDCrossBorderShare=" + eIDCrossBorderShare
-				+ ", requestedAttributes=" + requestedAttributes
-			;			
+		public String toString() {
+//			return String.format(
+//					"Extensionsdata4Partner [QualityAuthenticationAssuranceLevel=%s, spSector=%s, spInstitution=%s, spApplication=%s, spCountry=%s, eIDSectorShare=%s, eIDCrossSectorShare=%s, eIDCrossBorderShare=%s, requestedAttributes=%s]",
+//					QualityAuthenticationAssuranceLevel, spSector, spInstitution, spApplication, spCountry,
+//					eIDSectorShare, eIDCrossSectorShare, eIDCrossBorderShare, requestedAttributes);
+			
+			return "Extensionsdata4Partner:" + new ReflectionToStringBuilder( this, new StandardToStringStyle()).toString();
+
 		}
 
+		
 		public synchronized Integer getQualityAuthenticationAssuranceLevel()
 		{
 			return QualityAuthenticationAssuranceLevel;
@@ -1016,6 +1091,7 @@ public class PartnerData
 		private String IssuerLogout = null;
 		private String DestinationLogout = null;
 
+		/*
 		@Override
 		public String toString()
 		{
@@ -1033,7 +1109,18 @@ public class PartnerData
 				+ ", DestinationLogout=" + DestinationLogout
 			;			
 		}
+		*/
 		
+		@Override
+		public String toString() {
+//			return String.format(
+//					"Testdata4Partner [IssueInstant=%s, Issuer=%s, AuthnContextClassRefURI=%s, AuthnContextComparisonTypeEnumeration=%s, ForceAuthn=%s, ProviderName=%s, AssertionConsumerServiceIndex=%s, AssertionConsumerServiceURL=%s, Destination=%s, IssueInstantLogout=%s, IssuerLogout=%s, DestinationLogout=%s]",
+//					IssueInstant, Issuer, AuthnContextClassRefURI, AuthnContextComparisonTypeEnumeration, ForceAuthn,
+//					ProviderName, AssertionConsumerServiceIndex, AssertionConsumerServiceURL, Destination,
+//					IssueInstantLogout, IssuerLogout, DestinationLogout);
+			return "Testdata4Partner:" + new ReflectionToStringBuilder( this, new StandardToStringStyle()).toString();
+			
+		}
 		/**
 		 * @return the issueInstant
 		 */

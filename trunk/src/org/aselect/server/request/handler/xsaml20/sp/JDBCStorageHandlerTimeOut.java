@@ -243,6 +243,8 @@ public class JDBCStorageHandlerTimeOut extends JDBCStorageHandler
 		String _sMethod = "sendLogoutToFederation";
 
 		String sFederationUrl = (String) htTGTContext.get("federation_url");
+		String sResourcegroup = (String) htTGTContext.get("federation_group");	// RH, 20190325, n
+
 		Vector<String> sessionIndexes = (Vector<String>)  htTGTContext.get("remote_sessionlist");	// can be null	// RH, 20120201, n
 
 		if (sFederationUrl == null)
@@ -258,7 +260,8 @@ public class JDBCStorageHandlerTimeOut extends JDBCStorageHandler
 		MetaDataManagerSp metadataManager = null;
 		try {
 			metadataManager = MetaDataManagerSp.getHandle();
-			url = metadataManager.getLocation(sFederationUrl, SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME,
+//			url = metadataManager.getLocation(sFederationUrl, SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME,	// RH, 20190325, o
+			url = metadataManager.getLocation(sResourcegroup, sFederationUrl, SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME,	// RH, 20190325, n
 					SAMLConstants.SAML2_SOAP11_BINDING_URI);
 		}
 		catch (ASelectException e1) {
@@ -268,7 +271,8 @@ public class JDBCStorageHandlerTimeOut extends JDBCStorageHandler
 		String issuerUrl = _serverUrl;
 		List<PublicKey> pkeys = null;	// RH, 20181119, n
 		if (is_bVerifySignature()) {
-			pkeys = metadataManager.getSigningKeyFromMetadata(sFederationUrl);	// RH, 20181119, n
+//			pkeys = metadataManager.getSigningKeyFromMetadata(sFederationUrl);	// RH, 20181119, n	// RH, 20190325, o
+			pkeys = metadataManager.getSigningKeyFromMetadata(sResourcegroup, sFederationUrl);	// RH, 20181119, n	// RH, 20190325, n
 			if (pkeys == null || pkeys.isEmpty()) {	// RH, 20181119, n
 				_oSystemLogger.log(Level.SEVERE, MODULE, _sMethod, "No valid public key in metadata");
 				throw new ASelectStorageException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
@@ -279,7 +283,8 @@ public class JDBCStorageHandlerTimeOut extends JDBCStorageHandler
 		PartnerData partnerData = null;
 		PartnerData.Crypto specificCrypto = null;
 		try {
-			partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sFederationUrl);
+//			partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sFederationUrl);	// RH, 20190325, o
+			partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sResourcegroup, sFederationUrl);	// RH, 20190325, n
 			if (partnerData != null) {
 				specificCrypto = partnerData.getCrypto();	// might be null
 			}

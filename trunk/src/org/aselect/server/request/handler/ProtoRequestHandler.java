@@ -1223,13 +1223,15 @@ public abstract class ProtoRequestHandler extends AbstractRequestHandler
 				"</wst:RequestSecurityTokenResponse>";
 	}
 
-	public void getKeyAndCheckSignature(String sIssuer, SignableSAMLObject samlObject)
+//	public void getKeyAndCheckSignature(String sIssuer, SignableSAMLObject samlObject)	// RH, 20190322, o
+	public void getKeyAndCheckSignature(String resourceGroup, String sIssuer, SignableSAMLObject samlObject)	// RH, 20190322, n
 	throws ASelectException
 	{
 		String sMethod = "getKeyAndCheckSignature";
 		
 //		PublicKey pkey = retrievePublicSigningKey(sIssuer);	// RH, 20181116, o
-		List <PublicKey> pkeys = retrievePublicSigningKey(sIssuer);	// RH, 20181116, n
+//		List <PublicKey> pkeys = retrievePublicSigningKey(sIssuer);	// RH, 20181116, n	// RH, 20190322, o
+		List <PublicKey> pkeys = retrievePublicSigningKey(resourceGroup, sIssuer);	// RH, 20181116, n	// RH, 20190322, n
 		if (pkeys == null || pkeys.isEmpty()) {	// RH, 20181116, n
 			_systemLogger.log(Level.SEVERE, MODULE, sMethod, "No valid public key in metadata for "+sIssuer);
 			throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
@@ -1251,14 +1253,16 @@ public abstract class ProtoRequestHandler extends AbstractRequestHandler
 	 * @throws ASelectException
 	 */
 //	public PublicKey retrievePublicSigningKey(String sEntityId)	// RH, 20181116, o
-	public List <PublicKey> retrievePublicSigningKey(String sEntityId)	// RH, 20181116, n
+//	public List <PublicKey> retrievePublicSigningKey(String sEntityId)	// RH, 20181116, n	// RH, 20190322, o
+	public List <PublicKey> retrievePublicSigningKey(String resourceGroup, String sEntityId)	// RH, 20181116, n	// RH, 20190322, n
 	throws ASelectException
 	{
 		String sMethod = "retrievePublicSigningKey";
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "Get Metadata Key for: "+sEntityId);
 		MetaDataManagerIdp metadataManager = MetaDataManagerIdp.getHandle();
 //		PublicKey publicKey = metadataManager.getSigningKeyFromMetadata(sEntityId);	// RH, 20181116, o
-		List <PublicKey> publicKeys = metadataManager.getSigningKeyFromMetadata(sEntityId);	// RH, 20181116, n
+//		List <PublicKey> publicKeys = metadataManager.getSigningKeyFromMetadata(sEntityId);	// RH, 20181116, n	// RH, 20190322, o
+		List <PublicKey> publicKeys = metadataManager.getSigningKeyFromMetadata(resourceGroup, sEntityId);	// RH, 20181116, n	// RH, 20190322, o
 //		return publicKey;	// RH, 20181116, o
 		return publicKeys;	// RH, 20181116, n
 	}

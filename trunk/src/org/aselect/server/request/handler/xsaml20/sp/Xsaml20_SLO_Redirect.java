@@ -168,7 +168,8 @@ public class Xsaml20_SLO_Redirect extends Saml20_BaseHandler
 				}
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "SAML message IS signed.");
 				MetaDataManagerSp metadataManager = MetaDataManagerSp.getHandle();
-				List<PublicKey> publicKeys = metadataManager.getSigningKeyFromMetadata(sEntityId);	// RH, 20181119, n
+//				List<PublicKey> publicKeys = metadataManager.getSigningKeyFromMetadata(sEntityId);	// RH, 20181119, n	// RH, 20190322, o
+				List<PublicKey> publicKeys = metadataManager.getSigningKeyFromMetadata(_sResourceGroup, sEntityId);	// RH, 20181119, n	// RH, 20190322, n
 				if (publicKeys == null || publicKeys.isEmpty()) {	// RH, 20181119, n
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, "PublicKey for entityId: " + sEntityId
 							+ " not found.");
@@ -260,7 +261,8 @@ public class Xsaml20_SLO_Redirect extends Saml20_BaseHandler
 			String sp_audience = (String)found.get("sp_audience");
 			try {
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "Logout to audience: " + sp_audience);
-				statusCode = sendLogoutRequestToSpAudience(sNameID, sp_audience, reason);
+//				statusCode = sendLogoutRequestToSpAudience(sNameID, sp_audience, reason);	// RH, 20190322, o
+				statusCode = sendLogoutRequestToSpAudience(_sResourceGroup, sNameID, sp_audience, reason);	// RH, 20190322, o
 			} catch (ASelectException e) {	// we don't want to interrupt the idp logout process
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Logout to audience failed: " + e.getMessage());
 				statusCode = StatusCode.PARTIAL_LOGOUT_URI;
@@ -276,17 +278,20 @@ public class Xsaml20_SLO_Redirect extends Saml20_BaseHandler
 		String myEntityId = _sServerUrl;
 
 		MetaDataManagerSp metadataManager = MetaDataManagerSp.getHandle();
-		String logoutResponseLocation = metadataManager.getResponseLocation(issuer,
+//		String logoutResponseLocation = metadataManager.getResponseLocation(issuer,	// RH, 20190322, o
+		String logoutResponseLocation = metadataManager.getResponseLocation(_sResourceGroup, issuer,	// RH, 20190322, n
 				SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME, SAMLConstants.SAML2_REDIRECT_BINDING_URI);
 		if (logoutResponseLocation == null) {
 			// if responselocation does not exist, use location
-			logoutResponseLocation = metadataManager.getLocation(issuer,
+//			logoutResponseLocation = metadataManager.getLocation(issuer,	// RH, 20190322, o
+			logoutResponseLocation = metadataManager.getLocation(_sResourceGroup, issuer,	// RH, 20190322, n
 					SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME, SAMLConstants.SAML2_REDIRECT_BINDING_URI);
 		}
 		// RH, 20180918, sn
 		PrivateKey key = null;
 		LogoutResponseSender sender = null;
-		PartnerData partnerdata = metadataManager.getPartnerDataEntry(issuer);
+//		PartnerData partnerdata = metadataManager.getPartnerDataEntry(issuer);	// RH, 20190322, o
+		PartnerData partnerdata = metadataManager.getPartnerDataEntry(_sResourceGroup, issuer);	// RH, 20190322, n
 		if (partnerdata != null && partnerdata.getCrypto() != null) {
 			sender = new LogoutResponseSender(partnerdata.getCrypto());
 			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Using specific private key for redirect");

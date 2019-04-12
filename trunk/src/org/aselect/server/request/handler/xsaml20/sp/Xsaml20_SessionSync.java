@@ -157,12 +157,17 @@ public class Xsaml20_SessionSync extends Saml20_BaseHandler
 				_systemLogger.log(Level.SEVERE, MODULE, _sMethod, "No \"federation_url\" available in TGT");
 				throw new ASelectException(Errors.ERROR_ASELECT_INIT_ERROR);
 			}
-
+			// RH, 20190322, sn
+			String sFederationGroup = (String) htTGTContext.get("federation_group");
+			if (sFederationGroup == null) {
+				sFederationGroup = _sResourceGroup;
+			}
 			List<PublicKey> pkeys = null;	// RH, 20181119, n
 			if (is_bVerifySignature()) {
 				// Check signature of session synchronization here
 				MetaDataManagerSp metadataManager = MetaDataManagerSp.getHandle();
-				pkeys = metadataManager.getSigningKeyFromMetadata(sFederationUrl);	// RH, 20181119, n
+//				pkeys = metadataManager.getSigningKeyFromMetadata(sFederationUrl);	// RH, 20181119, n	// RH, 20190322, o
+				pkeys = metadataManager.getSigningKeyFromMetadata(sFederationGroup, sFederationUrl);	// RH, 20181119, n	// RH, 20190322, n
 				if (pkeys == null || pkeys.isEmpty()) {	// RH, 20181119, n
 					_systemLogger.log(Level.SEVERE, MODULE, _sMethod, "No public valid key in metadata for: "
 							+ sFederationUrl);
@@ -170,7 +175,8 @@ public class Xsaml20_SessionSync extends Saml20_BaseHandler
 				}
 			}
 
-			String sSessionSyncUrl = MetaDataManagerSp.getHandle().getSessionSyncURL(sFederationUrl); // "/saml20_session_sync";
+//			String sSessionSyncUrl = MetaDataManagerSp.getHandle().getSessionSyncURL(sFederationUrl); // "/saml20_session_sync";	// RH, 20190322, o
+			String sSessionSyncUrl = MetaDataManagerSp.getHandle().getSessionSyncURL(sFederationGroup, sFederationUrl); // "/saml20_session_sync";	// RH, 20190322, n
 			_systemLogger.log(Level.INFO, MODULE, _sMethod, "Metadata session sync url=" + sSessionSyncUrl);
 			if (sSessionSyncUrl == null)
 				sSessionSyncUrl = _sFederationUrl; // 20091030: backward compatibility

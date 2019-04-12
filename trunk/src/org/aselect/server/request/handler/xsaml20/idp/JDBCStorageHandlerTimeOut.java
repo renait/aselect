@@ -235,7 +235,8 @@ public class JDBCStorageHandlerTimeOut extends JDBCStorageHandler
 						}
 						_oSystemLogger.log(Level.INFO, MODULE, _sMethod, "IDPTO - Send Logout to SP="
 								+ sp.getServiceProviderUrl());
-						sendLogoutRequestToSp(sNameID, sp.getServiceProviderUrl());
+//						sendLogoutRequestToSp(sNameID, sp.getServiceProviderUrl());	// RH, 20190325, o
+						sendLogoutRequestToSp(sNameID, sp.getServiceProviderUrl(), htTGTContext);	// RH, 20190325, n
 					}
 				}
 			}
@@ -260,18 +261,24 @@ public class JDBCStorageHandlerTimeOut extends JDBCStorageHandler
 	 * @throws ASelectException
 	 *             If send request fails.
 	 */
-	private void sendLogoutRequestToSp(String sNameID, String urlSp)
+//	private void sendLogoutRequestToSp(String sNameID, String urlSp)	// RH, 20190325, o
+	private void sendLogoutRequestToSp(String sNameID, String urlSp, HashMap htTGTContext)	// RH, 20190325, n
+	
 	throws ASelectException
 	{
 		String _sMethod = "sendLogOutRequest";
+		String sResourcegroup = htTGTContext != null ? (String) htTGTContext.get("federation_group") : null;	// RH, 20190325, n
+
 		SoapLogoutRequestSender requestSender = new SoapLogoutRequestSender();
 		MetaDataManagerIdp metadataManager = MetaDataManagerIdp.getHandle();
-		String url = metadataManager.getLocation(urlSp, SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME,
+//		String url = metadataManager.getLocation(urlSp, SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME,	// Rh, 20190325, o
+		String url = metadataManager.getLocation(sResourcegroup, urlSp, SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME,	// Rh, 20190325, n
 				SAMLConstants.SAML2_SOAP11_BINDING_URI);
 
 		List <PublicKey> pkeys = null;
 		if (is_bVerifySignature()) {
-			pkeys = metadataManager.getSigningKeyFromMetadata(urlSp);
+//			pkeys = metadataManager.getSigningKeyFromMetadata(urlSp);	// RH, 20190325, o
+			pkeys = metadataManager.getSigningKeyFromMetadata(sResourcegroup, urlSp);	// RH, 20190325, n
 //			if (pkey == null || "".equals(pkey)) {
 			if (pkeys == null || pkeys.isEmpty()) {
 				_oSystemLogger.log(Level.SEVERE, MODULE, _sMethod, "No valid public key in metadata");
