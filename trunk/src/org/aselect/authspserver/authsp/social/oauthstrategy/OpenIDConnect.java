@@ -109,8 +109,17 @@ public class OpenIDConnect implements OAuthStrategyBase {
 				.indexOf('?') == -1 ? '?' : '&';
 		sb.append(separator);
 		sb.append("client_id=").append(oauth.getConfig().get_consumerKey());
-//		sb.append("&response_type=code");	// RH, 20160216, o
-		sb.append("&response_type=code+id_token");	// RH, 20160216, n	// for OpenID Connect
+		///////////////////	RH, 20190114, sn
+		String resp_type = "code+id_token";	// default for OpenID Connect
+		String custom_response_type = customproperties.get("reponse_type");
+		if (custom_response_type != null && custom_response_type.length() > 0) {
+			resp_type = custom_response_type;
+		}
+		sb.append("&response_type="+resp_type);
+		///////////////////	RH, 20190114, sn
+//		sb.append("&response_type=code");	// RH, 20160216, o	// RH, 20190114, o
+//		sb.append("&response_type=code+id_token");	// RH, 20160216, n	// for OpenID Connect	// RH, 20181218, o
+//		sb.append("&response_type=id_token");	// RH, 20160216, n	// for OpenID Connect	// RH, 20181218, n	// implicit
 		sb.append("&redirect_uri=").append(this.successUrl);
 		if (scope != null) {
 			sb.append("&scope=").append(scope);
@@ -231,14 +240,26 @@ public class OpenIDConnect implements OAuthStrategyBase {
 						sb.toString(), null);
 				if (response != null) {
 					result = response.getResponseBodyAsString(Constants.ENCODING);
+					LOG.debug("POST URL getResponseBodyAsString : " + result);
 
 					if (result != null) {
 						// azure returns json object
 						JSONObject jObj = new JSONObject(result);
+						LOG.debug("POST URL jObj : " + jObj.toString());
 						if (jObj.has("access_token")) {
 							accessToken = jObj.getString("access_token");
 						}
-	
+						// RH, 20190115, sn
+						if ( (id_token == null  || id_token.length() == 0) && jObj.has("id_token") ) {
+							LOG.debug("POST URL ID Token retrieved");
+							id_token = jObj.getString("id_token");
+							// verify and decode id_token here
+							// Azure uses list of email addresses
+							// Still to verify types in the claim
+							claims = consumeJWT(id_token);
+						}
+						// RH, 20190115, en
+
 						// expires_in can come in several different types, and newer
 						// org.json versions complain if you try to do getString over an
 						// integer...
