@@ -169,7 +169,13 @@ public class MetaDataManagerSp extends AbstractMetaDataManager
 			if (suppressscoping != null)
 				idpData.setSuppressscoping(suppressscoping);
 			// RH, 20180327, en
-	
+
+			// RH, 20190412, sn
+			String suppressforcedauthn = Utils.getSimpleParam(_configManager, _systemLogger, idpSection, "suppressforcedauthn", false);
+			if (suppressforcedauthn != null)
+				idpData.setSuppresssforcedauthn(suppressforcedauthn);
+			// RH, 20190412, en
+
 			// RH, 20181005, sn
 			String idpentryproviderid = Utils.getParamFromSection(_configManager, _systemLogger, idpSection, "authnrequest_scoping", "authnrequest_providerid", false);
 			if (idpentryproviderid != null)
