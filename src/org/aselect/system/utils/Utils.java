@@ -68,6 +68,7 @@ import java.net.URLEncoder;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
 import java.util.ArrayList;
+import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -92,6 +93,7 @@ import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.logging.ISystemLogger;
 import org.aselect.system.logging.SystemLogger;
+import org.aselect.system.utils.crypto.Auxiliary;
 
 /**
  * Static class that implements generic, widely used utility methods. <br>
@@ -106,6 +108,10 @@ import org.aselect.system.logging.SystemLogger;
  */
 public class Utils
 {
+	private static final String OPERATOR_URLDECODE = "URLDECODE";
+
+	private static final String OPERATORPREFIX_URLDECODE = "=urldecode:";
+
 	/**
 	 * Static char array for quickly converting bytes to hex-strings.
 	 */
@@ -1578,5 +1584,57 @@ public class Utils
 		}
 		return buffer.toString();
 	}
+
+	// RH, 20190211, sn
+	public static String parseSessionVariable(Map session, String sToParse, String leftParenthesis, String rightParenthesis, SystemLogger oSysLog)
+	{
+		String sMethod = "parseConfigSessionVariable";
+		if (sToParse != null && leftParenthesis != null && rightParenthesis != null && sToParse.contains(leftParenthesis) && sToParse.contains(rightParenthesis)) {
+			StringBuffer sb = new StringBuffer(sToParse);
+			int len = sb.length();
+			int li = sb.indexOf(leftParenthesis);
+			String sesvalue = "";
+			while (li > -1 && len > li) {
+				int ri = sb.indexOf(rightParenthesis, li);
+				if ( ri > li ) {
+					oSysLog.log(Level.FINEST, MODULE, sMethod, "li:" + li + ", ri:" + ri);
+					String var = sb.substring(li+1, ri);	// cut off parenthesis as well
+					oSysLog.log(Level.FINEST, MODULE, sMethod, "Parsing variable:" + var);
+					String operation = null;
+					if (var != null && var.startsWith(OPERATORPREFIX_URLDECODE)) {	// Maybe parameterize this
+						operation = OPERATOR_URLDECODE;
+						var = var.substring(OPERATORPREFIX_URLDECODE.length());
+					}
+					if (session != null && (sesvalue = (String)session.get(var)) != null) {
+						oSysLog.log(Level.FINEST, MODULE, sMethod, "Found session variable value:" + Auxiliary.obfuscate(sesvalue));
+					} else {
+						sesvalue= "";	// clear possible null value
+					}
+					if (operation != null) {
+						if (OPERATOR_URLDECODE.equals(operation)) {	// allows for other operators
+							try {
+								sesvalue = URLDecoder.decode(sesvalue, "UTF-8");
+							} catch (UnsupportedEncodingException | IllegalArgumentException e) {
+								sesvalue = "";	// a bit arbitrary but decided to not include any data
+								oSysLog.log(Level.WARNING, MODULE, sMethod, "Could not urldecode:" + e.getMessage());
+							}
+						}
+					}
+					sb.replace(li, ri+1, sesvalue);	
+					li += sesvalue.length();
+				} else {
+					oSysLog.log(Level.WARNING, MODULE, sMethod, "No variable or no matching Right parenthesis found for Left parenthesis on position: " + li);
+					li++;	// skip single left parenthesis
+				}
+				li = sb.indexOf(leftParenthesis, li);	// resets to -1 if not found
+			}
+			oSysLog.log(Level.FINEST, MODULE, sMethod, "Parsing finished");
+			sToParse = sb.toString();
+		} else {
+			oSysLog.log(Level.FINEST, MODULE, sMethod, "No parsable parameters passed to method, returning unmodified value");
+		}
+		return sToParse;
+	}
+	// RH, 20190211, sn
 
 }

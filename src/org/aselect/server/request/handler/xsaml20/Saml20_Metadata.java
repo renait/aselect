@@ -98,6 +98,7 @@ public class Saml20_Metadata extends ProtoRequestHandler
 	
 	private boolean addkeyname2descriptors = DEFAULT_ADDKEYNAME2DESCRIPTORS;	// RH, 20161007, n
 	
+	private String requestedGroupId = null;	// RH, 20190311, n
 
 	protected XMLObjectBuilderFactory _oBuilderFactory;
 
@@ -348,6 +349,9 @@ public class Saml20_Metadata extends ProtoRequestHandler
 		try {
 			// These method calls could be made more transparent
 			// all kind of things get set that we don't know off
+			String groupID = request.getParameter("groupid");	// RH, 20190304, n
+			_systemLogger.log(Level.FINER, MODULE, sMethod, "Requested 'groupid':" + groupID);
+			setRequestedGroupId(groupID);
 			aselectReader(); // among other things this sets the publicKeyAlias
 			readMetaDataPublicKeyCert(getWorkingDir()); // This sets the signing certificate using the publicKeyAlias
 			handleMetaDataRequest(request, response);
@@ -959,5 +963,13 @@ public class Saml20_Metadata extends ProtoRequestHandler
 	public synchronized void setAddkeyname2descriptors(boolean addkeyname2descriptors)
 	{
 		this.addkeyname2descriptors = addkeyname2descriptors;
+	}
+
+	protected synchronized String getRequestedGroupId() {
+		return requestedGroupId;
+	}
+
+	protected synchronized void setRequestedGroupId(String groupId) {
+		this.requestedGroupId = groupId;
 	}
 }

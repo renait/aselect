@@ -346,7 +346,8 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 				if (bIsPostRequest) {  // POST, check request
 					_systemLogger.log(Level.FINER, MODULE, sMethod, "SAML POST EntityId=" + sEntityId+" VerifySignature=" + is_bVerifySignature());
 					if (is_bVerifySignature()) { // Check signature.
-						getKeyAndCheckSignature(sEntityId, samlMessage);  // throws an exception on error
+//						getKeyAndCheckSignature(sEntityId, samlMessage);  // throws an exception on error	// RH, 20190325, o
+						getKeyAndCheckSignature(_sResourceGroup, sEntityId, samlMessage);  // throws an exception on error	// RH, 20190325, n
 					}
 				}
 				else { // GET, check signing of the URL
@@ -357,7 +358,8 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 					_systemLogger.log(Level.INFO, MODULE, sMethod, "SAML GET message IS signed.");
 	
 //					PublicKey publicKey = retrievePublicSigningKey(sEntityId);	// RH, 20181119, o
-					List<PublicKey> publicKeys = retrievePublicSigningKey(sEntityId);	// RH, 20181119, n
+//					List<PublicKey> publicKeys = retrievePublicSigningKey(sEntityId);	// RH, 20181119, n	// RH, 20190325, o
+					List<PublicKey> publicKeys = retrievePublicSigningKey(_sResourceGroup, sEntityId);	// RH, 20181119, n	// RH, 20190325, n
 					if (publicKeys == null || publicKeys.isEmpty()) {	// RH, 20181119, n
 						_systemLogger.log(Level.WARNING, MODULE, sMethod, "PublicKey for entityId: "+sEntityId+" not found.");
 						throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
@@ -526,7 +528,9 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 		
 		// RM_49_01
 		// List SessionIndexes = logoutRequest.getSessionIndexes();
+		String resourcegroup = null;	// RH, 20190325, n
 		if (htTGTContext != null) {
+			resourcegroup = (String)htTGTContext.get("federation_group"); 	// RH, 20190325, n
 			UserSsoSession sso = (UserSsoSession) htTGTContext.get("sso_session");
 			List<ServiceProvider> spList = sso.getServiceProviders();
 
@@ -588,7 +592,8 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 
 					// Determine ResponseLocation from metadata
 					MetaDataManagerIdp metadataManager = MetaDataManagerIdp.getHandle();
-					String url = metadataManager.getLocation(serviceProvider,
+//					String url = metadataManager.getLocation(serviceProvider,	// RH, 20190325, o
+					String url = metadataManager.getLocation(resourcegroup != null ? resourcegroup : _sResourceGroup, serviceProvider,	// RH, 20190325, n
 							SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME, SAMLConstants.SAML2_REDIRECT_BINDING_URI);
 
 					_systemLogger.log(Level.INFO, MODULE, sMethod, "Redirect logout for SP=" + serviceProvider);
@@ -682,11 +687,13 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 		// And answer the initiating SP by sending a LogoutResponse
 		// Get location from metadata, try ResponseLocation first, then Location
 		MetaDataManagerIdp metadataManager = MetaDataManagerIdp.getHandle();
-		String logoutResponseLocation = metadataManager.getResponseLocation(initiatingSP,
+//		String logoutResponseLocation = metadataManager.getResponseLocation(initiatingSP,	// RH, 20190325, o
+		String logoutResponseLocation = metadataManager.getResponseLocation(resourcegroup != null ? resourcegroup : _sResourceGroup, initiatingSP,	// RH, 20190325, n
 				SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME, SAMLConstants.SAML2_REDIRECT_BINDING_URI);
 		if (logoutResponseLocation == null) {
 			// try getLocation as well
-			logoutResponseLocation = metadataManager.getLocation(initiatingSP,
+//			logoutResponseLocation = metadataManager.getLocation(initiatingSP,	// RH, 20190325, o
+			logoutResponseLocation = metadataManager.getLocation(resourcegroup != null ? resourcegroup : _sResourceGroup, initiatingSP,	// RH, 20190325, n
 					SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME, SAMLConstants.SAML2_REDIRECT_BINDING_URI);
 		}
 		if (logoutResponseLocation == null) {

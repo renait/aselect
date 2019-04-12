@@ -626,11 +626,13 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 			// get from metadata
 			MetaDataManagerIdp metadataManager = MetaDataManagerIdp.getHandle();
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Looking for EntityId="+sEntityId + " sElementName="+sElementName+
-					" sBindingName="+sBindingName + " in:"+metadataManager.getMetadataURL(sEntityId));
+//					" sBindingName="+sBindingName + " in:"+metadataManager.getMetadataURL(sEntityId));	// RH, 20190325, o
+					" sBindingName="+sBindingName + " in:"+metadataManager.getMetadataURL(_sResourceGroup, sEntityId));	// RH, 20190325, n
 			
 			try {
 				// if sBindingName was null, binding was not present in the Auhtentication request
-				sAssertionConsumerServiceURL = metadataManager.getLocationAndBinding(sEntityId, sElementName,
+//				sAssertionConsumerServiceURL = metadataManager.getLocationAndBinding(sEntityId, sElementName,	// RH, 20190325, o
+				sAssertionConsumerServiceURL = metadataManager.getLocationAndBinding(_sResourceGroup, sEntityId, sElementName,	// RH, 20190325, n
 						sBindingName, "Location", hmBinding);
 			}
 			catch (ASelectException e) {

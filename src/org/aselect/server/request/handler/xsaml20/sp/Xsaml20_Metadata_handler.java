@@ -23,6 +23,7 @@ import javax.servlet.ServletConfig;
 import javax.xml.namespace.QName;
 
 import org.apache.commons.codec.binary.Base64;
+import org.aselect.server.attributes.requestors.GenericAttributeRequestor;
 import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.server.request.handler.xsaml20.AbstractMetaDataManager;
 import org.aselect.server.request.handler.xsaml20.PartnerData;
@@ -107,6 +108,14 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 		String sMethod = "aselectReader";
 
 		super.aselectReader();
+		// RH, 20190319, sn
+		// cleaunup old values
+		setAssertionConsumerTarget(null);
+		setSpSloHttpLocation(null);
+		setSpSloSoapLocation(null);
+		setSpSloHttpResponse(null);
+		setSpSloSoapResponse(null);
+		// RH, 20190319, en
 		try {
 			Object oRequest = _configManager.getSection(null, "requests");
 			Object oHandlers = _configManager.getSection(oRequest, "handlers");
@@ -115,29 +124,67 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 			for (; oHandler != null; oHandler = _configManager.getNextSection(oHandler)) {
 				try {
 					String sId = _configManager.getParam(oHandler, "id");
-					if (!sId.startsWith("saml20_")) {
+//					if (!sId.startsWith("saml20_")) {	// RH, 20190319, o
+					if (!sId.contains("saml20_")) {	// RH, 20190319, n
 						continue;
 					}
-					String sTarget = _configManager.getParam(oHandler, "target");
-					_systemLogger.log(Level.INFO, MODULE, sMethod, "id=" + sId + " target=" + sTarget);
-					sTarget = sTarget.replace("\\", "");
-					sTarget = sTarget.replace(".*", "");
-
-					if (sId.equals("saml20_assertionconsumer")) {
-						setAssertionConsumerTarget(sTarget);
-					}
-					else if (sId.equals("saml20_sp_slo_http_request")) {
-						setSpSloHttpLocation(sTarget);
-					}
-					else if (sId.equals("saml20_sp_slo_soap_request")) {
-						setSpSloSoapLocation(sTarget);
-					}
-					else if (sId.equals("saml20_sp_slo_http_response")) {
-						setSpSloHttpResponse(sTarget);
-					}
-					else if (sId.equals("saml20_sp_slo_soap_response")) {
-						setSpSloSoapResponse(sTarget);
-					}
+					String groupid = getRequestedGroupId();
+					if (groupid != null) {
+						String sGroup = null;
+						try {
+							sGroup = _configManager.getParam(oHandler, "resourcegroup");
+						} catch (ASelectConfigException ace) {
+							_systemLogger.log(Level.WARNING, MODULE, sMethod, "No 'resourcegroup' found for handler id:" + sId + ", continuing");
+							continue;
+						}
+						if (!groupid.equals(sGroup)) {
+							_systemLogger.log(Level.FINEST, MODULE, sMethod, "Handler not belonging to requested 'groupid':" + groupid + ", continuing");
+							continue;
+						} else {
+							String sTarget = _configManager.getParam(oHandler, "target");
+							_systemLogger.log(Level.INFO, MODULE, sMethod, "id=" + sId + " target=" + sTarget);
+							sTarget = sTarget.replace("\\", "");
+							sTarget = sTarget.replace(".*", "");
+		
+							if (sId.contains("saml20_assertionconsumer")) {
+								setAssertionConsumerTarget(sTarget);
+							}
+							else if (sId.contains("saml20_sp_slo_http_request")) {
+								setSpSloHttpLocation(sTarget);
+							}
+							else if (sId.contains("saml20_sp_slo_soap_request")) {
+								setSpSloSoapLocation(sTarget);
+							}
+							else if (sId.contains("saml20_sp_slo_http_response")) {
+								setSpSloHttpResponse(sTarget);
+							}
+							else if (sId.contains("saml20_sp_slo_soap_response")) {
+								setSpSloSoapResponse(sTarget);
+							}
+						}						
+					} else {	// what we used to do
+					// RH, 2090319, en
+						String sTarget = _configManager.getParam(oHandler, "target");
+						_systemLogger.log(Level.INFO, MODULE, sMethod, "id=" + sId + " target=" + sTarget);
+						sTarget = sTarget.replace("\\", "");
+						sTarget = sTarget.replace(".*", "");
+	
+						if (sId.equals("saml20_assertionconsumer")) {
+							setAssertionConsumerTarget(sTarget);
+						}
+						else if (sId.equals("saml20_sp_slo_http_request")) {
+							setSpSloHttpLocation(sTarget);
+						}
+						else if (sId.equals("saml20_sp_slo_soap_request")) {
+							setSpSloSoapLocation(sTarget);
+						}
+						else if (sId.equals("saml20_sp_slo_http_response")) {
+							setSpSloHttpResponse(sTarget);
+						}
+						else if (sId.equals("saml20_sp_slo_soap_response")) {
+							setSpSloSoapResponse(sTarget);
+						}
+					}	// RH, 20190319, n
 				}
 				catch (ASelectConfigException e) {
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config next section 'handler' found", e);
@@ -188,7 +235,9 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 		String sLocalIssuer = null;
 		if (remoteID != null) {
 			// find "id" in the partner's section
-			partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(remoteID);
+			String resourceGroup = getRequestedGroupId();	// RH, 20190322, n
+//			partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(remoteID);	// RH, 20190322, o
+			partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(resourceGroup, remoteID);	// RH, 20190322, o
 		}
 		if (partnerData != null)
 			sLocalIssuer = partnerData.getLocalIssuer();
@@ -365,7 +414,7 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 
 		// RH, 20110113, sn
 		if (partnerData != null && partnerData.getMetadata4partner().getHandlers().size() > 0) {	// Get handlers to publish from partnerdata
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "Using Parnerdata");
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "Using Parnerdata for handlers");
 
 			Enumeration<HandlerInfo> eHandler = partnerData.getMetadata4partner().getHandlers().elements();
 			while (eHandler.hasMoreElements()) {

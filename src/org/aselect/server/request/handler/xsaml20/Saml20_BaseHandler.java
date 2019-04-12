@@ -96,6 +96,9 @@ public abstract class Saml20_BaseHandler extends ProtoRequestHandler
 	
 	protected boolean audiencelogout_required = false;
 
+	// RH, 20190319, n, refactor pull up from Xsaml20_ISTS
+	protected String _sResourceGroup = null;
+
 	
 	/**
 	 * Init for class Saml20_BaseHandler. <br>
@@ -241,6 +244,10 @@ public abstract class Saml20_BaseHandler extends ProtoRequestHandler
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config item 'audiencelogout' found, normal operation resumes");
 			audiencelogout_required = false;
 		}
+		
+		// RH, 20190319, sn, pull-up from Xsam20_ISTS
+		_sResourceGroup = ASelectConfigManager.getSimpleParam(oHandlerConfig, "resourcegroup", false);
+
 
 	}
 
@@ -323,14 +330,22 @@ public abstract class Saml20_BaseHandler extends ProtoRequestHandler
 
 		// metadata
 		String sFederationUrl = (String) htTGTContext.get("federation_url");
+		// RH, 20190322, sn
+		String sFederationGroup = (String) htTGTContext.get("federation_group");
+		if (sFederationGroup == null) {	// fall-back
+			sFederationGroup = _sResourceGroup;
+		}
+		// RH, 20190322, en
 		
 		// RH, 20120307, Add partnerdata for later usage, this is the best point for geting the federationurl, we already retrieved the tgtcontext 
-		PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sFederationUrl);
+//		PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sFederationUrl);// RH, 20190322, o
+		PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sFederationGroup, sFederationUrl);// RH, 20190322, n
 		if ("true".equalsIgnoreCase(partnerData.getLogoutSupport())) {
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "Logout to IdP="+sFederationUrl + " returnUrl="+sLogoutReturnUrl);
 			// if (sFederationUrl == null) sFederationUrl = _sFederationUrl; // xxx for now
 			MetaDataManagerSp metadataManager = MetaDataManagerSp.getHandle();
-			String url = metadataManager.getLocation(sFederationUrl, SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME,
+//			String url = metadataManager.getLocation(sFederationUrl, SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME,	// RH, 20190322, o
+			String url = metadataManager.getLocation(sFederationGroup, sFederationUrl, SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME,	// RH, 20190322, n
 					SAMLConstants.SAML2_REDIRECT_BINDING_URI);
 			if (url != null) {
 				// RH, 20180918, sn
@@ -346,6 +361,12 @@ public abstract class Saml20_BaseHandler extends ProtoRequestHandler
 
 				// Get list of sessions to kill if present in tgt
 				Vector<String> sessionindexes = (Vector<String>) htTGTContext.get("remote_sessionlist");	// can be null
+				// RH, 20190129, sn
+				// DigiD wants same issuer for login and logout
+				if (partnerData != null && partnerData.getLocalIssuer() != null) {
+					sIssuer = partnerData.getLocalIssuer();
+				}
+				// RH, 20190129, sn
 				logoutRequestSender.sendLogoutRequest(request, response, sTgT, url, sIssuer/* issuer */, sNameID,
 						"urn:oasis:names:tc:SAML:2.0:logout:user", sLogoutReturnUrl, sessionindexes, partnerData);
 			}
@@ -570,21 +591,24 @@ public abstract class Saml20_BaseHandler extends ProtoRequestHandler
 	 * @throws ASelectException
 	 *             If send request fails.
 	 */
-	protected String sendLogoutRequestToSpAudience(String sNameID, String entityID, String reason)
+//	protected String sendLogoutRequestToSpAudience(String sNameID, String entityID, String reason)	// Rh, 20190322, o
+	protected String sendLogoutRequestToSpAudience(String resourceGroup, String sNameID, String entityID, String reason)	// Rh, 20190322, n
 	throws ASelectException
 	{
 		String _sMethod = "sendLogoutRequestToSpAudience";
 		String status = null;
 		SoapLogoutRequestSender requestSender = new SoapLogoutRequestSender();
 		MetaDataManagerIdp metadataManager = MetaDataManagerIdp.getHandle();
-		String url = metadataManager.getLocation(entityID, SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME,
+//		String url = metadataManager.getLocation(entityID, SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME,	// RH, 20190322, o
+		String url = metadataManager.getLocation(resourceGroup, entityID, SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME,	// RH, 20190322, n
 				SAMLConstants.SAML2_SOAP11_BINDING_URI);
 
 		_systemLogger.log(Level.FINEST, MODULE, _sMethod, "Found audience url = " + url);
 
 		List<PublicKey> pkeys = null;	// RH, 20181119, n
 		if (is_bVerifySignature()) {
-			pkeys = metadataManager.getSigningKeyFromMetadata(entityID);	// RH, 20181119, n
+//			pkeys = metadataManager.getSigningKeyFromMetadata(entityID);	// RH, 20181119, n	// RH, 20190322, o
+			pkeys = metadataManager.getSigningKeyFromMetadata(resourceGroup, entityID);	// RH, 20181119, n	// RH, 20190322, n
 			if (pkeys == null || pkeys.isEmpty()) {	// RH, 20181119, n
 				_systemLogger.log(Level.SEVERE, MODULE, _sMethod, "No valid public key in metadata");
 				throw new ASelectStorageException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);

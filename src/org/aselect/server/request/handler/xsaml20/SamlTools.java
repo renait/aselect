@@ -928,7 +928,7 @@ public class SamlTools
 				 throw new DecryptionException("Decrypted XMLObject was not an instance of SAMLObject");
 		        }
 			 } catch (DecryptionException e) {
-			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Faled to decrypted SamlObject: " + e.getMessage());
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Failed to decrypted SamlObject: " + e.getMessage());
 		}
 		return (SAMLObject) samlObject;
 	}

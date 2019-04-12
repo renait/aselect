@@ -102,7 +102,6 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 	private String _sAssertionConsumerUrl = null;
 	private String _sPostTemplate = null;
 	private String _sHttpMethod = "GET";
-	private String _sIdpResourceGroup = null;
 	private String _sFallbackUrl = null;
 	private String _sRedirectSyncTime = null;
 	private boolean bIdpSelectForm = false;
@@ -150,10 +149,11 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 		if (sUseIdpSelectForm != null && sUseIdpSelectForm.equals("true"))
 			bIdpSelectForm = true;
 
-		_sIdpResourceGroup = ASelectConfigManager.getSimpleParam(oConfig, "resourcegroup", false);
-		if (_sIdpResourceGroup == null)
-			_sIdpResourceGroup = "federation-idp";  // backward compatibility
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "IDP resourcegroup="+_sIdpResourceGroup);
+//		_sIdpResourceGroup = ASelectConfigManager.getSimpleParam(oConfig, "resourcegroup", false);	// RH, 20190319, o // pulled up
+		if (_sResourceGroup == null)
+			_sResourceGroup = "federation-idp";  // backward compatibility
+//		_systemLogger.log(Level.INFO, MODULE, sMethod, "IDP resourcegroup="+_sResourceGroup);	// RH, 20190319, o
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "resourcegroup="+_sResourceGroup);	// RH, 20190319, o
 
 		_sFallbackUrl = ASelectConfigManager.getSimpleParam(oConfig, "fallback_url", false);
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "fallback_url="+_sFallbackUrl);
@@ -162,17 +162,18 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 		sam = _configManager.getSection(null, "sam");
 		agent = _configManager.getSection(sam, "agent");
 		try {
-			Object metaResourcegroup = _configManager.getSection(agent, "resourcegroup", "id=" + _sIdpResourceGroup);
+			Object metaResourcegroup = _configManager.getSection(agent, "resourcegroup", "id=" + _sResourceGroup);
 			idpSection = _configManager.getSection(metaResourcegroup, "resource");
 		}		
 		catch (ASelectConfigException e) {
-			_systemLogger.log(Level.WARNING, MODULE, sMethod, "No resourcegroup: "+_sIdpResourceGroup+" configured");
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "No resourcegroup: "+_sResourceGroup+" configured");
 		}
 		
 		// And pass it's resources to the metadata manager
 		MetaDataManagerSp metadataMgr = MetaDataManagerSp.getHandle();  // will create the MetaDataManager object
 		while (idpSection != null) {
-			metadataMgr.processResourceSection(idpSection);
+//			metadataMgr.processResourceSection(idpSection);	// RH, 20190321, o
+			metadataMgr.processResourceSection(_sResourceGroup, idpSection);	// RH, 20190321, n
 			idpSection = _configManager.getNextSection(idpSection);
 		}
 		metadataMgr.logIdPs();
@@ -242,6 +243,7 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 			//     otherwise this handler uses it's own resource group to get a resource and sets "federation_url"
 			//     to the id of that resource
 			sFederationUrl = servletRequest.getParameter("federation_url");
+			_systemLogger.log(Level.FINER, MODULE, sMethod, "Received federation_url="+sFederationUrl);
 			
 			//int cnt = MetaDataManagerSp.getHandle().getIdpCount();
 			//if (cnt == 1) {
@@ -269,16 +271,16 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 				return new RequestState(null);
 			}
 			// federation_url was set or bIdpSelectForm is false
-			_systemLogger.log(Level.FINER, MODULE, sMethod, "federation_url="+sFederationUrl);
 			_htSessionContext.put("user_state", "state_toidp");  // at least remove state_select
 			_oSessionManager.setUpdateSession(_htSessionContext, _systemLogger);  // 20120403, Bauke: was updateSession
 
 			// 20110308, Bauke: new mechanism to get to the IdP using the SAM agent (allows redundant resources)
 			// User choice was made, or "federation_url" was set programmatically
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Getting active resource from resourcegroup=" + _sResourceGroup);
 			ASelectSAMAgent samAgent = ASelectSAMAgent.getHandle();
 			SAMResource samResource = null;
 			try {
-				samResource = samAgent.getActiveResource(_sIdpResourceGroup);
+				samResource = samAgent.getActiveResource(_sResourceGroup);
 			}
 			catch (ASelectSAMException ex) {  // no active resource
 				// if a fallback is present: REDIRECT to the authsp
@@ -310,12 +312,18 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 			}
 			// The result is a single resource from our own resourcegroup
 			sFederationUrl = samResource.getId();
-			_systemLogger.log(Level.FINER, MODULE, sMethod, "IdP resource id="+sFederationUrl);
+			_systemLogger.log(Level.FINER, MODULE, sMethod, "Found active IdP resource id using asfederation_url="+sFederationUrl);
 
 			// 20090811, Bauke: save type of Authsp to store in the TGT later on
 			// This is needed to prevent session sync when we're not saml20
 			_htSessionContext.put("authsp_type", "saml20");
 			_htSessionContext.put("federation_url", sFederationUrl);
+			
+			// RH, 20190322, sn
+			// save federation group (resourcegroup) as well
+			_htSessionContext.put("federation_group", _sResourceGroup);
+			// RH, 20190322, en
+			
 			_oSessionManager.setUpdateSession(_htSessionContext, _systemLogger);  // 20120403, Bauke: was updateSession
 
 			_systemLogger.log(Level.FINER, MODULE, sMethod, "Get MetaData FederationUrl=" + sFederationUrl);
@@ -325,18 +333,21 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 			// We now support the Redirect and POST Binding
 			String sDestination = null;
 			if ("POST".equalsIgnoreCase(_sHttpMethod)) {
-				sDestination = metadataMgr.getLocation(sFederationUrl,
+//				sDestination = metadataMgr.getLocation(sFederationUrl,	// RH, 20190322, o
+				sDestination = metadataMgr.getLocation(_sResourceGroup, sFederationUrl,	// RH, 20190322, n
 						SingleSignOnService.DEFAULT_ELEMENT_LOCAL_NAME, singleSignOnServiceBindingConstantHTTPPOST);
 			} else {
-				sDestination = metadataMgr.getLocation(sFederationUrl,
+//				sDestination = metadataMgr.getLocation(sFederationUrl,	// RH, 20190322, o
+				sDestination = metadataMgr.getLocation(_sResourceGroup, sFederationUrl,	// RH, 20190322, n
 						SingleSignOnService.DEFAULT_ELEMENT_LOCAL_NAME, singleSignOnServiceBindingConstantREDIRECT);
 			}
 			_systemLogger.log(Level.FINER, MODULE, sMethod, "Location retrieved=" + sDestination);
 			if ("".equals(sDestination))
 				throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 			
-			PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sFederationUrl);
-			_systemLogger.log(Level.FINER, MODULE, sMethod, "Partnerdata: "+partnerData);
+//			PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sFederationUrl);	// RH, 20190322, o
+			PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(_sResourceGroup, sFederationUrl);	// RH, 20190322, n
+			_systemLogger.log(Level.FINER, MODULE, sMethod, "Retreived Partnerdata: "+partnerData);
 			String specialSettings = (partnerData == null)? null: partnerData.getSpecialSettings();
 			
 			// Use Level of Assurance (for ETD) instead of PASSWORDPROTECTEDTRANSPORT_URI and his friends
@@ -390,6 +401,12 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 			if (!suppressscoping) {	// RH, 20180327, en
 				String sApplicationRequestorID = getApplicationRequesterID(sApplicationId);
 				if (sApplicationRequestorID != null) {
+					// RH, 20190211, sn
+					// RequesterID has type anyURI. Therefore it should not contain unencoded spaces, control characters and <>#%{}|\^`
+					// We therefore will use the {} pair to define variable parameter to inject
+					sApplicationRequestorID = Utils.parseSessionVariable(_htSessionContext, sApplicationRequestorID, "{", "}", _systemLogger);
+					// RH, 20190211, en
+					
 					SAMLObjectBuilder<Scoping> scopingtBuilder = null;
 					scopingtBuilder = (SAMLObjectBuilder<Scoping>) builderFactory
 							.getBuilder(Scoping.DEFAULT_ELEMENT_NAME);
@@ -1149,7 +1166,7 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 			if (_configManager.getParam(oApplication, "id").equals(sApplicationId)) {
 //				String sApplicationRequesterID = _configManager.getSimpleParam(oApplication,  "authnrequest_requesterid", false);
 				String sApplicationRequesterID = _configManager.getParamFromSection(oApplication, "authnrequest_scoping", "authnrequest_requesterid", false);
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Found ' authnrequest_requesterid' =" + sApplicationRequesterID);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Found 'authnrequest_requesterid' =" + sApplicationRequesterID);
 				return sApplicationRequesterID;
 			}
 			oApplication = _configManager.getNextSection(oApplication);

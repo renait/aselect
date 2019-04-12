@@ -23,10 +23,12 @@ import java.security.PublicKey;
 import java.security.cert.CertificateException;
 import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
+import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.List;
+import java.util.Map;
 import java.util.Set;
 import java.util.Timer;
 import java.util.concurrent.ConcurrentHashMap;
@@ -82,12 +84,14 @@ public abstract class AbstractMetaDataManager
 	protected SystemLogger _systemLogger;
 
 	// All descriptors
-	protected ConcurrentHashMap<String, SSODescriptor> SSODescriptors = new ConcurrentHashMap<String, SSODescriptor>();
+//	protected ConcurrentHashMap<String, SSODescriptor> SSODescriptors = new ConcurrentHashMap<String, SSODescriptor>();	// RH, 20190322, o
+	protected ConcurrentHashMap<Map.Entry<String, String>, SSODescriptor> SSODescriptors = new ConcurrentHashMap<Map.Entry<String, String>, SSODescriptor>();	// RH, 20190322, n
 //	protected ConcurrentHashMap<String, String> metadataSPs = new ConcurrentHashMap<String, String>();
 //	protected ConcurrentHashMap<String, String> sessionSyncSPs = new ConcurrentHashMap<String, String>();
 	protected ConcurrentHashMap<String, java.security.cert.X509Certificate> trustedIssuers = new ConcurrentHashMap<String, java.security.cert.X509Certificate>();
 
-	public ConcurrentHashMap<String, PartnerData> storeAllIdPData = new ConcurrentHashMap<String, PartnerData>();
+//	public ConcurrentHashMap<String, PartnerData> storeAllIdPData = new ConcurrentHashMap<String, PartnerData>();	// RH, 20190321, o
+	public ConcurrentHashMap<Map.Entry<String, String>, PartnerData> storeAllIdPData = new ConcurrentHashMap<Map.Entry<String, String>, PartnerData>();	// RH, 20190321, n
 
 	private static String _sCheckCertificates = null;
 	
@@ -230,28 +234,33 @@ public abstract class AbstractMetaDataManager
 	 * @throws ASelectException
 	 *             the a select exception
 	 */
-	protected void ensureMetadataPresence(String entityId)
+//	protected void ensureMetadataPresence(String entityId)	// RH, 20190322, o
+	protected void ensureMetadataPresence(String resourceGroup, String entityId)	// RH, 20190322, n
 	throws ASelectException
 	{
 		String sMethod = "ensureMetadataPresence";
 		String metadataURL = null;
 		ChainingMetadataProvider myMetadataProvider = new ChainingMetadataProvider();
 
-		_systemLogger.log(Level.FINE, MODULE, sMethod, "myRole="+getMyRole()+" entityId="+entityId+" SSODescriptors="+SSODescriptors);
+//		_systemLogger.log(Level.FINE, MODULE, sMethod, "myRole="+getMyRole()+" entityId="+entityId+" SSODescriptors="+SSODescriptors);
+		_systemLogger.log(Level.FINE, MODULE, sMethod, "myRole="+getMyRole()+" resourceGroup="+resourceGroup+" entityId="+entityId+" SSODescriptors="+SSODescriptors);
 		if (trustedIssuers.isEmpty() && getCheckCertificates() != null) {
 			// Load trusted ca's (SP) or trusted SP's (IdP) from trusted_issuers.keystore
 			loadTrustedIssuers();
 		}
 		if (entityId == null)
 			return;
-		if (SSODescriptors.containsKey(makeEntityKey(entityId, null))) {
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "entityId=" + entityId + " already in cache");
+//		if (SSODescriptors.containsKey(makeEntityKey(entityId, null))) {	// RH, 20190322, o
+		if (SSODescriptors.containsKey(new AbstractMap.SimpleEntry<String, String>(resourceGroup, makeEntityKey(entityId, null)))) {	// RH, 20190322, n
+//			_systemLogger.log(Level.INFO, MODULE, sMethod, "entityId=" + entityId + " already in cache");
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "resourceGroup="+resourceGroup + " entityId=" + entityId + " already in cache");
 			return;
 		}
 
 		// Read the new metadata
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "entityId=" + entityId + " not in cache yet");
-		metadataURL = getMetadataURL(entityId);
+//		metadataURL = getMetadataURL(entityId);	// RH, 20190322, o
+		metadataURL = getMetadataURL(resourceGroup, entityId);	// RH, 20190322, n
 		if (metadataURL == null) {
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "Entity id: " + entityId + " is not Configured");
 			return;
@@ -270,7 +279,7 @@ public abstract class AbstractMetaDataManager
 
 		// Add to the SSODescriptor
 //		addMetadata(myMetadataProvider);	// RH, 20180829, n
-		addMetadata(myMetadataProvider, entityId);	// RH, 20180829, o
+		addMetadata(myMetadataProvider, resourceGroup);	// RH, 20180829, o
 	}
 
 	/**
@@ -333,6 +342,42 @@ public abstract class AbstractMetaDataManager
 			trustedIssuers.put("loading_has_been_done", null);
 	}
 
+	// RH, 20190322, so
+//	/**
+//	 * Handle metadata provider.
+//	 * List all entries or Remove an entity from the metadata storage
+//	 * Produces output on stdout!
+//	 * Can be called from the Operating System to cleanup the cache.
+//	 * 
+//	 * @param out
+//	 *            the out
+//	 * @param entityId
+//	 *            the entity id
+//	 * @param sList
+//	 *            the s list
+//	 */
+//	public void handleMetadataProvider(PrintWriter out, String entityId, boolean sList)
+//	{
+//		String sMethod = "handleMetadataProvider";
+//
+//		if (sList) {
+//			Set<String> SSOkeys = SSODescriptors.keySet();
+//			for (String SSOkey : SSOkeys) {
+//				out.println("EntityId=" + SSOkey);
+//			}
+//			return;
+//		}
+//		// Remove entries from SSODescriptors
+//		SSODescriptor descriptorSP = SSODescriptors.remove(makeEntityKey(entityId, "SP"));
+//		SSODescriptor descriptorIDP = SSODescriptors.remove(makeEntityKey(entityId, "IDP"));
+//		if (descriptorSP == null && descriptorIDP == null) {
+//			_systemLogger.log(Level.INFO, MODULE, sMethod, "Entity " + entityId + " not found");
+//			out.println("Entity " + entityId + " not found");
+//		}
+//	}
+	// RH, 20190322, eo
+
+	// RH, 20190322, sn
 	/**
 	 * Handle metadata provider.
 	 * List all entries or Remove an entity from the metadata storage
@@ -342,35 +387,58 @@ public abstract class AbstractMetaDataManager
 	 * @param out
 	 *            the out
 	 * @param entityId
-	 *            the entity id
+	 *            the entity id not null
 	 * @param sList
 	 *            the s list
 	 */
-	public void handleMetadataProvider(PrintWriter out, String entityId, boolean sList)
+	public void handleMetadataProvider(PrintWriter out, String resourceGroup, String entityId, boolean sList)
 	{
 		String sMethod = "handleMetadataProvider";
 
 		if (sList) {
-			Set<String> SSOkeys = SSODescriptors.keySet();
-			for (String SSOkey : SSOkeys) {
+			Set<Map.Entry<String,String>> SSOkeys = SSODescriptors.keySet();
+			for (Map.Entry<String,String> SSOkey : SSOkeys) {
+				// This output is unfortunately not backward compatible, maybe handle this differently
 				out.println("EntityId=" + SSOkey);
 			}
 			return;
 		}
 		// Remove entries from SSODescriptors
-		SSODescriptor descriptorSP = SSODescriptors.remove(makeEntityKey(entityId, "SP"));
-		SSODescriptor descriptorIDP = SSODescriptors.remove(makeEntityKey(entityId, "IDP"));
-		if (descriptorSP == null && descriptorIDP == null) {
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "Entity " + entityId + " not found");
-			out.println("Entity " + entityId + " not found");
+		if (resourceGroup == null) {	// remove enitityID form all groups
+			Set<Map.Entry<String,String>> SSOkeys = SSODescriptors.keySet();
+			for (Map.Entry<String,String> SSOkey : SSOkeys) {
+				boolean removed = false;
+				if ( SSOkey.getValue().equals(makeEntityKey(entityId, "SP")) ) {
+					removed = SSOkeys.remove(SSOkey);
+					// This output is unfortunately not backward compatible, maybe handle this differently
+					out.println("EntityId=" + SSOkey + " removed:" + removed);
+				}
+				removed = false;
+				if ( SSOkey.getValue().equals(makeEntityKey(entityId, "IDP")) ) {
+					removed = SSOkeys.remove(SSOkey);
+					// This output is unfortunately not backward compatible, maybe handle this differently
+					out.println("EntityId=" + SSOkey + " removed:" + removed);
+				}
+			}
+		} else {
+			SSODescriptor descriptorSP = SSODescriptors.remove(new AbstractMap.SimpleEntry<String, String>(resourceGroup, makeEntityKey(entityId, "SP")));
+			SSODescriptor descriptorIDP = SSODescriptors.remove(new AbstractMap.SimpleEntry<String, String>(resourceGroup, makeEntityKey(entityId, "IDP")));
+			if (descriptorSP == null && descriptorIDP == null) {
+				_systemLogger.log(Level.INFO, MODULE, sMethod, "Entity " + entityId + " not found");
+				out.println("Entity " + entityId + " not found");
+			}
 		}
 	}
+	// RH, 20190322, en
+
 
 	// RH, 20180829, sn
-	protected void addMetadata(ChainingMetadataProvider myMetadataProvider)
+//	protected void addMetadata(ChainingMetadataProvider myMetadataProvider)	// RH, 20190322, o
+	protected void addMetadata(ChainingMetadataProvider myMetadataProvider, String resourceGroup)	// RH, 20190322, n
 	throws ASelectException
 	{
-		addMetadata(myMetadataProvider, null);
+//		addMetadata(myMetadataProvider, null);	// RH, 20190322, o
+		addMetadata(myMetadataProvider, resourceGroup, null);	// RH, 20190322, n
 	}
 	// RH, 20180829, en
 	/**
@@ -383,7 +451,8 @@ public abstract class AbstractMetaDataManager
 	 * @throws ASelectException
 	 */
 //	protected void addMetadata(ChainingMetadataProvider myMetadataProvider)	// RH, 20180829, o
-	protected void addMetadata(ChainingMetadataProvider myMetadataProvider, String entityId)	// RH, 20180829, n
+//	protected void addMetadata(ChainingMetadataProvider myMetadataProvider, String entityId)	// RH, 20180829, n	// 20190322, o
+	protected void addMetadata(ChainingMetadataProvider myMetadataProvider, String resourceGroup, String entityId)	// 20190322, n
 	throws ASelectException
 	{
 		String sMethod = "addMetadata";
@@ -414,14 +483,16 @@ public abstract class AbstractMetaDataManager
 						_systemLogger.log(Level.INFO, MODULE, sMethod, "IDP SSODescriptor found");
 						if (!checkKeyDescriptorCertificate(descriptorValueIDP))
 							throw new ASelectException(Errors.ERROR_ASELECT_INIT_ERROR);
-						SSODescriptors.put(makeEntityKey(entityId, "IDP"), descriptorValueIDP);
+//						SSODescriptors.put(makeEntityKey(entityId, "IDP"), descriptorValueIDP);	// RH, 20190322, o
+						SSODescriptors.put(new AbstractMap.SimpleEntry<String, String>(resourceGroup, makeEntityKey(entityId, "IDP")), descriptorValueIDP);	// RH, 20190322, n
 					}
 					SSODescriptor descriptorValueSP = entityDescriptorValue.getSPSSODescriptor(protocolSupportEnumeration);
 					if (descriptorValueSP != null) {
 						_systemLogger.log(Level.INFO, MODULE, sMethod, "SP SSODescriptor found");
 						if (!checkKeyDescriptorCertificate(descriptorValueSP))
 							throw new ASelectException(Errors.ERROR_ASELECT_INIT_ERROR);
-						SSODescriptors.put(makeEntityKey(entityId, "SP"), descriptorValueSP);
+//						SSODescriptors.put(makeEntityKey(entityId, "SP"), descriptorValueSP);	// RH, 20190322, o
+						SSODescriptors.put(new AbstractMap.SimpleEntry<String, String>(resourceGroup, makeEntityKey(entityId, "SP")), descriptorValueSP);	// RH, 20190322, n
 					}
 				}
 			}
@@ -668,22 +739,25 @@ public abstract class AbstractMetaDataManager
 	 *            the entity id
 	 * @return List<PublicKey>, is null on errors.
 	 */
-	public List<PublicKey> getSigningKeyFromMetadata(String entityId)
+//	public List<PublicKey> getSigningKeyFromMetadata(String entityId)	// RH, 20190322, o
+	public List<PublicKey> getSigningKeyFromMetadata(String resourceGroup, String entityId)	// RH, 20190322, n
 	{
 		String sMethod = "getSigningKeyFromMetadata";
 		List<PublicKey> pubKeys = new ArrayList<PublicKey>();
 
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "myRole="+getMyRole()+" entityId=" + entityId);
 		try {
-			ensureMetadataPresence(entityId);
+//			ensureMetadataPresence(entityId);	// RH, 20190322, o
+			ensureMetadataPresence(resourceGroup, entityId);	// RH, 20190322, n
 		}
 		catch (ASelectException e) {
 			return null;
 		}
 
-		SSODescriptor descriptor = SSODescriptors.get(makeEntityKey(entityId, null));
+//		SSODescriptor descriptor = SSODescriptors.get(makeEntityKey(entityId, null));	// RH, 20190322, o
+		SSODescriptor descriptor = SSODescriptors.get(new AbstractMap.SimpleEntry<String, String>(resourceGroup, makeEntityKey(entityId, null)));	// RH, 20190322, n
 		if (descriptor == null) {
-			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Entity id: " + entityId + " not in SSODescriptors: "+SSODescriptors);
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "ResourceGroup:" + resourceGroup + " Entity id:" + entityId + " not in SSODescriptors: "+SSODescriptors);
 			return null;
 		}
 		
@@ -758,19 +832,22 @@ public abstract class AbstractMetaDataManager
 	 *            the attribute name
 	 * @return the attribute value
 	 */
-	public String getAttributeFromMetadata(String entityId, String sAttrName)
+//	public String getAttributeFromMetadata(String entityId, String sAttrName)	// RH, 20190322, o
+	public String getAttributeFromMetadata(String resourceGroup, String entityId, String sAttrName)	// RH, 20190322, n
 	{
 		String sMethod = "getAttributeFromMetadata";
 
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "myRole="+getMyRole()+" entityId=" + entityId);
 		try {
-			ensureMetadataPresence(entityId);
+//			ensureMetadataPresence(entityId);	// RH, 20190322, o
+			ensureMetadataPresence(resourceGroup, entityId);	// RH, 20190322, n
 		}
 		catch (ASelectException e) {
 			return null;
 		}
 
-		SSODescriptor descriptor = SSODescriptors.get(makeEntityKey(entityId, null));
+//		SSODescriptor descriptor = SSODescriptors.get(makeEntityKey(entityId, null));	// RH, 20190322, o
+		SSODescriptor descriptor = SSODescriptors.get(new AbstractMap.SimpleEntry<String, String>(resourceGroup, makeEntityKey(entityId, null)));	// RH, 20190322, n
 		if (descriptor == null) {
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Entity id: " + entityId + " not in SSODescriptors");
 			return null;
@@ -802,10 +879,12 @@ public abstract class AbstractMetaDataManager
 	 * @throws ASelectException
 	 *             the a select exception
 	 */
-	public String getLocation(String entityId, String elementName, String bindingName)
+//	public String getLocation(String entityId, String elementName, String bindingName)	// RH, 20190322, o
+	public String getLocation(String resourceGroup, String entityId, String elementName, String bindingName)	// RH, 20190322, n
 	throws ASelectException
 	{
-		String locationValue = getAttrFromElementBinding(entityId, elementName, bindingName, "Location", null);
+//		String locationValue = getAttrFromElementBinding(entityId, elementName, bindingName, "Location", null);	// RH, 20190322, o
+		String locationValue = getAttrFromElementBinding(resourceGroup, entityId, elementName, bindingName, "Location", null);	// RH, 20190322, n
 		return locationValue;
 	}
 
@@ -830,10 +909,12 @@ public abstract class AbstractMetaDataManager
 	 * @throws ASelectException
 	 *             the a select exception
 	 */
-	public String getResponseLocation(String entityId, String elementName, String bindingName)
+//	public String getResponseLocation(String entityId, String elementName, String bindingName)	// RH, 20190322, o
+	public String getResponseLocation(String resourceGroup, String entityId, String elementName, String bindingName)	// RH, 20190322, n
 	throws ASelectException
 	{
-		return getAttrFromElementBinding(entityId, elementName, bindingName, "ResponseLocation", null);
+//		return getAttrFromElementBinding(entityId, elementName, bindingName, "ResponseLocation", null);	// RH, 20190322, o
+		return getAttrFromElementBinding(resourceGroup, entityId, elementName, bindingName, "ResponseLocation", null);	// RH, 20190322, o
 	}
 
 	/**
@@ -853,11 +934,13 @@ public abstract class AbstractMetaDataManager
 	 * @throws ASelectException
 	 */
 	// 20110323, Bauke added to pass back binding from metadata
-	public String getLocationAndBinding(String entityId, String elementName, String bindingName,
+//	public String getLocationAndBinding(String entityId, String elementName, String bindingName,	// RH, 20190322, o
+	public String getLocationAndBinding(String resourceGroup, String entityId, String elementName, String bindingName,	// RH, 20190322, n
 					String whichLocation, HashMap<String, String> hmBinding)
 	throws ASelectException
 	{
-		return getAttrFromElementBinding(entityId, elementName, bindingName, whichLocation, hmBinding);
+//		return getAttrFromElementBinding(entityId, elementName, bindingName, whichLocation, hmBinding);	// RH, 20190322, o
+		return getAttrFromElementBinding(resourceGroup, entityId, elementName, bindingName, whichLocation, hmBinding);	// RH, 20190322, n
 	}
 
 	/**
@@ -877,7 +960,8 @@ public abstract class AbstractMetaDataManager
 	 * @return the requested attribute
 	 * @throws ASelectException
 	 */
-	protected String getAttrFromElementBinding(String entityId, String elementName, String requestedBinding,
+//	protected String getAttrFromElementBinding(String entityId, String elementName, String requestedBinding,	// RH, 20190322, o
+	protected String getAttrFromElementBinding(String resourceGroup, String entityId, String elementName, String requestedBinding,	// RH, 20190322, n
 					String attrName, HashMap<String, String> hmBinding)
 	throws ASelectException
 	{
@@ -885,16 +969,22 @@ public abstract class AbstractMetaDataManager
 		String location = null;
 		String sDefaultLocation = null;
 
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "myRole="+getMyRole()+" entityId=" + entityId + " elementName=" + elementName
+//		_systemLogger.log(Level.INFO, MODULE, sMethod, "myRole="+getMyRole()+" entityId=" + entityId + " elementName=" + elementName
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "myRole="+getMyRole()+" resourceGroup=" + resourceGroup+" entityId=" + entityId + " elementName=" + elementName
 				+ " binding=" + requestedBinding + " attr=" + attrName);
 		if (entityId == null)
 			return null;
-		ensureMetadataPresence(entityId);
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "Presence ensured for " + entityId);
+//		ensureMetadataPresence(entityId);	// RH, 20190322, o
+		ensureMetadataPresence(resourceGroup, entityId);	// RH, 20190322, n
+//		_systemLogger.log(Level.INFO, MODULE, sMethod, "Presence ensured for " + entityId);
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "Presence ensured for resourceGroup=" + resourceGroup+" entityId=" + entityId);
 		
-		SSODescriptor descriptor = SSODescriptors.get(makeEntityKey(entityId, null));
+//		SSODescriptor descriptor = SSODescriptors.get(makeEntityKey(entityId, null));	// RH, 20190322, o
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "SSODescriptors:" + SSODescriptors);
+		SSODescriptor descriptor = SSODescriptors.get(new AbstractMap.SimpleEntry<String, String>(resourceGroup, makeEntityKey(entityId, null)));	// RH, 20190322, n
 		if (descriptor == null) {
-			_systemLogger.log(Level.WARNING, MODULE, sMethod, "No SSODescriptor for " + entityId);
+//			_systemLogger.log(Level.WARNING, MODULE, sMethod, "No SSODescriptor for " + entityId);
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "No SSODescriptor for resourceGroup=" + resourceGroup+" entityId=" + entityId);
 		}
 		else {
 			try {
@@ -1006,12 +1096,14 @@ public abstract class AbstractMetaDataManager
 	 *            the entity id
 	 * @return The session sync URL, or null on errors.
 	 */
-	public String getSessionSyncURL(String entityId)
+//	public String getSessionSyncURL(String entityId)	// RH, 20190321, o
+	public String getSessionSyncURL(String sResourceGroup, String entityId)	// RH, 20190321, n
 	{
 		String sMethod = "getSessionSyncURL";
 		String sUrl = null;
 
-		PartnerData partnerData = getPartnerDataEntry(entityId);		
+//		PartnerData partnerData = getPartnerDataEntry(entityId);	// RH, 20190321, o		
+		PartnerData partnerData = getPartnerDataEntry(sResourceGroup, entityId);	// RH, 20190321, n	
 		if (partnerData != null)
 			sUrl = partnerData.getSessionSyncUrl();
 		if (sUrl == null) {
@@ -1027,12 +1119,14 @@ public abstract class AbstractMetaDataManager
 	 *            the entity id
 	 * @return The session sync URL, or null on errors.
 	 */
-	public String getMetadataURL(String entityId)
+//	public String getMetadataURL(String entityId)
+	public String getMetadataURL(String sResourceGroup, String entityId)	// RH, 20190321, o
 	{
 		String sMethod = "getMetadataURL";
 		String sUrl = null;
 
-		PartnerData partnerData = getPartnerDataEntry(entityId);
+//		PartnerData partnerData = getPartnerDataEntry(entityId);	// RH, 20190321, o
+		PartnerData partnerData = getPartnerDataEntry(sResourceGroup, entityId);	// RH, 20190321, n
 		if (partnerData != null)
 			sUrl = partnerData.getMetadataUrl();
 		
@@ -1041,20 +1135,70 @@ public abstract class AbstractMetaDataManager
 		return sUrl;
 	}
 
+	// RH, 20190321, so
+//	/**
+//	 * Get the PartnerData entry for the given entity id
+//	 * 
+//	 * @param entityId
+//	 * @return - the entry
+//	 */
+//	public PartnerData getPartnerDataEntry(String entityId)
+//	{
+//		PartnerData partnerData = storeAllIdPData.get(entityId);
+//		if (partnerData == null)
+//			partnerData = storeAllIdPData.get("metadata");
+//		return partnerData;
+//	}
+	// RH, 20190321, eo
+
+	// RH, 20190321, sn
 	/**
 	 * Get the PartnerData entry for the given entity id
 	 * 
 	 * @param entityId
 	 * @return - the entry
 	 */
-	public PartnerData getPartnerDataEntry(String entityId)
+	public PartnerData getPartnerDataEntry(String _sResourceGroup, String entityId)
 	{
-		PartnerData partnerData = storeAllIdPData.get(entityId);
-		if (partnerData == null)
-			partnerData = storeAllIdPData.get("metadata");
+		String sMethod = "getPartnerDataEntry";
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "storeAllIdPData:" + storeAllIdPData);
+
+		PartnerData partnerData = null;
+		if (_sResourceGroup != null) {
+			partnerData = storeAllIdPData.get(new AbstractMap.SimpleEntry<String,String>(_sResourceGroup, entityId));
+			if (partnerData != null) {
+				_systemLogger.log(Level.FINER, MODULE, sMethod, "Found partnerdata in _sResourceGroup / entityId:" + _sResourceGroup + " / " + entityId);
+			}
+
+		} else {
+			partnerData = storeAllIdPData.get(new AbstractMap.SimpleEntry<String,String>("", "metadata"));
+			if (partnerData != null) {
+				_systemLogger.log(Level.FINER, MODULE, sMethod, "Found partnerdata in _sResourceGroup/entityId:" + "''" + " / " + "metadata");
+			}
+		}
+		if (partnerData == null) {	// last resort
+			_systemLogger.log(Level.FINER, MODULE, sMethod, "No partnerdata found, trying all resourcegroups");
+			Set<Map.Entry<String,String>> keys = storeAllIdPData.keySet();
+			boolean found = false;
+			for (Map.Entry<String,String> key : keys) {
+				
+				if ( entityId.equals(key.getValue()) ) {
+					_systemLogger.log(Level.FINER, MODULE, sMethod, "Found partnerdata for entityId:" + entityId + " in resourcegroup:" + key.getKey());
+					if (!found) {
+						partnerData = storeAllIdPData.get(key);
+						found = true;
+					} else {
+						_systemLogger.log(Level.WARNING, MODULE, sMethod, "Found another partnerdata for entityId:" + entityId + " in resourcegroup:" + key.getKey());
+					}
+				}
+			}
+		}
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Finally returning partnerData:" + partnerData);
 		return partnerData;
 	}
+	// RH, 20190321, en
 
+	
 	/**
 	 * Return the number of configured IdPs
 	 * 
@@ -1062,9 +1206,30 @@ public abstract class AbstractMetaDataManager
 	 */
 	public int getIdpCount()
 	{
+		// Does not return actual number of entries, but is never called
+		// Should return total number of entries
 		return storeAllIdPData.size();
 	}
 
+	// RH, 20190321, so
+//	/**
+//	 * Gets the default IdP.
+//	 * 
+//	 * @return the default IdP
+//	 */
+//	public String getDefaultIdP()
+//	{
+//		// Get the first one, useful when there's only one (the default)
+//		Set<String> keys = storeAllIdPData.keySet();
+//		for (Object s : keys) {
+//			String sIdP = (String) s;
+//			return (sIdP.equals("metadata")) ? _configManager.getFederationUrl() : sIdP;
+//		}
+//		return null;
+//	}
+	// RH, 20190321, eo
+	
+	// RH, 20190321, sn
 	/**
 	 * Gets the default IdP.
 	 * 
@@ -1073,11 +1238,14 @@ public abstract class AbstractMetaDataManager
 	public String getDefaultIdP()
 	{
 		// Get the first one, useful when there's only one (the default)
-		Set<String> keys = storeAllIdPData.keySet();
-		for (Object s : keys) {
-			String sIdP = (String) s;
-			return (sIdP.equals("metadata")) ? _configManager.getFederationUrl() : sIdP;
+		Set<Map.Entry<String, String>> keys = storeAllIdPData.keySet();
+		for (Map.Entry<String, String> s : keys) {
+			Map.Entry<String, String> sIdP = s;
+//			return (sIdP.equals("metadata")) ? _configManager.getFederationUrl() : sIdP;
+			return ( "metadata".equals(sIdP.getValue()) ) ? _configManager.getFederationUrl() : sIdP.getValue();
 		}
 		return null;
 	}
+	// RH, 20190321, en
+	
 }

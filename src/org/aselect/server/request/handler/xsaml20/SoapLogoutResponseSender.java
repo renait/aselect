@@ -49,7 +49,8 @@ public class SoapLogoutResponseSender
 	 * @throws ASelectException
 	 *             If sending fails.
 	 */
-	public void sendSoapLogoutResponse(String serviceProvider, String issuerUrl, String user, String statusCodeValue,
+//	public void sendSoapLogoutResponse(String serviceProvider, String issuerUrl, String user, String statusCodeValue,	// RH, 20190322, o
+	public void sendSoapLogoutResponse(String resourceGroup, String serviceProvider, String issuerUrl, String user, String statusCodeValue,	// RH, 20190322, o
 			String inResponseTo)
 	throws ASelectException
 	{
@@ -81,10 +82,12 @@ public class SoapLogoutResponseSender
 		try {
 			// get response location from metadata
 			MetaDataManagerIdp metadataManager = MetaDataManagerIdp.getHandle();
-			String responseLocation = metadataManager.getResponseLocation(serviceProvider,
+//			String responseLocation = metadataManager.getResponseLocation(serviceProvider,	// RH, 20190322, o
+			String responseLocation = metadataManager.getResponseLocation(resourceGroup, serviceProvider,	// RH, 20190322, n
 					SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME, SAMLConstants.SAML2_SOAP11_BINDING_URI);
 			if (responseLocation == null) {
-				responseLocation = metadataManager.getLocation(serviceProvider,
+//				responseLocation = metadataManager.getLocation(serviceProvider,	// RH, 20190322, o
+				responseLocation = metadataManager.getLocation(resourceGroup, serviceProvider,	// RH, 20190322, n
 						SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME, SAMLConstants.SAML2_SOAP11_BINDING_URI);
 			}
 

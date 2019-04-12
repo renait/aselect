@@ -119,6 +119,9 @@ public class SLOTimerTask extends TimerTask
 
 		// Send a backchannel logout to all known SP's
 		String initiatingSP = tgtSso.getLogoutInitiator();
+		
+		String sResourcegroup = tgtContext != null ? (String) tgtContext.get("federation_group") : null;	// RH, 20190325, n
+
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "initiatingSP=" + initiatingSP);
 		List<ServiceProvider> sps = tgtSso.getServiceProviders();
 		for (ServiceProvider serviceProvider : sps) {
@@ -130,7 +133,8 @@ public class SLOTimerTask extends TimerTask
 				}
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "Logout to SP=" + sp + " requestId=" + requestId);
 				MetaDataManagerIdp metadataManager = MetaDataManagerIdp.getHandle();
-				String url = metadataManager.getLocation(sp, SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME,
+//				String url = metadataManager.getLocation(sp, SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME,	// RH, 20190325, o
+				String url = metadataManager.getLocation(sResourcegroup, sp, SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME,	// RH, 20190325, n
 						SAMLConstants.SAML2_SOAP11_BINDING_URI);
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "Logging out '" + sp + "' via backchannel");
 				SoapLogoutRequestSender sender = new SoapLogoutRequestSender();
@@ -140,8 +144,9 @@ public class SLOTimerTask extends TimerTask
 				// RM_44_01
 				List <PublicKey> pkeys = null;// RH, 20181116, n
 				if (is_bVerifySignature()) {
-					pkeys = metadataManager.getSigningKeyFromMetadata(sp);// RH, 20181116, n
-					if (pkeys == null || pkeys.isEmpty()) {// RH, 20181116, n
+//					pkeys = metadataManager.getSigningKeyFromMetadata(sp);// RH, 20181116, n	// Rh, 20190325, o
+					pkeys = metadataManager.getSigningKeyFromMetadata(sResourcegroup, sp);// RH, 20181116, n	// Rh, 20190325, n
+									if (pkeys == null || pkeys.isEmpty()) {// RH, 20181116, n
 						_systemLogger.log(Level.SEVERE, MODULE, sMethod, "No valid public key in metadata");
 						throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 					}
@@ -170,7 +175,8 @@ public class SLOTimerTask extends TimerTask
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "Logging out initiator '" + initiatingSP
 						+ "' via backchannel");
 				SoapLogoutResponseSender sender = new SoapLogoutResponseSender();
-				sender.sendSoapLogoutResponse(initiatingSP, issuer, tgtId, StatusCode.SUCCESS_URI, requestId);
+//				sender.sendSoapLogoutResponse(initiatingSP, issuer, tgtId, StatusCode.SUCCESS_URI, requestId);	// RH, 20190325, o
+				sender.sendSoapLogoutResponse(sResourcegroup, initiatingSP, issuer, tgtId, StatusCode.SUCCESS_URI, requestId);	// RH, 20190325, n
 			} else {
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "No need for logging out initiator '" + initiatingSP
 						+ "' logoutresponse already sent");

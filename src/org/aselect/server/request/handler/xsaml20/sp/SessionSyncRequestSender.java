@@ -349,6 +349,7 @@ public class SessionSyncRequestSender
 	throws ASelectException
 	{
 		String _sMethod = "sendSAMLUpdateToFederation";
+		TGTManager tgtmanager = TGTManager.getHandle();	// RH, 20190325, n
 
 		// Build AuthzDecisionQuery SAML
 		XMLObjectBuilderFactory oBuilderFactory = Configuration.getBuilderFactory();
@@ -413,7 +414,16 @@ public class SessionSyncRequestSender
 		PartnerData partnerData = null;
 		PartnerData.Crypto specificCrypto = null;
 		try {
-			partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(_sFederationUrl);
+//			partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(_sFederationUrl);	// RH, 20190325, o
+			// RH, 20190325, sn
+			// We must get the resourcegroup from the tgt
+			HashMap htTGTContext = tgtmanager.getTGT(sTgT);
+			String resourceGroup = null;
+			if (htTGTContext != null) {
+				resourceGroup = (String) htTGTContext.get("federation_group");
+			}
+			partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(resourceGroup, _sFederationUrl);	
+			// RH, 20190325, en
 			if (partnerData != null) {
 				specificCrypto = partnerData.getCrypto();	// might be null
 			}

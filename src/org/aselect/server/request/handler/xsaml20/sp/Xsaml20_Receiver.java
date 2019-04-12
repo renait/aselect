@@ -187,7 +187,8 @@ public class Xsaml20_Receiver extends Saml20_BrowserHandler
 			// RH, 20180810, sn
 			// We want to get the partnerdata
 			String sEntityId = _oSamlIssuer.getValue();
-			PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sEntityId);
+//			PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sEntityId);	// RH, 20190322, o
+			PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(_sResourceGroup, sEntityId);	// RH, 20190322, o
 			String specialSettings = (partnerData == null)? null: partnerData.getSpecialSettings();
 			//////////////////////
 			// Maybe per application, not sure yet

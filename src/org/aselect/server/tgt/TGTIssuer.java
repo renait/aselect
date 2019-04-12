@@ -276,6 +276,7 @@ public class TGTIssuer
 			Utils.copyHashmapValue("user_agent", htTGTContext, htSessionContext);
 			// Bauke 20091029, for multiple saml IdPs
 			Utils.copyHashmapValue("federation_url", htTGTContext, htSessionContext);
+			Utils.copyHashmapValue("federation_group", htTGTContext, htSessionContext);	// RH, 20190322, n
 			// 20120606, Bauke: connect sessions
 			Utils.copyHashmapValue("usi", htTGTContext, htSessionContext);
 			
@@ -659,6 +660,7 @@ public class TGTIssuer
 			Utils.copyHashmapValue("user_agent", htTGTContext, htSessionContext);
 			// Bauke 20091029, for multiple saml IdPs
 			Utils.copyHashmapValue("federation_url", htTGTContext, htSessionContext);
+			Utils.copyHashmapValue("federation_group", htTGTContext, htSessionContext);	// RH, 20190322, n
 			// 20120606, Bauke: connect sessions
 			Utils.copyHashmapValue("usi", htTGTContext, htSessionContext);
 			

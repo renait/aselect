@@ -11,6 +11,7 @@
  */
 package org.aselect.server.request.handler.xsaml20.idp;
 
+import java.util.AbstractMap;
 import java.util.logging.Level;
 
 import org.aselect.server.request.handler.xsaml20.AbstractMetaDataManager;
@@ -145,7 +146,9 @@ public class MetaDataManagerIdp extends AbstractMetaDataManager
 					+ metadata.getFirstChild().getTextContent());
 			PartnerData idpData = new PartnerData(sId);
 			idpData.setMetadataUrl(metadata.getFirstChild().getTextContent());
-			storeAllIdPData.put(sId, idpData);
+//			storeAllIdPData.put(sId, idpData);	// RH, 20190321,o
+			// This means an application cannot be called _application_ , maybe we should call this some random string
+			storeAllIdPData.put(new AbstractMap.SimpleEntry<String,String>("_application_", sId), idpData);	// RH, 20190321,n
 		}
 	}
 }

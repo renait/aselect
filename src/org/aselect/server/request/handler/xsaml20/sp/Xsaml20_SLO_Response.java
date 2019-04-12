@@ -187,7 +187,8 @@ public class Xsaml20_SLO_Response extends Saml20_BaseHandler
 
 				String sEntityId = issuer.getValue();
 				MetaDataManagerSp metadataManager = MetaDataManagerSp.getHandle();
-				List<PublicKey> publicKeys = metadataManager.getSigningKeyFromMetadata(sEntityId);	// RH, 20181119, n
+//				List<PublicKey> publicKeys = metadataManager.getSigningKeyFromMetadata(sEntityId);	// RH, 20181119, n	// RH, 20190322, o
+				List<PublicKey> publicKeys = metadataManager.getSigningKeyFromMetadata(_sResourceGroup, sEntityId);	// RH, 20181119, n	// RH, 20190322, n
 				if (publicKeys == null || publicKeys.isEmpty()) {	// RH, 20181119, n
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, "PublicKey for entityId: " + sEntityId
 							+ " not found.");
@@ -338,7 +339,8 @@ public class Xsaml20_SLO_Response extends Saml20_BaseHandler
 			if (is_bVerifySignature()) {
 				// Bauke, 20091008: changed from MetaDataManagerIdp to ...Sp
 				MetaDataManagerSp metadataManager = MetaDataManagerSp.getHandle();
-				List<PublicKey> pkeys = metadataManager.getSigningKeyFromMetadata(initiatingSP);	// RH, 20181119, n
+//				List<PublicKey> pkeys = metadataManager.getSigningKeyFromMetadata(initiatingSP);	// RH, 20181119, n	// RH, 20190322, o
+				List<PublicKey> pkeys = metadataManager.getSigningKeyFromMetadata(_sResourceGroup, initiatingSP);	// RH, 20181119, n	// RH, 20190322, n
 				if (pkeys == null || pkeys.isEmpty()) {	// RH, 20181119, n
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, "PublicKey for entityId: " + initiatingSP
 							+ " not found.");

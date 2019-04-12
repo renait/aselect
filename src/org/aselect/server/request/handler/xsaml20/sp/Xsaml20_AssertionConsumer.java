@@ -71,6 +71,7 @@ import org.opensaml.saml2.core.AttributeStatement;
 import org.opensaml.saml2.core.AuthenticatingAuthority;
 import org.opensaml.saml2.core.AuthnContext;
 import org.opensaml.saml2.core.AuthnContextClassRef;
+import org.opensaml.saml2.core.EncryptedAssertion;
 import org.opensaml.saml2.core.EncryptedAttribute;
 import org.opensaml.saml2.core.EncryptedID;
 import org.opensaml.saml2.core.Issuer;
@@ -272,7 +273,8 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "FederationUrl="+sFederationUrl);
 				// use metadata
 				MetaDataManagerSp metadataManager = MetaDataManagerSp.getHandle();
-				String sASelectServerUrl = metadataManager.getLocation(sFederationUrl,
+//				String sASelectServerUrl = metadataManager.getLocation(sFederationUrl,	// RH, 20190325, o
+				String sASelectServerUrl = metadataManager.getLocation(_sResourceGroup, sFederationUrl,	// RH, 20190325, n
 						ArtifactResolutionService.DEFAULT_ELEMENT_LOCAL_NAME, SAMLConstants.SAML2_SOAP11_BINDING_URI);
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "Artifact Resolution at " + sASelectServerUrl);
 	
@@ -304,7 +306,8 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 				// 20100312, Bauke: eHerkenning, no assertion issuer format:
 				// assertionIssuer.setFormat(NameIDType.ENTITY);
 				// 20100311, Bauke: added for eHerkenning: Specific issuer id, independent of the Url
-				PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sFederationUrl);
+//				PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sFederationUrl);	// RH, 20190325, o
+				PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(_sResourceGroup, sFederationUrl);	// RH, 20190325, n
 				String specialSettings = (partnerData == null)? null: partnerData.getSpecialSettings();
 				if (partnerData != null && partnerData.getLocalIssuer() != null)
 					assertionIssuer.setValue(partnerData.getLocalIssuer());
@@ -410,7 +413,8 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 						throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 					}
 					
-					List<PublicKey> pkeys = metadataManager.getSigningKeyFromMetadata(artifactResponseIssuer);	// RH, 20181119, n
+//					List<PublicKey> pkeys = metadataManager.getSigningKeyFromMetadata(artifactResponseIssuer);	// RH, 20181119, n	// RH, 20190325, o
+					List<PublicKey> pkeys = metadataManager.getSigningKeyFromMetadata(_sResourceGroup, artifactResponseIssuer);	// RH, 20181119, n	// RH, 20190325, n
 					if (pkeys == null || pkeys.isEmpty()) {	// RH, 20181119, n
 						_systemLogger.log(Level.SEVERE, MODULE, sMethod, "No valid public key in metadata");
 						throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
@@ -500,7 +504,8 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 						throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 					}
 					
-					List<PublicKey> pkeys = metadataManager.getSigningKeyFromMetadata(responseIssuer);	// RH, 20181119, n
+//					List<PublicKey> pkeys = metadataManager.getSigningKeyFromMetadata(responseIssuer);	// RH, 20181119, n	// RH, 20190325, o
+					List<PublicKey> pkeys = metadataManager.getSigningKeyFromMetadata(_sResourceGroup, responseIssuer);	// RH, 20181119, n	// RH, 20190325, n
 					if (pkeys == null || pkeys.isEmpty()) {	// RH, 20181119, n
 						_systemLogger.log(Level.SEVERE, MODULE, sMethod, "No valid public key in metadata");
 						throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
@@ -536,8 +541,27 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 				if (sStatusCode.equals(StatusCode.SUCCESS_URI)) {
 //					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Response was successful " + samlResponse.toString());
 					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Response was successful, Destination: " + samlResponse.getDestination());
-					_systemLogger.log(Level.FINE, MODULE, sMethod, "Number of Assertions found: " +  samlResponse.getAssertions().size());
-					Assertion samlAssertion = samlResponse.getAssertions().get(0);
+					// RH, 20190225, sn
+					// Try Encrypted Assertion first
+					Assertion samlAssertion = null;
+					List<EncryptedAssertion> encAsses = samlResponse.getEncryptedAssertions();
+					if (encAsses != null && samlResponse.getEncryptedAssertions().size() > 0) { // For now we support either Encrypted or normal Assertions, not both
+						_systemLogger.log(Level.FINE, MODULE, sMethod, "Number of EncryptedAssertions found: " +  samlResponse.getEncryptedAssertions().size());
+						EncryptedAssertion encAss = samlResponse.getEncryptedAssertions().get(0);	// We only support one
+						samlAssertion = (Assertion) SamlTools.decryptSamlObject(encAss);
+					} else {
+						_systemLogger.log(Level.FINE, MODULE, sMethod, "Number of Assertions found: " +  samlResponse.getAssertions().size());
+						samlAssertion = samlResponse.getAssertions().get(0);
+					}
+					if (samlAssertion == null) {	// There should be at least one
+						_systemLogger.log(Level.SEVERE, MODULE, sMethod, "No (readable) Assertion present in Response");
+						throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
+					}
+					// RH, 20190225, en
+					// RH, 20190225, so
+//					_systemLogger.log(Level.FINE, MODULE, sMethod, "Number of Assertions found: " +  samlResponse.getAssertions().size());
+//					Assertion samlAssertion = samlResponse.getAssertions().get(0);
+					// RH, 20190225, eo
 					_systemLogger.log(Level.FINE, MODULE, sMethod, "Assertion ID=" +samlAssertion.getID());
 					String sAssertIssuer = samlAssertion.getIssuer().getValue();
 					_systemLogger.log(Level.FINE, MODULE, sMethod, "Issuer=" +sAssertIssuer+" checkAssertionSigning="+checkAssertionSigning);
@@ -555,7 +579,8 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 						}
 						
 //						MetaDataManagerSp metadataManager = MetaDataManagerSp.getHandle();	// RH, 20121205, n
-						List<PublicKey> pkeys = metadataManager.getSigningKeyFromMetadata(sAssertIssuer);	// RH, 20181119, n
+//						List<PublicKey> pkeys = metadataManager.getSigningKeyFromMetadata(sAssertIssuer);	// RH, 20181119, n	// RH, 20190325, o
+						List<PublicKey> pkeys = metadataManager.getSigningKeyFromMetadata(_sResourceGroup, sAssertIssuer);	// RH, 20181119, n	// RH, 20190325, n
 						if (pkeys == null || pkeys.isEmpty()) {	// RH, 20181119, n
 							_systemLogger.log(Level.SEVERE, MODULE, sMethod, "No valid public key in metadata");
 							throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
@@ -605,7 +630,8 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 							Issuer issuer = samlResponse.getIssuer();
 							String sIssuer = (issuer == null)? null: issuer.getValue();
 							if (sIssuer != null) {
-								PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sIssuer);
+//								PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sIssuer);	// RH, 20190325, o
+								PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(_sResourceGroup, sIssuer);	// RH, 20190325, n
 								if (partnerData != null) {
 									PolyKeyUtil keys = new PolyKeyUtil(partnerData.getId_keylocation(), partnerData.getI_point(), null, null, null); 
 									if (keys.getDecryptKey() != null) {	// loading of keys went well
@@ -628,7 +654,8 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 							Issuer issuer = samlResponse.getIssuer();
 							String sIssuer = (issuer == null)? null: issuer.getValue();
 							if (sIssuer != null) {
-								PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sIssuer);
+//								PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sIssuer);	// RH, 20190325, o
+								PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(_sResourceGroup, sIssuer);	// RH, 20190325, n
 								if (partnerData != null) {
 									PolyKeyUtil keys = new PolyKeyUtil(null, null, partnerData.getPd_keylocation(), partnerData.getPc_keylocation(), partnerData.getP_point()); 
 									if (keys.getPDecryptKey() != null && keys.getPClosingKey() != null) {	// loading of keys went well
@@ -687,7 +714,8 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 					
 //					String sAuthnContextClassRefURI = oAuthnContext.getAuthnContextClassRef().getAuthnContextClassRef();	// RH, 20160405, o
 					// RH, 20160405, sn
-					PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sFederationUrl);
+//					PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sFederationUrl);	// RH, 20190325, o
+					PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(_sResourceGroup, sFederationUrl);	// RH, 20190325, o
 					// RH, 20180810, sn, Moved this up a bit
 					String specialSettings = (partnerData == null)? null: partnerData.getSpecialSettings();
 					boolean useLoa = (specialSettings != null && specialSettings.contains("use_loa"));
@@ -1224,6 +1252,18 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 				String sOldTGT = (String) htServiceRequest.get("aselect_credentials_tgt");
 				// Will also redirect the user, this call can update/delete the session in the local cache
 				// Final session updates will be done by finalSessionProcessing()
+
+				// RH, 20190208, sn
+				// Temporary hack for Solera
+				String forced_level =  (String)htSessionContext.get("forced_level");
+				if (forced_level != null) {
+					String sel_level =  (String)htSessionContext.get("sel_level");
+//					htSessionContext.remove("forced_level")	;				
+//					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Authentication successful, removing forced_level: " + forced_level);
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Authentication successful, forcing forced_level to sel_level: " + forced_level + ", sel_level:" + sel_level);
+					htSessionContext.put("forced_level", sel_level)	;				
+				}
+				// RH, 20190208, en
 				oTGTIssuer.issueTGTandRedirect(sLocalRid, htSessionContext, null, htRemoteAttributes, servletRequest, servletResponse, sOldTGT, true);
 				// 20090909: oTGTIssuer.issueCrossTGT(sLocalRid, null, htRemoteAttributes, servletResponse, sOldTGT);
 			}

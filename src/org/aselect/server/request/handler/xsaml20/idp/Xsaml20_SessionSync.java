@@ -134,7 +134,8 @@ public class Xsaml20_SessionSync extends Saml20_BaseHandler
 								"For signature verification the received message must have an Issuer");
 						throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 					}
-					getKeyAndCheckSignature(sp, authzDecisionQuery);  // throws an exception on error
+//					getKeyAndCheckSignature(sp, authzDecisionQuery);  // throws an exception on error	// RH, 20190325, o
+					getKeyAndCheckSignature(_sResourceGroup, sp, authzDecisionQuery);  // throws an exception on error	// RH, 20190325, n
 				}
 				// check validity interval of authzDecisionQuery
 				if (is_bVerifyInterval()) {
