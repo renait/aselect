@@ -3,6 +3,9 @@ package org.aselect.authspserver.authsp.social;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
+import java.net.URI;
+import java.net.URISyntaxException;
+import java.net.URL;
 import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
@@ -118,14 +121,41 @@ public class SocialAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 		HashMap<String,Object> htSessionContext = null;
 		String sRid = null;
 		String sSignRid = null;
-		
+	
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Enter");
+
 		PrintWriter pwOut = Utils.prepareForHtmlOutput(servletRequest, servletResponse);
 
 		String sQueryString = servletRequest.getQueryString();
-//		_systemLogger.log(Level.FINEST, MODULE, sMethod, "qry="+sQueryString);
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "initial sQueryString="+sQueryString);
+//		String sURI = servletRequest.getRequestURI();
+//		_systemLogger.log(Level.FINEST, MODULE, sMethod, "sURI="+sURI);
+		StringBuffer sURL = servletRequest.getRequestURL();
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "sURL="+sURL);
+		try {
+			URI uri = new URI(sURL.toString());
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "uri="+uri);
+//			URL url = new URL(sURL.toString());
+//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "url="+url);
+			String uri_fragment = uri.getFragment();
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "uri_fragment="+uri_fragment);
+//			String url_path = url.getPath();	// url has no fragment
+//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "url_path="+url_path);
+			if (uri_fragment != null && uri_fragment.length()>0) {
+				if (sQueryString != null && sQueryString.length()>0) {
+					sQueryString += "&" + uri_fragment;
+				} else {
+					sQueryString = uri_fragment;
+				}
+			}			
+		} catch (URISyntaxException e1) {
+			_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Invalid URI syntax: "+e1);
+			handleResult(htSessionContext, servletResponse, pwOut, Errors.ERROR_SOCIAL_COULD_NOT_AUTHENTICATE_USER, null, null);
+		}
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "final sQueryString="+sQueryString);
 		HashMap htServiceRequest = Utils.convertCGIMessage(sQueryString, true);  // URL decoded result
 //		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Enter - htServiceRequest:" + htServiceRequest);
-		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Enter");
+//		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Enter");
 		
 		// If 'state' is present this is the return call from the socialauth provider
 		String sState = (String)htServiceRequest.get("state");
@@ -249,7 +279,8 @@ public class SocialAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 			if ( sSocialLogin.toLowerCase().startsWith("azure") ) {
 				sUrl += "&state=" + URLEncoder.encode( base64Enc.encode(sData.getBytes("UTF-8")), "UTF-8");
 //				sUrl = sUrl.replace("response_type=code", "response_type=code+id_token&scope=openid&response_mode=query&nonce=12345");
-				sUrl += "&scope=openid%20offline_access&response_mode=query&nonce=" + nonce;
+//				sUrl += "&scope=openid%20offline_access&response_mode=query&nonce=" + nonce;	// RH, 20181213, o 
+				sUrl += "&scope=openid&response_mode=query&nonce=" + nonce;	// RH, 20181213, n
 			}
 			_systemLogger.log(Level.FINEST, MODULE, sMethod, "authenticationUrl after manipulation="+sUrl);
 			String sFabricatedRid = sRid + RID_POSTFIX;

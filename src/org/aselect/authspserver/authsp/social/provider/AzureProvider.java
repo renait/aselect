@@ -150,7 +150,8 @@ AuthProvider, Serializable {
 			LOG.info("User access denied: " + requestParams.get("error_description"));
 			throw new UserDeniedPermissionException();
 		}
-		accessGrant = authenticationStrategy.verifyResponse(requestParams);
+//		accessGrant = authenticationStrategy.verifyResponse(requestParams);	// RH, 20181217, o
+		setAccessGrant(authenticationStrategy.verifyResponse(requestParams));	// RH, 20181217, n
 
 		if (accessGrant != null) {
 			LOG.debug("Access grant available");
