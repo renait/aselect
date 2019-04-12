@@ -58,6 +58,8 @@ public class PartnerData
 	
 	private String logoutSupport = "true";
 	private String suppressscoping = null; // RH, 20180327, n
+	private String suppresssforcedauthn = null; // RH, 20190412, n
+	
 	private String idpentryproviderid = null; // RH, 20181005, n
 
 	private String federationurl = null;
@@ -243,9 +245,15 @@ public class PartnerData
 	{
 		this.suppressscoping = suppressscoping;
 	}
-
-	// RH, 20180917, sn
 	
+	public synchronized String getSuppresssforcedauthn() {
+		return suppresssforcedauthn;
+	}
+
+	public synchronized void setSuppresssforcedauthn(String suppresssforcedauthn) {
+		this.suppresssforcedauthn = suppresssforcedauthn;
+	}
+
 	public synchronized String getIdpentryproviderid() {
 		return idpentryproviderid;
 	}

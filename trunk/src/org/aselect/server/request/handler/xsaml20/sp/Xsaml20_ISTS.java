@@ -550,16 +550,23 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 			}
 			// RH, 20171201, en
 			
-			// Check if we have to set the ForceAuthn attribute
-			// 20090613, Bauke: use forced_authenticate (not forced_logon)!
-			Boolean bForcedAuthn = (Boolean)_htSessionContext.get("forced_authenticate");
-			if (bForcedAuthn == null)
-				bForcedAuthn = false;
-			// 20100311, Bauke: "force" special_setting added for eHerkenning
-			if (bForcedAuthn || (specialSettings != null && specialSettings.contains("force"))) {
-				_systemLogger.log(Level.INFO, MODULE, sMethod, "Setting the ForceAuthn attribute");
-				authnRequest.setForceAuthn(true);
-			}
+			// RH, 20190412, sn
+			// for idp partner sso
+			boolean suppressforcedauthn = partnerData != null && "true".equalsIgnoreCase(partnerData.getSuppresssforcedauthn());
+			if (!suppressforcedauthn) {
+			// RH, 20190412, en
+				
+				// Check if we have to set the ForceAuthn attribute
+				// 20090613, Bauke: use forced_authenticate (not forced_logon)!
+				Boolean bForcedAuthn = (Boolean)_htSessionContext.get("forced_authenticate");
+				if (bForcedAuthn == null)
+					bForcedAuthn = false;
+				// 20100311, Bauke: "force" special_setting added for eHerkenning
+				if (bForcedAuthn || (specialSettings != null && specialSettings.contains("force"))) {
+					_systemLogger.log(Level.INFO, MODULE, sMethod, "Setting the ForceAuthn attribute");
+					authnRequest.setForceAuthn(true);
+				}
+			}	// RH, 20190412, n
 
 			// 20140924, RH: "force_passive" special_setting (only for testing yet)
 			// If needed in production must have its own element/attribuut in config
