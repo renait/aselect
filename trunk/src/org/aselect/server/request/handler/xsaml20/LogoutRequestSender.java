@@ -24,6 +24,7 @@ import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.crypto.Auxiliary;
 import org.joda.time.DateTime;
+import org.opensaml.Configuration;
 import org.opensaml.common.SAMLObjectBuilder;
 import org.opensaml.common.binding.BasicSAMLMessageContext;
 import org.opensaml.saml2.binding.encoding.HTTPRedirectDeflateEncoder;
@@ -36,7 +37,9 @@ import org.opensaml.xml.XMLObjectBuilderFactory;
 import org.opensaml.xml.io.Marshaller;
 import org.opensaml.xml.io.MarshallerFactory;
 import org.opensaml.xml.io.MarshallingException;
+import org.opensaml.xml.security.BasicSecurityConfiguration;
 import org.opensaml.xml.security.x509.BasicX509Credential;
+import org.opensaml.xml.signature.SignatureConstants;
 import org.opensaml.xml.util.XMLHelper;
 import org.w3c.dom.Node;
 
@@ -189,7 +192,14 @@ public class LogoutRequestSender
 		SamlHistoryManager history = SamlHistoryManager.getHandle();
 		history.put(sTgT, logoutRequest.getDOM());
 
-		HTTPRedirectDeflateEncoder encoder = new HTTPRedirectDeflateEncoder();
+		////////////////////////////// Alternative	/////////////////////////
+//        BasicSecurityConfiguration config = (BasicSecurityConfiguration) Configuration.getGlobalSecurityConfiguration();
+//        config.registerSignatureAlgorithmURI("RSA", SignatureConstants.ALGO_ID_SIGNATURE_RSA_SHA256);
+//        config.setSignatureReferenceDigestMethod(SignatureConstants.ALGO_ID_DIGEST_SHA256);
+        ////////////////////////////////////////////////////////////////////////
+
+//		HTTPRedirectDeflateEncoder encoder = new HTTPRedirectDeflateEncoder();	// RH, 20190426, o
+		Saml20_RedirectEncoder encoder = new Saml20_RedirectEncoder();	// RH, 20190426, n
 		try {
 			encoder.encode(messageContext);
 		}
