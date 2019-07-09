@@ -346,6 +346,7 @@ public class AccountSTS extends ProtoRequestHandler
 				// RH, 20180523, sn
 				if (sPwauth != null && _htWauthAppidMapping.get(sPwauth) != null && ((String)_htWauthAppidMapping.get(sPwauth)).equals(htTGTContext.get("app_id"))) {
 					htSessionData.put("wauth", sPwauth);
+					htSessionData.put("app_id", htTGTContext.get("app_id"));	// RH, 20190704, n
 				}
 				// RH, 20180523, en
 				// We've done some elementary checking on the htSessionData. Maybe narrow this down some more, // RH, 20180523, n
@@ -615,9 +616,10 @@ public class AccountSTS extends ProtoRequestHandler
 			
 //			if (sPwauth != null)  sAuthMeth = sPwauth;	// sPwauth should have been checked		// RH, 20180523, n	// RH, 20180529, o
 			if (sPwauth != null 
-					&& _htWauthAppidMapping.get(sPwauth) != null && ((String)_htWauthAppidMapping.get(sPwauth)).equals(htSessionData.get("app_id")))  
+					&& _htWauthAppidMapping.get(sPwauth) != null && ((String)_htWauthAppidMapping.get(sPwauth)).equals(htSessionData.get("app_id")))
+			{
 				sAuthMeth = sPwauth;	// sPwauth, we must check again	// RH, 20180529
-
+			}
 			
 //			String sRequestorToken = createRequestorToken(request, _sProviderId, sUid, _sUserDomain, _sNameIdFormat,
 //					sAudience, htAttributes, sSubjConf);	// RH, 20130924, o
