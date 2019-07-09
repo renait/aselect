@@ -113,7 +113,7 @@ public  final class Auxiliary
 			+ "burgerservicenummer", "patientnummer", "Burgerservicenummer", "Patientnummer",
 		"name_id", "Name_ID", "NAME_ID", "Name_id", "authid", "Authid", "AuthId", "AuthID",
 		"password", "pw", "passwd", "shared_secret", "secret", "cn", "CN",
-	 	"full_dn", "mail", "email", "contents" };
+	 	"full_dn", "mail", "email", "contents", "Authorization" };
 	public static final List<String> BANNED_KEYS = Arrays.asList(DEFAULT_KEYS);
 	private static SecureRandom sr = null;
 	private static  byte bytes[] = new byte[20];
