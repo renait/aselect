@@ -27,6 +27,7 @@ import java.util.AbstractMap;
 import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
+import java.util.Iterator;
 import java.util.List;
 import java.util.Map;
 import java.util.Set;
@@ -43,6 +44,8 @@ import org.aselect.system.logging.SystemLogger;
 import org.aselect.system.utils.Utils;
 import org.opensaml.DefaultBootstrap;
 import org.opensaml.common.xml.SAMLConstants;
+import org.opensaml.saml2.core.Assertion;
+import org.opensaml.saml2.metadata.EntitiesDescriptor;
 import org.opensaml.saml2.metadata.EntityDescriptor;
 import org.opensaml.saml2.metadata.KeyDescriptor;
 import org.opensaml.saml2.metadata.SSODescriptor;
@@ -57,11 +60,15 @@ import org.opensaml.xml.XMLObject;
 import org.opensaml.xml.io.Marshaller;
 import org.opensaml.xml.io.MarshallerFactory;
 import org.opensaml.xml.io.MarshallingException;
+import org.opensaml.xml.io.Unmarshaller;
+import org.opensaml.xml.io.UnmarshallerFactory;
+import org.opensaml.xml.io.UnmarshallingException;
 import org.opensaml.xml.parse.BasicParserPool;
 import org.opensaml.xml.parse.XMLParserException;
 import org.opensaml.xml.security.credential.UsageType;
 import org.opensaml.xml.signature.X509Certificate;
 import org.opensaml.xml.signature.X509Data;
+import org.opensaml.xml.util.XMLHelper;
 import org.w3c.dom.Element;
 import org.w3c.dom.NamedNodeMap;
 import org.w3c.dom.Node;
@@ -456,6 +463,7 @@ public abstract class AbstractMetaDataManager
 	throws ASelectException
 	{
 		String sMethod = "addMetadata";
+
 		ArrayList<MetadataProvider> metadataProviderArray = new ArrayList<MetadataProvider>();
 
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "getProviders");
@@ -463,18 +471,41 @@ public abstract class AbstractMetaDataManager
 
 		for (MetadataProvider metadataEntityId : metadataProviderArray) {
 			try {
-				EntityDescriptor entityDescriptorValue = null;
-				if (entityId == null) {	// RH, 20180829, n
+				
+//				EntityDescriptor entityDescriptorValue = null;
+//				if (entityId == null) {	// RH, 20180829, n, 	// RH, 20190809, o
 				XMLObject domdoc = metadataEntityId.getMetadata();
 
 				Element domDescriptor = marshallDescriptor(domdoc);
 //				String entityId = domDescriptor.getAttribute("entityID");	// RH, 20180829, o
-				entityId = domDescriptor.getAttribute("entityID");	// RH, 20180829, n
+				if (entityId == null) {	// RH, 20190809, n
+					entityId = domDescriptor.getAttribute("entityID");	// RH, 20180829, n
 				}	// RH, 20180829, n
 				// We will get and fill SSODescriptors
-				entityDescriptorValue = metadataEntityId.getEntityDescriptor(entityId);
+				// ((ChainingMetadataProvider)metadataEntityId).
+				EntityDescriptor singleEntityDescriptorValue = metadataEntityId.getEntityDescriptor(entityId);
 
-				if (entityDescriptorValue != null) {
+				// RH, 20180829, sn
+				List<EntityDescriptor> entityDescriptors = new ArrayList<EntityDescriptor>();
+				if (singleEntityDescriptorValue == null) {
+					// if no single root EntityDescriptor, maybe embedded in EntitiesDescriptor
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "No single EntityDescriptor found, trying EntitiesDescriptor");
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, XMLHelper.prettyPrintXML(domdoc.getDOM()));
+					
+					if (!(domdoc instanceof EntitiesDescriptor)) {
+					        throw new ASelectException("Unexpected body content.  Expected a SAML EntitiesDescriptor but recieved "
+					                + domdoc.getElementQName());
+				    }
+					EntitiesDescriptor rootDescriptor = (EntitiesDescriptor)domdoc ;
+					entityDescriptors = getEntityDescriptors(rootDescriptor, entityDescriptors);
+				} else {
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Found single EntityDescriptor");
+					entityDescriptors.add(singleEntityDescriptorValue);
+				}
+				// RH, 20180829, en
+				for (EntityDescriptor entityDescriptorValue : entityDescriptors) {	// RH, 20190809, n
+//				if (entityDescriptorValue != null) {	// RH, 20190809, o
+					entityId = entityDescriptorValue.getEntityID();	// RH, 20190809, n
 					_systemLogger.log(Level.INFO, MODULE, sMethod, "New Entity Descriptor: " + entityDescriptorValue
 							+ " for " + entityId);
 					// 20100501, Bauke: metadata can contain both Descriptor types, so check both of them!
@@ -511,6 +542,38 @@ public abstract class AbstractMetaDataManager
 		}
 	}
 
+	// RH, 20190809, sn
+	/**
+	 * Recurse into EntitiesDescriptor and
+	 * return flat list of EntityDescriptor
+	 * @param rootDescriptor
+	 *            the top level EntitiesDescriptor
+	 * @param entityDescriptors
+	 *            the (possibly empty or null) flat list of EntityDescriptor
+	 */
+	private List<EntityDescriptor> getEntityDescriptors(EntitiesDescriptor rootDescriptor, List<EntityDescriptor> entityDescriptors) {
+		String sMethod = "getEntityDescriptors";
+
+		if (entityDescriptors == null) { 
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Creating empty list entityDescriptors");
+			entityDescriptors =  new ArrayList<EntityDescriptor>();
+		}
+		entityDescriptors.addAll(rootDescriptor.getEntityDescriptors());
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "list of entityDescriptors so far:" + entityDescriptors);
+		List<EntitiesDescriptor> entitiesDescriptors = rootDescriptor.getEntitiesDescriptors();
+		if (entitiesDescriptors != null) {
+			Iterator<EntitiesDescriptor> iter = entitiesDescriptors.iterator();
+			while (iter.hasNext()) {
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Recursing into entitiesDescriptors");
+				entityDescriptors = getEntityDescriptors(iter.next(), entityDescriptors);
+			}
+		}
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "finally returning list entityDescriptors:" + entityDescriptors);
+		return entityDescriptors;
+	}
+	// RH, 20190809, en
+	
+	
 	/**
 	 * Check validity of a metadata certificate. Called when the metadata is read in. Dates must be valid, and the
 	 * certificate must be trusted by a ca stored in the trusted_issuers keystore.
