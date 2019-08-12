@@ -100,7 +100,8 @@ public class Saml20_ArtifactManager extends StorageManager
 		putArtifactInStorage(sArtifact, samlObject, addedPatching);
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "Encode");
 		String uencArtifact = URLEncoder.encode(sArtifact, "UTF-8");
-		String sRedirectUrl = sAppUrl + "?SAMLart=" + uencArtifact;
+//		String sRedirectUrl = sAppUrl + "?SAMLart=" + uencArtifact;	// RH, 20190812, o
+		String sRedirectUrl = sAppUrl + (sAppUrl.contains("?") ? "&" : "?") + "SAMLart="  + uencArtifact;	// RH, 20190812, n
 		if (sRelayState != null)
 			sRedirectUrl += "&RelayState=" + URLEncoder.encode(sRelayState, "UTF-8");
 
