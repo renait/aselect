@@ -67,14 +67,20 @@ public class PolyKeyUtil {
 
         // Convert P7 key to PEM
         try (final InputStream is = new FileInputStream(id_key_location)) {
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Inputstream identitykey openend");	// RH, 20190805, n
             String identityKeyPem = CMS.read(getPrivateKey(), is);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Identitykey read from file");	// RH, 20190805, n
             // Convert PEM to IdentityDecryptKey
             decryptKey = DecryptKey.fromPem(identityKeyPem, IdentityDecryptKey.class);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Identitykey parsed from pem");	// RH, 20190805, n
             // Derive verifier (for signature verifying) from key
             verifiers = identity_point != null ? decryptKey.toVerifiers(identity_point) : null;
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, (identity_point != null) ? "Verifier created" : "No identity point supplied for verifier");	// RH, 20190805, n
         }        
         catch (Exception e) {
-			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not load identityKey");
+//			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not load identityKey");	// RH, 20190805, o
+        	//	try to get some more info
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not load identityKey, " + e.getMessage());	// RH, 20190805, n
 		}
 	}
 	
@@ -83,23 +89,34 @@ public class PolyKeyUtil {
 		String sMethod = "getPseudoKeys";
 
 		try (final InputStream is = new FileInputStream(pdkey_location)) {
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Inputstream pseudoKey openend");	// RH, 20190805, n
         	String pseudoKeyPem = CMS.read(getPrivateKey(), is);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "PseudoKey read from file");	// RH, 20190805, n
             // Convert PEM to IdentityDecryptKey
         	pDecryptKey = DecryptKey.fromPem(pseudoKeyPem, PseudonymDecryptKey.class);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "PseudoKey parsed from pem");	// RH, 20190805, n
             // Derive verifier (for signature verifying) from key
             pVerifiers = pseudonym_point != null ? pDecryptKey.toVerifiers(pseudonym_point) : null;
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, (pseudonym_point != null) ? "Verifier created" : "No pseudonym point supplied for verifier");	// RH, 20190805, n
         }        
         catch (Exception e) {
-			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not load pseudoKey");
+//			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not load pseudoKey");	// RH, 20190805, o
+//        	try to get some more info
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not load pseudoKey, " + e.getMessage());	// RH, 20190805, n
 		}
         
 		try (final InputStream is = new FileInputStream(pckey_location)) {
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Inputstream closingKey openend");	// RH, 20190805, n
         	String pseudoClosingKeyPem = CMS.read(getPrivateKey(), is);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "ClosingKey read from file");	// RH, 20190805, n
             // Convert PEM to IdentityDecryptKey
         	pClosingKey = DecryptKey.fromPem(pseudoClosingKeyPem, PseudonymClosingKey.class);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "ClosingKey parsed from pem");	// RH, 20190805, n
         }        
         catch (Exception e) {
-			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not load pseudoClosingKey");
+//			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not load pseudoClosingKey");	// RH, 20190805, o
+        	//	try to get some more info
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not load pseudoClosingKey, " + e.getMessage());	// RH, 20190805, n
 		}
 	}
 	
