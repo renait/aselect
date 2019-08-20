@@ -44,6 +44,7 @@ package org.aselect.server.attributes.requestors.opaque;
 
 import java.nio.ByteBuffer;
 import java.security.MessageDigest;
+import java.security.SecureRandom;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.UUID;
@@ -77,6 +78,7 @@ import org.aselect.system.utils.crypto.Auxiliary;
 public class OpaqueAttributeRequestor extends GenericAttributeRequestor
 {
 	final private String MODULE = "OpaqueAttributeRequestor";
+	final private int MAXRANDOMBYTESDECIMALWIDTH = 5;	// RH, 20190716, n, We will not allow ridiculous large bytearrays, max 99999 bytes
 	
 	private String _format = null;
 	private String _algorithm = null;
@@ -133,6 +135,21 @@ public class OpaqueAttributeRequestor extends GenericAttributeRequestor
 			byte[] digested;
 			if ("NONE".equalsIgnoreCase(_algorithm)) {
 				digested = digest_input;
+			// RH, 20190716, sn
+			} else if (_algorithm != null && _algorithm.startsWith("RANDOM")) {		// Already uppercase from init()
+				String sByteLen = _algorithm.substring(6);	// Length of literal "RANDOM", take what is behind it
+				if (sByteLen.length() > MAXRANDOMBYTESDECIMALWIDTH) {
+					throw new Exception("Requested byte array too large, max number of digits = " + MAXRANDOMBYTESDECIMALWIDTH);
+				}
+				int byteLen = 0;
+				try {
+					byteLen = Integer.parseInt(sByteLen);
+				} catch (NumberFormatException nfe) {
+					throw new Exception(nfe);
+				}
+				digested = new byte[byteLen];
+				SecureRandom.getInstance("SHA1PRNG").nextBytes(digested);
+			// RH, 20190716, en
 			} else {
 				MessageDigest md = MessageDigest.getInstance(_algorithm);
 				md.update(digest_input);
@@ -177,7 +194,8 @@ public class OpaqueAttributeRequestor extends GenericAttributeRequestor
 				// RH, 20180628, en
 			} else {
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Unable to generate opaque handle", e);
-				throw new ASelectAttributesException(Errors.ERROR_ASELECT_INTERNAL_ERROR);
+//				throw new ASelectAttributesException(Errors.ERROR_ASELECT_INTERNAL_ERROR);		// RH, 20190716, o
+				throw new ASelectAttributesException(Errors.ERROR_ASELECT_INTERNAL_ERROR, e);		// RH, 20190716, n
 			}
 		}
 	}
