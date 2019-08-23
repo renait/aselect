@@ -158,6 +158,7 @@ public class ApplicationManager
 
 	// 
 	private HashMap _htSSOGroupedApplications;
+	private HashMap _htAppsPerSSOGroup;	// RH, 20190823, n
 
 	// Name of this module, used for logging
 	private static final String MODULE = "ApplicationManager";
@@ -546,6 +547,7 @@ public class ApplicationManager
 				_bApplicationsConfigured = true;
 			}
 			_htSSOGroupedApplications = resolveSSOGroups();
+			_htAppsPerSSOGroup = resolveAppsPerSSOGroup();	// RH, 20190823
 		}
 		catch (ASelectException eA) {
 			throw eA;
@@ -1192,6 +1194,120 @@ public class ApplicationManager
 		return htReturn;
 	}
 
+	
+	// RH, 20190823, sn
+	/*
+	 * loads the single sign-on groups configuration, like: <sso_groups> <sso_group id="1"> <application id="app1"/>
+	 * <application id="app2"/> </sso_group> <sso_group id="2"> <application id="app1"/> <application id="app3"/>
+	 * </sso_group> <sso_group id="3"> <application id="app1"/> <application id="app4"/> </sso_group> </sso_groups>
+	 */
+	/**
+	 * Resolve Apps per sso group.
+	 * 
+	 * @return the hash map with appids per SSOGroup
+	 * @throws ASelectException
+	 *             the a select exception
+	 */
+	private HashMap resolveAppsPerSSOGroup()
+	throws ASelectException
+	{
+		String sMethod = "resolveAppsForSSOGroups";
+		HashMap htReturn = new HashMap();
+		try {
+			Object oSSOGroups = null;
+			try {
+				oSSOGroups = _oASelectConfigManager.getSection(null, "sso_groups");
+			}
+			catch (ASelectConfigException e) {
+				_systemLogger.log(Level.CONFIG, MODULE, sMethod,
+						"No valid 'sso_groups' config item found, disabling single sign-on groups.");
+			}
+
+			if (oSSOGroups != null) {
+				Object oSSOGroup = null;
+				try {
+					oSSOGroup = _oASelectConfigManager.getSection(oSSOGroups, "sso_group");
+				}
+				catch (ASelectConfigException e) {
+					_systemLogger.log(Level.WARNING, MODULE, sMethod,
+							"Not even one valid 'sso_group' config section defined.");
+					throw e;
+				}
+
+				while (oSSOGroup != null) {
+					String sSSOGroupID = null;
+					try {
+						sSSOGroupID = _oASelectConfigManager.getParam(oSSOGroup, "id");
+					}
+					catch (ASelectConfigException e) {
+						_systemLogger.log(Level.WARNING, MODULE, sMethod,
+								"No valid 'id' config item defined in 'sso_group' config item.");
+						throw e;
+					}
+
+					Object oApplication = null;
+					try {
+						oApplication = _oASelectConfigManager.getSection(oSSOGroup, "application");
+					}
+					catch (ASelectConfigException e) {
+						StringBuffer sbError = new StringBuffer(
+								"Not even one valid 'application' config section defined in 'sso_group' with id: ");
+						sbError.append(sSSOGroupID);
+						_systemLogger.log(Level.WARNING, MODULE, sMethod, sbError.toString(), e);
+						throw e;
+					}
+
+					Vector vAppsPerGroup = null;
+					while (oApplication != null) {
+						String sAppId = null;
+						try {
+							sAppId = _oASelectConfigManager.getParam(oApplication, "id");
+						}
+						catch (ASelectConfigException e) {
+							StringBuffer sbError = new StringBuffer(
+									"No valid 'id' config item defined in 'application' config section within the 'sso_group with id:'");
+							sbError.append(sSSOGroupID);
+							_systemLogger.log(Level.WARNING, MODULE, sMethod, sbError.toString());
+							throw e;
+						}
+
+						
+						if (!htReturn.containsKey(sSSOGroupID)) {
+							vAppsPerGroup = new Vector();
+							vAppsPerGroup.add(sAppId);
+							htReturn.put(sSSOGroupID, vAppsPerGroup);
+						}
+						else {
+							vAppsPerGroup = (Vector) htReturn.get(sSSOGroupID);
+							if (vAppsPerGroup.contains(sAppId)) {
+								StringBuffer sbError = new StringBuffer("'App' with id='");
+								sbError.append(sAppId);
+								sbError.append("' isn't unique");
+								_systemLogger.log(Level.WARNING, MODULE, sMethod, sbError.toString());
+								throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR);
+							}
+							vAppsPerGroup.add(sAppId);
+						}
+						htReturn.put(sSSOGroupID, vAppsPerGroup);
+
+						oApplication = _oASelectConfigManager.getNextSection(oApplication);
+					}
+					oSSOGroup = _oASelectConfigManager.getNextSection(oSSOGroup);
+				}
+			}
+		}
+		catch (ASelectException e) {
+			throw e;
+		}
+		catch (Exception e) {
+			_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Could not load the ss_groups config");
+			throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR, e);
+		}
+
+		return htReturn;
+	}
+	// RH, 20190823, sn
+	
 	// Private function which loads the public keys from the keystore
 	/**
 	 * Load public key from keystore.
@@ -1650,6 +1766,14 @@ public class ApplicationManager
 	{
 		Application oApplication = getApplication(sAppId);
 		return (oApplication==null)? false: oApplication.isPushAttributes();
+	}
+
+	public synchronized HashMap getAppsPerSSOGroup() {
+		return _htAppsPerSSOGroup;
+	}
+
+	public synchronized void setAppsPerSSOGroup(HashMap _htAppsPerSSOGroup) {
+		this._htAppsPerSSOGroup = _htAppsPerSSOGroup;
 	}
 
 	
