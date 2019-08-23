@@ -58,8 +58,10 @@ public class RESTAPIAttributeRequestor extends APIAttributeRequestor {
 
 			// Get communicator
 			String sProtocol = null;
+			String method = null;	// RH, 20190614, n
 			try {
 				sProtocol = _configManager.getParam(oMainConfiguration, "transferprotocol");
+				method = _configManager.getSimpleParam(oMainConfiguration, "method", false);	// RH, 20190614, n
 			}
 			catch (ASelectConfigException eAC) {
 				_systemLogger.log(Level.CONFIG, MODULE, sMethod,
@@ -72,8 +74,18 @@ public class RESTAPIAttributeRequestor extends APIAttributeRequestor {
 			_systemLogger.log(Level.FINEST, MODULE, sMethod, "communicator="+sProtocol);
 			if (sProtocol.equalsIgnoreCase("json")) {
 //				retrieveSOAPMethodFromConfig(oMainConfiguration);	// Maybe provide for POST here
-				_communicator = new JSONCommunicator(_systemLogger);
+				// RH, 20190614, so
+//				_communicator = new JSONCommunicator(_systemLogger);
+				// RH, 20190614, eo
+				// RH, 20190614, sn
+				if (method != null) {
+					_communicator = new JSONCommunicator(_systemLogger, method);
+				} else {
+					_communicator = new JSONCommunicator(_systemLogger);
+				}
+				// RH, 20190614, en
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "communicator= 'json' loaded");
+
 			} else {
 				// raw communication is specified or something unreadable
 				_systemLogger.log(Level.SEVERE, MODULE, sMethod, "only 'json' supported");
@@ -129,6 +141,9 @@ public class RESTAPIAttributeRequestor extends APIAttributeRequestor {
 				}
 				// create request/response
 				HashMap htRequest = new HashMap();
+				//////////////////////////////
+				htRequest.putAll(_htConfigParameters);	// RH, 20190614, n
+				////////////////////////////////
 //				HashMap htRequestpairs = new HashMap();
 				HashMap htResponse = new HashMap();
 				// set TGT parameters
@@ -144,7 +159,11 @@ public class RESTAPIAttributeRequestor extends APIAttributeRequestor {
 						throw new ASelectAttributesException(Errors.ERROR_ASELECT_CONFIG_ERROR);
 					}
 					requestURL = requestURL.replaceAll("\\{" + sName + "\\}", sValue);
-
+					// RH, 20190717, sn
+					if (vAttributes.contains(sName)) {
+						htRequest.put(sName, sValue);	// Selected as (json) request parameter
+					}
+					// RH, 20190717, en
 				}
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "request url after parsing:" + Auxiliary.obfuscate(requestURL));
 

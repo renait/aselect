@@ -12,9 +12,13 @@
 package org.aselect.system.communication;
 
 import java.io.PrintStream;
+import java.lang.reflect.Field;
+import java.lang.reflect.Modifier;
 import java.net.HttpURLConnection;
 import java.net.MalformedURLException;
 import java.net.URL;
+import java.util.Arrays;
+import java.util.LinkedHashSet;
 import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
@@ -54,6 +58,14 @@ public class DataCommunicator
 	{
 		return dataComSend(systemLogger, sMessage, sUrl, null);
 	}
+
+	// RH, 20190618, sn
+	public static String dataComSend(SystemLogger systemLogger, String sMessage, String sUrl, Map<String, String> requestProprties)
+	throws MalformedURLException, ASelectCommunicationException
+	{
+		return dataComSend(systemLogger, sMessage, sUrl, requestProprties, null);
+	}
+	// RH, 20190618, sn
 	
 	/**
 	 * Send data using a HTTP POST connection
@@ -74,7 +86,8 @@ public class DataCommunicator
 	 */
 //	public static String dataComSend(SystemLogger systemLogger, String sMessage, String sUrl)
 //	throws MalformedURLException, ASelectCommunicationException
-	public static String dataComSend(SystemLogger systemLogger, String sMessage, String sUrl, Map<String, String> requestProprties)
+//	public static String dataComSend(SystemLogger systemLogger, String sMessage, String sUrl, Map<String, String> requestProprties)	// RH, 20190618, o
+	public static String dataComSend(SystemLogger systemLogger, String sMessage, String sUrl, Map<String, String> requestProprties, String reqMethod)	// RH, 20190618, o
 	throws MalformedURLException, ASelectCommunicationException
 	{
 		String sMethod = "dataComSend";
@@ -84,14 +97,23 @@ public class DataCommunicator
 		PrintStream osOutput = null;
 		URL url = new URL(sUrl);
 
+		systemLogger.log(Level.FINEST, MODULE, sMethod, "Sending headers/RequestProperties: "+Auxiliary.obfuscate(requestProprties));
 		systemLogger.log(Level.FINEST, MODULE, sMethod, "Sending message: "+Auxiliary.obfuscate(sMessage));
-		systemLogger.log(Level.INFO, MODULE, sMethod, "Send "+sMessage.length()+" bytes to: "+sUrl);
+		systemLogger.log(Level.FINEST, MODULE, sMethod, "Using  RequestMethod: "+reqMethod);
+		systemLogger.log(Level.INFO, MODULE, sMethod, "Sending "+sMessage.length()+" [bytes] to: "+sUrl);
 		try {
 			// open HTTP connection to URL
 			connection = (HttpURLConnection) url.openConnection();
 			// enable sending to connection
 			connection.setDoOutput(true);
-
+			// RH, 20190618, sn
+			if (reqMethod != null && reqMethod.length() > 0) {
+				if ("PATCH".equalsIgnoreCase(reqMethod)) {	// patch for java
+					allowMethods("PATCH");
+				}
+				connection.setRequestMethod(reqMethod);
+			}
+			// RH, 20190618, sn
 			// set mime headers
 			if (requestProprties != null) {
 				Set<String> keySet = requestProprties.keySet();
@@ -108,8 +130,12 @@ public class DataCommunicator
 			osOutput.println("");  // is already <CR><NL> combination
 
 			int xRetCode = connection.getResponseCode();
+			systemLogger.log(Level.INFO, MODULE, sMethod, "Message send, response code: " + xRetCode);
 			switch (xRetCode) { // switch on HTTP response code
 			case 200: // ok
+				sbBuf = new StringBuffer(Tools.stream2string(connection.getInputStream(), true));
+				break;
+			case 204: // ok but no content
 				sbBuf = new StringBuffer(Tools.stream2string(connection.getInputStream(), true));
 				break;
 			case 400: // Bad request
@@ -121,7 +147,8 @@ public class DataCommunicator
 				systemLogger.log(Level.WARNING, MODULE, sMethod, sbBuffer.toString());
 				break;
 			default: // unknown error
-				sbBuffer = new StringBuffer("Invalid response from target host: \"");
+//				sbBuffer = new StringBuffer("Invalid response from target host: \"");
+				sbBuffer = new StringBuffer("Unexpected response from target host: \"");
 				sbBuffer.append(connection.getHeaderField(0));
 				sbBuffer.append(" \". errorcode: ").append(Errors.ERROR_ASELECT_INTERNAL_ERROR);
 				systemLogger.log(Level.WARNING, MODULE, sMethod, sbBuffer.toString());
@@ -129,6 +156,7 @@ public class DataCommunicator
 			}
 		}
 		catch (java.net.UnknownHostException eUH) {  // target host unknown
+			systemLogger.log(Level.WARNING, MODULE, sMethod, "Exception: " + eUH.getMessage());
 			sbBuffer = new StringBuffer("Target host unknown: \"");
 			sbBuffer.append(sUrl);
 			sbBuffer.append("\" errorcode: ").append(Errors.ERROR_ASELECT_USE_ERROR);
@@ -136,6 +164,7 @@ public class DataCommunicator
 			throw new ASelectCommunicationException(Errors.ERROR_ASELECT_USE_ERROR);
 		}
 		catch (java.io.IOException eIO) {  // error while connecting,writing or reading
+			systemLogger.log(Level.WARNING, MODULE, sMethod, "Exception: " + eIO.getMessage());
 			sbBuffer = new StringBuffer("Could not open connection to host: \"");
 			sbBuffer.append(sUrl);
 			sbBuffer.append("\" errorcode: ").append(Errors.ERROR_ASELECT_IO);
@@ -143,7 +172,7 @@ public class DataCommunicator
 			throw new ASelectCommunicationException(Errors.ERROR_ASELECT_IO);
 		}
 		finally {
-			systemLogger.log(Level.INFO, MODULE, sMethod, "Close osOutput="+osOutput+" conn="+connection);
+			systemLogger.log(Level.FINEST, MODULE, sMethod, "Close osOutput="+osOutput+" conn="+connection);
 			if (osOutput != null)
 				osOutput.close();
 			if (connection != null)
@@ -151,4 +180,27 @@ public class DataCommunicator
 		}
 		return sbBuf.toString();
 	}
+	
+	// Temporary workaround by okutane
+    private static void allowMethods(String... methods) {
+        try {
+            Field methodsField = HttpURLConnection.class.getDeclaredField("methods");
+
+            Field modifiersField = Field.class.getDeclaredField("modifiers");
+            modifiersField.setAccessible(true);
+            modifiersField.setInt(methodsField, methodsField.getModifiers() & ~Modifier.FINAL);
+
+            methodsField.setAccessible(true);
+
+            String[] oldMethods = (String[]) methodsField.get(null);
+            Set<String> methodsSet = new LinkedHashSet<>(Arrays.asList(oldMethods));
+            methodsSet.addAll(Arrays.asList(methods));
+            String[] newMethods = methodsSet.toArray(new String[0]);
+
+            methodsField.set(null/*static field*/, newMethods);
+        } catch (NoSuchFieldException | IllegalAccessException e) {
+            throw new IllegalStateException(e);
+        }
+    }
+
 }

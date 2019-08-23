@@ -135,13 +135,17 @@ public class JSONCommunicator implements IClientCommunicator
 		if ("POST".equalsIgnoreCase(method)) {
 			_systemLogger.log( Level.FINEST, MODULE, sMethod, "Using: " +method );
 			sResponse = sendStringMessage(sRequest.toString(), target);	// does a POST
+			// RH, 20190618, sn
+		} else if ("PUT".equalsIgnoreCase(method) || "PATCH".equalsIgnoreCase(method)) {
+			sResponse = sendJSONMessage(parameters, target);	// does a PUT or PATCH
+		// RH, 20190618, en
 		} else {	// like we used to
 			sResponse = sendRequestToAnotherServer(target, sRequest.toString());		 // does a GET
 		}
 //		String sResponse = sendRequestToAnotherServer(target, sRequest.toString());
 		_systemLogger.log( Level.FINEST, MODULE, sMethod, "received sResponse:" + Auxiliary.obfuscate(sResponse) );
 		// Convert response to HashMap
-		if (sResponse != null) {
+		if (sResponse != null && sResponse.length() > 0) {
 //				htReturn = convertCGIMessage(sResponse);
 			_systemLogger.log( Level.FINEST, MODULE, sMethod, "parsing message." );
 			try {
@@ -157,8 +161,9 @@ public class JSONCommunicator implements IClientCommunicator
 				
 			}
 			_systemLogger.log( Level.FINEST, MODULE, sMethod, "created HashMap:" + Auxiliary.obfuscate(htReturn) );
+		} else {
+			_systemLogger.log( Level.FINEST, MODULE, sMethod, "Empty response received, continuing" );
 		}
-		
 		return htReturn;
 	}
 
@@ -200,6 +205,62 @@ public class JSONCommunicator implements IClientCommunicator
 		return sResponse;
 	}
 
+
+	// RH, 20190618, sn
+	public String sendJSONMessage(HashMap parameters, String sTarget)
+	throws ASelectCommunicationException
+	{
+		
+		String sResponse = null;
+		String sMethod = "sendJSONMessage";
+
+		try {  // Send the message
+			if ( user != null) {
+				_systemLogger.log(Level.INFO, MODULE, sMethod, "Using user/pw Authentication");	// RH, 20170731, n
+				Authenticator.setDefault(new Authenticator() {
+				    protected PasswordAuthentication getPasswordAuthentication() {
+				    	// RH, 20170731, sn
+						String sMethod = "getPasswordAuthentication";
+				    	String scheme = getRequestingScheme();
+						_systemLogger.log(Level.FINER, MODULE, sMethod, "Requested Authentication scheme: " + scheme );
+					return new PasswordAuthentication(getUser(), (getPw() != null) ? getPw().toCharArray() : "".toCharArray());
+				    }
+				});
+			}
+			HashMap<String,String> reqProps = new HashMap<String, String>();
+			reqProps.put("Content-Type", "application/json");	// default
+			reqProps.put("Accept", "application/json");	// default
+			if (getCommunicatorRequestProperties() != null && !getCommunicatorRequestProperties().isEmpty()) {
+				Iterator<String> iter = getCommunicatorRequestProperties() .keySet().iterator();
+				while (iter.hasNext()) {
+					String key = iter.next();
+					reqProps.put(key, getCommunicatorRequestProperties().get(key));
+				}
+			}
+			if (bearerToken != null) {
+				_systemLogger.log(Level.INFO, MODULE, sMethod, "Using Bearer Token Authentication");
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Bearer Token =" + Auxiliary.obfuscate(bearerToken));
+				reqProps.put("Authorization", "Bearer " + bearerToken);
+			}
+			JSONObject jsonObj = JSONObject.fromObject(parameters);
+			String sMessage =  jsonObj.toString();
+			sResponse = DataCommunicator.dataComSend(_systemLogger, sMessage, sTarget, reqProps, method);
+		}
+		catch (java.net.MalformedURLException eMU) {
+			StringBuffer sbBuffer = new StringBuffer("Invalid URL: ");
+			sbBuffer.append(eMU.getMessage()).append(" errorcode: ").append(Errors.ERROR_ASELECT_USE_ERROR);
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, sbBuffer.toString(), eMU);
+			throw new ASelectCommunicationException(Errors.ERROR_ASELECT_USE_ERROR, eMU);
+		}
+		finally {
+			if ( getUser() != null)	Authenticator.setDefault(null);
+		}
+		return sResponse;
+	}
+	// RH, 20190618, sn
+
+	
+	
 	/**
 	 * Send the request to the target url. <br>
 	 * <br>
