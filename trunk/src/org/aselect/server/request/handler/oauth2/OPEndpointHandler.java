@@ -283,6 +283,8 @@ public class OPEndpointHandler extends ProtoRequestHandler
 		   		PrintWriter outwriter = null;
 				try {
 					outwriter = Utils.prepareForHtmlOutput(servletRequest , servletResponse, "application/json" );
+					//
+					Utils.setDisableCachingHttpHeaders(servletRequest , servletResponse);	// RH, 20190606
 		   			int  return_status = 400; // default
 	
 					HashMap<String, String> return_parameters = new HashMap<String, String>();
@@ -438,7 +440,7 @@ public class OPEndpointHandler extends ProtoRequestHandler
 
 	       		String forced_app_id = null;
 	       		if (_forced_app_parameter != null && _forced_app_parameter.length() > 0) {
-	       			forced_app_id	 =  servletRequest.getParameter(_forced_app_parameter);
+	       			forced_app_id	 =  servletRequest.getParameter(_forced_app_parameter);	// can contain sort of login_hint
 	       		}
 
 //				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Received client_id/redirect_uri/scope/state: " + 
@@ -448,9 +450,15 @@ public class OPEndpointHandler extends ProtoRequestHandler
 						client_id + "/" + redirect_uri + "/" + scope + "/" + state + (forced_app_id != null ? ("/" + forced_app_id) : ""));
 				//////////////////////////
     	   		String sAppId = getClientIds().get(client_id);
-    	   		String sForcedAppId = null;
+//    	   		String sForcedAppId = null;
 				if (forced_app_id != null) {
-					sAppId = get_forced_app_ids().get(forced_app_id);
+					// RH, 20190523, sn
+					if (get_forced_app_ids() != null && get_forced_app_ids().size() > 0 ) {
+						sAppId = get_forced_app_ids().get(forced_app_id);
+					} else {
+						// no forced_app_ids configured, use appid from client_id table
+					}
+					// RH, 20190523, en
 				}
 				////////////////////////////
         		// Handle unconfigured app_id here
@@ -526,13 +534,29 @@ public class OPEndpointHandler extends ProtoRequestHandler
 	        		}
 	        		// RH, 20181001, sn
 	        		
+	        		// RH, 20190514, sn
+	        		// Add to appurl for later retrieval by parameters2forward
+	        		if (_forced_app_parameter != null && forced_app_id != null) {
+	        			if (ridAppURL.contains("?")) {
+	        				ridAppURL += "&";
+	        			} else {
+	        				if (!ridAppURL.endsWith("/")) {
+	        					ridAppURL += "/";
+	        				}
+	        				ridAppURL += "?";
+	        			}
+//	        			ridAppURL += _forced_app_parameter + "=" + forced_app_id;	// RH, 20190604, o
+	        			ridAppURL += _forced_app_parameter + "=" + URLEncoder.encode(forced_app_id, "UTF-8") ;	// RH, 20190604, n	// we need to double urlencode
+	        		}
+	        		// RH, 20190514, en
+	        		
 	        		// Still to add signature to RID request
 		    		String ridURL = ridReqURL + "?" + "shared_secret=" + URLEncoder.encode(ridSharedSecret, "UTF-8") +
 		    				"&a-select-server=" + URLEncoder.encode(ridAselectServer, "UTF-8") +
 		    				"&request=" + URLEncoder.encode(ridrequest, "UTF-8") +
 		    				"&uid=" + URLEncoder.encode(uid, "UTF-8") +
 		    				 // RM_30_01
-		    				"&app_url=" + URLEncoder.encode(ridAppURL, "UTF-8") +
+		    				"&app_url=" + URLEncoder.encode(ridAppURL, "UTF-8") +		    				
 	//			    				"&check-signature=" + URLEncoder.encode(ridCheckSignature, "UTF-8") +
 		    				"&app_id=" + URLEncoder.encode(sAppId, "UTF-8");
 					_systemLogger.log(Level.FINER, MODULE, sMethod, "Requesting rid from: " + ridReqURL + " , with app_url: " + ridAppURL + " , and app_id: " + sAppId);
