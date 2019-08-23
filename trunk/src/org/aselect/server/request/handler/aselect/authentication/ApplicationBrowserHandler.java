@@ -1550,7 +1550,37 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 					htServiceRequest.put("user_id", sUid);
 					rc = handleLogin2(htServiceRequest, servletResponse, pwOut);
 					_systemLogger.log(Level.FINEST, _sModule, sMethod, "Return for retry, rc=" + rc);
-					_tgtManager.remove(sTgt);	// remove tgt, retry login
+					// RH, 20190625, sn
+					// check single sign-on groups, special case, all have but one application
+					boolean keepTgt = false;
+					if (_htSessionContext != null && _htTGTContext != null) {
+						Vector vCurSSOGroups = (Vector)_htSessionContext.get("sso_groups");
+						String sessionAppId = (String) _htSessionContext.get("app_id");	// RH, 20190823, n
+						Vector vOldSSOGroups = (Vector)_htTGTContext.get("sso_groups");
+						String tgtAppId = (String) _htTGTContext.get("app_id");	// RH, 20190823, n
+						HashMap appsperssogroup = _applicationManager.getAppsPerSSOGroup();
+						_systemLogger.log(Level.FINEST, _sModule, sMethod, "Found sso_groups configuration session: " +vCurSSOGroups + " and tgt: " 
+								+ vOldSSOGroups);
+						if (vCurSSOGroups != null && vCurSSOGroups.size() == 1 && !"0".equals(vCurSSOGroups.elementAt(0))
+								&& 
+							vOldSSOGroups != null && vOldSSOGroups.size() == 1 && !"0".equals(vOldSSOGroups.elementAt(0))) {
+							// RH, 20190823, sn
+							_systemLogger.log(Level.FINEST, _sModule, sMethod, "Found apps per sso_group session : " +vCurSSOGroups.get(0) + "/" + appsperssogroup.get(vCurSSOGroups.get(0)) + " and tgt: " 
+									+ vOldSSOGroups.get(0) + "/" + appsperssogroup.get(vOldSSOGroups.get(0)));
+							if ( ((Vector)appsperssogroup.get(vCurSSOGroups.get(0))).size() == 1 && ((Vector)appsperssogroup.get(vOldSSOGroups.get(0))).size() == 1 
+								) {
+								_systemLogger.log(Level.FINEST, _sModule, sMethod, "Found special sso_groups configuration");
+								// RH, 20190823, en
+								keepTgt = true;
+							}
+						}
+					}
+					if (keepTgt) {
+						_systemLogger.log(Level.INFO, _sModule, sMethod, "Retaining tgt due to special sso_groups configuration");
+					} else {
+					// RH, 20190625, en
+						_tgtManager.remove(sTgt);	// remove tgt, retry login
+					}	// RH, 20190625, n
 //					return;	// RH, 20140328, o
 					return rc;	// RH, 20140328, n
 				}
