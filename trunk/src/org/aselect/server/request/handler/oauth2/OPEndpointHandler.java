@@ -194,8 +194,10 @@ public class OPEndpointHandler extends ProtoRequestHandler
 			}
 
 			try {
-				_sPostTemplate = readTemplateFromConfig(oConfig, "post_template");
-				setPostTemplate(_sPostTemplate);
+				if (_configManager.getParam(oConfig, "post_template") != null) {
+					_sPostTemplate = readTemplateFromConfig(oConfig, "post_template");
+					setPostTemplate(_sPostTemplate);
+				}
 			}
 			catch (ASelectConfigException e) {
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config item 'post_template' found, disabled");
