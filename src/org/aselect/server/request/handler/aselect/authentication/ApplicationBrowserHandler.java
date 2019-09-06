@@ -1147,6 +1147,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 							Utils.copyHashmapValue("oauthsessionclient_id", _htTGTContext, _htSessionContext);
 							Utils.copyHashmapValue("oauthsessionnonce", _htTGTContext, _htSessionContext);
 							// 20180830, RH, en
+							Utils.copyHashmapValue("oauthsessionresponse_mode", _htTGTContext, _htSessionContext);	// RH, 20190905, n
 														
 							_tgtManager.updateTGT(sTgt, _htTGTContext);
 							
@@ -1486,8 +1487,8 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 							Utils.copyHashmapValue("oauthsessionscope", _htTGTContext, _htSessionContext);
 							Utils.copyHashmapValue("oauthsessionclient_id", _htTGTContext, _htSessionContext);
 							Utils.copyHashmapValue("oauthsessionnonce", _htTGTContext, _htSessionContext);
-							
 							// 20180830, RH, en
+							Utils.copyHashmapValue("oauthsessionresponse_mode", _htTGTContext, _htSessionContext);	// RH, 20190905, n
 
 
 							_tgtManager.updateTGT(sTgt, _htTGTContext);

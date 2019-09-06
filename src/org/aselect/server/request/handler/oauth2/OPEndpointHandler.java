@@ -52,8 +52,10 @@ import org.aselect.system.exception.ASelectCommunicationException;
 import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.exception.ASelectStorageException;
+import org.aselect.system.logging.SystemLogger;
 import org.aselect.system.utils.BASE64Decoder;
 import org.aselect.system.utils.BASE64Encoder;
+import org.aselect.system.utils.Tools;
 import org.aselect.system.utils.Utils;
 import org.aselect.system.utils.crypto.Auxiliary;
 import org.jose4j.jws.AlgorithmIdentifiers;
@@ -75,6 +77,9 @@ import org.jose4j.lang.JoseException;
  */
 public class OPEndpointHandler extends ProtoRequestHandler
 {
+	private static final String RESPONSE_MODE_FRAGMENT = "fragment";
+	private static final String RESPONSE_MODE_QUERY = "query";
+	private static final String RESPONSE_MODE_FORM_POST = "form_post";
 	private final static String MODULE = "OPEndpointHandler";
 	private final static String AUTH_CODE_PREFIX = "AUTH_CODE";
 	private final static String ID_TOKEN_PREFIX = "ID_TOKEN";
@@ -189,7 +194,8 @@ public class OPEndpointHandler extends ProtoRequestHandler
 			}
 
 			try {
-				setPostTemplate(_configManager.getParam(oConfig, "post_template"));
+				_sPostTemplate = readTemplateFromConfig(oConfig, "post_template");
+				setPostTemplate(_sPostTemplate);
 			}
 			catch (ASelectConfigException e) {
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config item 'post_template' found, disabled");
@@ -435,7 +441,15 @@ public class OPEndpointHandler extends ProtoRequestHandler
 	    		String response_type = servletRequest.getParameter("response_type");
 	       		String scope	 =  servletRequest.getParameter("scope");
 	       		String state	 =  servletRequest.getParameter("state");
-
+	       		
+	       		// RH, 20190905, sn
+	       		String response_mode	 =  servletRequest.getParameter("response_mode");
+	       		if ( response_mode != null && !(RESPONSE_MODE_FORM_POST.equals(response_mode) || RESPONSE_MODE_QUERY.equals(response_mode)|| RESPONSE_MODE_FRAGMENT.equals(response_mode)) ) {
+					_systemLogger.log(Level.WARNING, MODULE, sMethod, "Invalid response_mode received:" + response_mode + " , continuing with default");
+					// maybe we should return error, specs are not exclusive
+	       			response_mode = null;
+	       		}
+	       		// RH, 20190905, en
 				ArrayList<String> resp_types = new ArrayList<String>();
 
 	       		String forced_app_id = null;
@@ -499,6 +513,7 @@ public class OPEndpointHandler extends ProtoRequestHandler
 							error_redirect = redirectURI.toString() + (redirectURI.toString().contains("?") ? "&" : "?") + "error=" + error 
 									+ ( ( state != null ) ? ("&state=" + state) : "");
 							servletResponse.sendRedirect(error_redirect);
+							///////////////////////////////////////////
 							return null;
 						} catch (IOException iox){
 							_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not redirect user to: " + error_redirect);
@@ -586,6 +601,7 @@ public class OPEndpointHandler extends ProtoRequestHandler
 			        			error_redirect = redirectURI.toString() + (redirectURI.toString().contains("?") ? "&" : "?") + "error=" + error 
 						+ ( ( state != null ) ? ("&state=" + state) : "");
 						servletResponse.sendRedirect(error_redirect);
+						//////////////////////////////////////////
 		    			if (in != null)
 							try {
 								in.close();
@@ -613,6 +629,7 @@ public class OPEndpointHandler extends ProtoRequestHandler
 			        			error_redirect = redirectURI.toString() + (redirectURI.toString().contains("?") ? "&" : "?") + "error=" + error 
 						+ ( ( state != null ) ? ("&state=" + state) : "");
 						servletResponse.sendRedirect(error_redirect);
+						////////////////////////////////////////////
 						return null;
 					} catch (IOException iox){
 						_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not redirect user to: " + error_redirect);
@@ -643,6 +660,11 @@ public class OPEndpointHandler extends ProtoRequestHandler
 				if (client_id != null) {	// should not be null here
 					_htSessionContext.put("oauthsessionclient_id", client_id);
 				}
+				// RH, 20190905, sn
+				if (response_mode != null) {
+					_htSessionContext.put("oauthsessionresponse_mode", response_mode);
+				}
+				// RH, 20190905, en
 				
 				_oSessionManager.updateSession(extractedRid, _htSessionContext);
 				
@@ -678,11 +700,14 @@ public class OPEndpointHandler extends ProtoRequestHandler
 				String sTgt = decryptCredentials(extractedAselect_credentials);
 				HashMap htTGTContext = getContextFromTgt(sTgt, false);
 				String saved_redirect_uri = null;
+				String saved_response_mode = null;	// RH, 20190905, n
 
 				if (htTGTContext != null) {
 					org_javaxSessionid = (String)htTGTContext.get("oauthsessionid");
 					saved_redirect_uri = (String)htTGTContext.get("oauthsessionredirect_uri");
 					_systemLogger.log(Level.FINEST, MODULE, sMethod, "original javaxSessionid: " +org_javaxSessionid);
+					saved_response_mode = (String)htTGTContext.get("oauthsessionresponse_mode");	// RH, 20190905, n
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "original response_mode: " +saved_response_mode);	// RH, 20190905, n
 				} else {
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not retrieve tgt for aselect_credentials:  " +extractedAselect_credentials);
 					throw new ASelectCommunicationException(Errors.ERROR_ASELECT_SERVER_UNKNOWN_TGT);
@@ -694,8 +719,10 @@ public class OPEndpointHandler extends ProtoRequestHandler
 					        	String error = "invalid_request";
 					        	
 //					        			error_redirect = getOauth2_redirect_uri() + (getOauth2_redirect_uri().contains("?") ? "&" : "?") + "error=" + error ;
-					        			error_redirect = saved_redirect_uri + (saved_redirect_uri.contains("?") ? "&" : "?") + "error=" + error ;
-						servletResponse.sendRedirect(error_redirect);
+//					        			error_redirect = saved_redirect_uri + (saved_redirect_uri.contains("?") ? "&" : "?") + "error=" + error ;	// RH, 20190906, o
+					        			error_redirect =  "error=" + error ;	// RH, 20190906, n
+//						servletResponse.sendRedirect(error_redirect);	// RH, 20190905, o
+						transferToClient(servletRequest, servletResponse, saved_redirect_uri, error_redirect, saved_response_mode);	// RH, 20190905, n
 						return null;
 					} catch (IOException iox){
 						_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not redirect user to: " + error_redirect);
@@ -733,8 +760,10 @@ public class OPEndpointHandler extends ProtoRequestHandler
 					try {
 					        	String error = "server_error";
 //					        			error_redirect = getOauth2_redirect_uri() + (getOauth2_redirect_uri().contains("?") ? "&" : "?") + "error=" + error ;
-					        			error_redirect = saved_redirect_uri + (saved_redirect_uri.contains("?") ? "&" : "?") + "error=" + error ;
-						servletResponse.sendRedirect(error_redirect);
+//					        			error_redirect = saved_redirect_uri + (saved_redirect_uri.contains("?") ? "&" : "?") + "error=" + error ;	// RH, 20190906, o
+					        			error_redirect = "error=" + error ;	// RH, 20190906, n
+//						servletResponse.sendRedirect(error_redirect);	// RH, 20190905, o
+						transferToClient(servletRequest, servletResponse, saved_redirect_uri, error_redirect, saved_response_mode);	// RH, 20190905, n
 						return null;
 					} catch (IOException iox){
 						_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not redirect user to: " + error_redirect);
@@ -745,14 +774,18 @@ public class OPEndpointHandler extends ProtoRequestHandler
 				String saved_state = (String)htTGTContext.get("oauthsessionstate");
 				String saved_client_id = (String)htTGTContext.get("oauthsessionclient_id");
 				String saved_nonce = (String)htTGTContext.get("oauthsessionnonce");
+				
 //				String saved_appidacr = (String)htTGTContext.get("oauthsessionappidacr");
 				// saved_uri already verified
 //				String saved_redirect_uri = (String)htTGTContext.get("oauthsessionredirect_uri");
 				if (saved_redirect_uri == null) {	// we did receive a redirect_url upon authentication so use registered one
 					saved_redirect_uri = ApplicationManager.getHandle().getApplication(sAppId).getOauth_redirect_uri().keySet().iterator().next().toString();
 				}
-				String sep = saved_redirect_uri.contains("?") ? "&" : "?";	// RH, 20181126, n
-		        StringBuffer return_url = new StringBuffer(saved_redirect_uri);	// RH, 20181126, n
+//				String sep = saved_redirect_uri.contains("?") ? "&" : "?";	// RH, 20181126, n	// RH, 20190906, o
+				String sep = "";// RH, 20190906, n
+//		        StringBuffer return_url = new StringBuffer(saved_redirect_uri);	// RH, 20181126, n	// RH, 20190906, o
+		        StringBuffer return_url = new StringBuffer();	// RH, 20181126, n	// RH, 20190906, o
+		        
 		        if (authenticatedAndApproved) {
 					// If authenticatedAndApproved then send off the user with redirect
 
@@ -794,7 +827,8 @@ public class OPEndpointHandler extends ProtoRequestHandler
 				        	if (saved_state != null) {
 				        		return_url.append(sep).append("state=" + saved_state);
 				        	}
-							servletResponse.sendRedirect(return_url.toString());
+//							servletResponse.sendRedirect(return_url.toString());	// RH, 20190905, o
+							transferToClient(servletRequest, servletResponse, saved_redirect_uri, return_url.toString(), saved_response_mode);	// RH, 20190905, n
 							// RH, 20181126, en
 							return null;
 						} catch (IOException iox){
@@ -873,10 +907,12 @@ public class OPEndpointHandler extends ProtoRequestHandler
 					}
 					// RH, 20181126, en
 		        }
-				_systemLogger.log(Level.INFO, MODULE, sMethod, "Redirecting to:  " + return_url);
+//				_systemLogger.log(Level.INFO, MODULE, sMethod, "Redirecting to:  " + return_url);	// RH, 20190906, o
+				_systemLogger.log(Level.INFO, MODULE, sMethod, "Transfering to:  " + return_url);	// RH, 20190906, n
 	        	try {
 //					servletResponse.sendRedirect(return_url);	// RH, 20181126, o
-					servletResponse.sendRedirect(return_url.toString());	// RH, 20181126, n
+//					servletResponse.sendRedirect(return_url.toString());	// RH, 20181126, n		// RH, 20190905, o
+					transferToClient(servletRequest, servletResponse, saved_redirect_uri, return_url.toString(), saved_response_mode);	// RH, 20190905, n
 				}
 				catch (IOException e) {
 					_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Could not URLEncode to UTF-8, this should not happen!");
@@ -1219,6 +1255,47 @@ public class OPEndpointHandler extends ProtoRequestHandler
 
         return jws.getCompactSerialization();
     }
-		
+
+	// RH, 20190905, sn
+	/**
+	 * 
+	 * @param servletResponse
+	 * @param return_url
+	 * @param response_mode	one of query, fragment or form_post
+	 * @throws IOException
+	 * @throws ASelectException 
+	 */
+	public void transferToClient(HttpServletRequest servletRequest, HttpServletResponse servletResponse, String action_url, String querystring, String response_mode) throws IOException, ASelectException {
+
+		String sMethod = "transferToClient";
+
+		if (RESPONSE_MODE_FORM_POST.equals(response_mode)) {
+			String sTemplate = getPostTemplate();
+			if (sTemplate != null) {
+//				HashMap<String, String> queryparameters = Tools.getUrlAttributes(querystring, _systemLogger);	// does URLDecoding
+				HashMap<String, String> queryparameters = Utils.convertCGIMessage(querystring, false);
+				Set<String> parmnames = queryparameters.keySet();
+				String sInputLines = ""; 
+				for (String s : parmnames) {
+					sInputLines += buildHtmlInput(Tools.htmlEncode(s), Tools.htmlEncode(queryparameters.get(s)));
+				}
+				handlePostForm(sTemplate, action_url, sInputLines,
+						servletRequest, servletResponse);
+				return;
+			} else {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "response_mode:" + response_mode + " not allowed, doing default");
+			}
+		} else if (RESPONSE_MODE_FRAGMENT.equals(response_mode)) {
+			String return_url = action_url + (action_url.contains("#") ? "&" : "#") + querystring;
+			servletResponse.sendRedirect(return_url);
+			return;
+		}
+		// default
+		String return_url = action_url + (action_url.contains("?") ? "&" : "?") + querystring;
+		servletResponse.sendRedirect(return_url);
+		return;
+	}
+	// RH, 20190905, en
+	
 
 }

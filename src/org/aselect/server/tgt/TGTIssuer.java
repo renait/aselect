@@ -294,8 +294,8 @@ public class TGTIssuer
 			Utils.copyHashmapValue("oauthsessionscope", htTGTContext, htSessionContext);
 			Utils.copyHashmapValue("oauthsessionclient_id", htTGTContext, htSessionContext);
 			Utils.copyHashmapValue("oauthsessionnonce", htTGTContext, htSessionContext);
-			
 			// 20180830, RH, en
+			Utils.copyHashmapValue("oauthsessionresponse_mode", htTGTContext, htSessionContext);	// RH, 20190905, n
 
 
 			// RH, 20160627, sn
@@ -679,7 +679,7 @@ public class TGTIssuer
 			Utils.copyHashmapValue("oauthsessionclient_id", htTGTContext, htSessionContext);
 			Utils.copyHashmapValue("oauthsessionnonce", htTGTContext, htSessionContext);
 			// 20180830, RH, en
-
+			Utils.copyHashmapValue("oauthsessionresponse_mode", htTGTContext, htSessionContext);	// RH, 20190905, n
 
 			
 			// RH, 20160627, sn
