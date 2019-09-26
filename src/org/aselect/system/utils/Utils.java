@@ -68,7 +68,6 @@ import java.net.URLEncoder;
 import java.text.CharacterIterator;
 import java.text.StringCharacterIterator;
 import java.util.ArrayList;
-import java.util.Date;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.List;
@@ -84,7 +83,7 @@ import javax.servlet.http.HttpServletResponse;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
-import org.aselect.server.log.ASelectSystemLogger;
+//import org.aselect.server.log.ASelectSystemLogger;	// RH, 20190926, o
 import org.aselect.system.communication.server.IInputMessage;
 import org.aselect.system.configmanager.ConfigManager;
 import org.aselect.system.error.Errors;
@@ -1187,8 +1186,11 @@ public class Utils
 			return b64enc.encode(result.getBytes("UTF-8"));
 		}
 		catch (Exception e) {
-			ASelectSystemLogger logger = ASelectSystemLogger.getHandle();
-			logger.log(Level.WARNING, MODULE, sMethod, "Could not serialize attributes", e);
+			// RH, 20190926, so
+//			ASelectSystemLogger logger = ASelectSystemLogger.getHandle();
+//			logger.log(Level.WARNING, MODULE, sMethod, "Could not serialize attributes", e);
+			// RH, 20190926, eo
+			_oSysLog.log(Level.WARNING, MODULE, sMethod, "Could not serialize attributes", e);	// RH, 20190926, n
 			throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR);
 		}
 	}
@@ -1244,8 +1246,11 @@ public class Utils
 				}
 			}
 			catch (Exception e) {
-				ASelectSystemLogger logger = ASelectSystemLogger.getHandle();
-				logger.log(Level.WARNING, Utils.MODULE, sMethod, "Error during deserialization of attributes", e);
+				// RH, 20190926, so
+//				ASelectSystemLogger logger = ASelectSystemLogger.getHandle();
+//				logger.log(Level.WARNING, Utils.MODULE, sMethod, "Error during deserialization of attributes", e);
+				// RH, 20190926, eo
+				_oSysLog.log(Level.WARNING, Utils.MODULE, sMethod, "Error during deserialization of attributes", e);	// RH, 20190926, n
 				throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR, e);
 			}
 		}
