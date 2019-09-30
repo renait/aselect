@@ -331,7 +331,8 @@ public class PartnerData
 	
 
 	public synchronized void loadSpecificCrypto(String sWorkingDir, String sKeyStoreName, String sAlias, String sPassword) throws ASelectException {
-		String sMethod = "loadSpecificPrivateKey";
+		String sMethod = "loadSpecificCrypto";
+		
 		StringBuffer sbKeystoreLocation = new StringBuffer(sWorkingDir);
 
 		try {
