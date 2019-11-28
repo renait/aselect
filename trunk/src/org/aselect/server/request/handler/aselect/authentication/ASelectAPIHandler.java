@@ -533,8 +533,10 @@ public class ASelectAPIHandler extends AbstractAPIRequestHandler
 
 		htTGTContext = _tgtManager.getTGT(sTGT);
 
-		if (htTGTContext == null) {
-			_systemLogger.log(Level.WARNING, _sModule, sMethod, "Unknown TGT");
+//		if (htTGTContext == null) {	// RH, 20191118, o 	// should also check validity
+		if (htTGTContext == null || Utils.hasValue((String)htTGTContext.get("invalidatedby")) ) { // RH, 20191118, n
+//			_systemLogger.log(Level.WARNING, _sModule, sMethod, "Unknown TGT");	// RH, 20191118, o
+			_systemLogger.log(Level.WARNING, _sModule, sMethod, "Unknown TGT or invalidated");	// RH, 20191118, n
 			throw new ASelectCommunicationException(Errors.ERROR_ASELECT_SERVER_UNKNOWN_TGT);
 		}
 

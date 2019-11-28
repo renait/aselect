@@ -717,8 +717,10 @@ public class ApplicationAPIHandler extends AbstractAPIRequestHandler
 
 		// check if the TGT exists
 		HashMap htTGTContext = _oTGTManager.getTGT(sTgT);
-		if (htTGTContext == null) {
-			_systemLogger.log(Level.WARNING, _sModule, sMethod, "Unknown TGT");
+//		if (htTGTContext == null) {		//	RH, 20191118, o
+			if ( htTGTContext == null || Utils.hasValue((String)htTGTContext.get("invalidatedby")) ) {	//	RH, 20191118, n, we should always check the tgt validity
+//			_systemLogger.log(Level.WARNING, _sModule, sMethod, "Unknown TGT");		//	RH, 20191118, o
+			_systemLogger.log(Level.WARNING, _sModule, sMethod, "Unknown TGT or TGT invalidated");		//	RH, 20191118, n
 			throw new ASelectCommunicationException(Errors.ERROR_ASELECT_SERVER_UNKNOWN_TGT);
 		}
 		try {
@@ -972,8 +974,10 @@ public class ApplicationAPIHandler extends AbstractAPIRequestHandler
 		htTGTContext = _oTGTManager.getTGT(sTGT);
 		_systemLogger.log(Level.INFO, _sModule, sMethod, "VERCRED ApplApi rid=" + sRid+" inputMessage="+oInputMessage);
 
-		if (htTGTContext == null) {
-			_systemLogger.log(Level.WARNING, _sModule, sMethod, "Unknown TGT");
+//		if (htTGTContext == null) {	// RH, 20191118, o	//  we should also check tgt validity
+		if ( htTGTContext == null || Utils.hasValue((String)htTGTContext.get("invalidatedby")) ) {	// RH, 20191118, o	//  we should also check tgt validity
+//			_systemLogger.log(Level.WARNING, _sModule, sMethod, "Unknown TGT");	// RH, 20191118, o
+			_systemLogger.log(Level.WARNING, _sModule, sMethod, "Unknown TGT or invalidated");	// RH, 20191118, n
 			throw new ASelectCommunicationException(Errors.ERROR_ASELECT_SERVER_UNKNOWN_TGT);
 		}
 

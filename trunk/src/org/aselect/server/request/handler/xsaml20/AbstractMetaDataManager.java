@@ -1054,8 +1054,10 @@ public abstract class AbstractMetaDataManager
 				Element domDescriptor = marshallDescriptor(descriptor);
 				if (domDescriptor == null)
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, "marshallDescriptor failed");
+				// following line may throw npe, fix this
 				NodeList nodeList = domDescriptor.getChildNodes();
 
+				// follow saml specs more precicely here, fix this
 				//_systemLogger.log(Level.FINE, MODULE, sMethod, "Try "+nodeList.getLength()+" entries");
 				for (int i = 0; i < nodeList.getLength(); i++) {
 					Node childNode = nodeList.item(i);

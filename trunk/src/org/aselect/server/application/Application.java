@@ -125,6 +125,9 @@ public class Application
 
 	// Optional application specific Audience in AudienceRestriction of Assertion in samlresponse
 	private String _sForcedAudience = null;	// RH, 20160211, n
+	
+	// Optional target for the locally generated saml logoutrequest
+	private String _sLocalSamlLogoutTarget = null;	// RH, 20191118, n
 
 	// Optional
 	private String _sApplicationEndpointAudience = null;	// RH, 20180625, n
@@ -779,6 +782,14 @@ public class Application
 	public synchronized void setForcedAudience(String _sForcedAudience)
 	{
 		this._sForcedAudience = _sForcedAudience;
+	}
+
+	public synchronized String getLocalSamlLogoutTarget() {
+		return _sLocalSamlLogoutTarget;
+	}
+
+	public synchronized void setLocalSamlLogoutTarget(String _sLocalSamlLogoutTarget) {
+		this._sLocalSamlLogoutTarget = _sLocalSamlLogoutTarget;
 	}
 
 	/**

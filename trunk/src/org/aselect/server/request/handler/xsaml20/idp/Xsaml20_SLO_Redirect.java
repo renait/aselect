@@ -22,6 +22,7 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.aselect.server.application.ApplicationManager;
 import org.aselect.server.config.ASelectConfigManager;
+import org.aselect.server.crypto.CryptoEngine;
 import org.aselect.server.request.HandlerTools;
 import org.aselect.server.request.handler.xsaml20.Saml20_BrowserHandler;
 import org.aselect.server.request.handler.xsaml20.SamlHistoryManager;
@@ -209,7 +210,31 @@ public class Xsaml20_SLO_Redirect extends Saml20_BrowserHandler
 			// path=/ so applications can access it
 			HandlerTools.delCookieValue(httpResponse, "ssoname", sCookieDomain, "/", _systemLogger);
 			_systemLogger.log(Audit.AUDIT, MODULE, sMethod, "> Removed cookie for domain: " + sCookieDomain);
-
+			
+			// RH, 20191114, sn
+			////////////////////////////////////////////////
+			// We also want to delete the tgt here to be sure of a logout in case of any third party mall saml implementation
+			// e.g. third party might not return at all
+			// But we will need to preserve htTGTContext so store in history
+			/*
+			if (htTGTContext != null) {
+				String key = ( fromNameID ? sNameID : originalID );
+				history.put(ORIGINAL_TGT + "_" + key, htTGTContext );
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "tgt stored in history with key: " + key);
+				 key = ( fromNameID ? sNameID : (String)htTGTContext.get("cookiestgt") );
+				tgtManager.remove(key);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "tgt removed from tgt storage with key: " + key);
+			} else {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "tgt null, nothing to store in history");
+			}
+			*/
+			// render tgt invalid
+			htTGTContext.put("invalidatedby" , MODULE+"->"+ sMethod);
+			tgtManager.updateTGT(htTGTContext.get("cookiestgt") != null ? (String)htTGTContext.get("cookiestgt") : sNameID, htTGTContext);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "tgt rendered invalid");
+			//////////////////////////////////////////////////////////
+			// RH, 20191114, en
+			
 			// Will save TGT (including the RelayState) as well
 			// 20090616, Bauke: save initiator ID for the logout response
 			String sRequestID = logoutRequest.getID();
