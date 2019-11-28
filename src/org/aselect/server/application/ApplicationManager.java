@@ -403,6 +403,8 @@ public class ApplicationManager
 
 				String sForcedAudience = ASelectConfigManager.getSimpleParam(oApplication, "forced_audience", false); // RH, 20160211, n
 
+				String sLocalSamlLogoutTarget = ASelectConfigManager.getSimpleParam(oApplication, "localsamllogouttarget", false); // RH, 20181118, n
+
 				String sApplicationEndpointAudience = ASelectConfigManager.getSimpleParam(oApplication, "applicationendpointaudience", false); // RH, 20180625, n
 
 				// RH, 20150921, sn
@@ -523,6 +525,7 @@ public class ApplicationManager
 
 				application.setForcedAttrConsServIndex(sForcedAttrConsServIndex);  // RH, 20140505, n
 				application.setForcedAudience(sForcedAudience);  // RH, 20160211, n
+				application.setLocalSamlLogoutTarget(sLocalSamlLogoutTarget); // RH, 20181118, n
 				application.setApplicationEndpointAudience(sApplicationEndpointAudience);  // RH, 20180625, n
 
 				application.setPushAttributes(bPushAttributes);	// RH, 20150921, n
@@ -1710,6 +1713,33 @@ public class ApplicationManager
 		return (oApplication==null)? null: oApplication.getForcedAudience();
 	}
 	
+	/**
+	 * Returns the Optional LocalSamlLogoutTarget for the locally created SAML logout. <br>
+	 * <br>
+	 * <b>Description:</b> <br>
+	 * Returns the configured LocalSamlLogoutTarget for the application. <br>
+	 * <br>
+	 * <b>Concurrency issues:</b> <br>
+	 * - <br>
+	 * <br>
+	 * <b>Preconditions:</b> <br>
+	 * - <br>
+	 * <br>
+	 * <b>Postconditions:</b> <br>
+	 * - <br>
+	 * 
+	 * @param sAppId
+	 *            <code>String</code> containing an application id.
+	 * @return String containing the Audience. <code>null</code> if no Audience name was found.
+	 * @throws ASelectException
+	 *             the a select exception
+	 */
+	public String getLocalSamlLogoutTarget(String sAppId)
+	throws ASelectException
+	{
+		Application oApplication = getApplication(sAppId);
+		return (oApplication==null)? null: oApplication.getLocalSamlLogoutTarget();
+	}
 
 	/**
 	 * Returns the Optional Audience to force in the SAML Assertion for an application. <br>

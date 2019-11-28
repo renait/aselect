@@ -2993,8 +2993,17 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 					}
 				}
 				// We need to get the logout url from somewhere too
-				String url = _sServerUrl + "/saml20_idp_slo_http_request";
+				String url = _sServerUrl + "/saml20_idp_slo_http_request";	// default
 
+				// RH, 20191118, sn
+				String target = _applicationManager.getLocalSamlLogoutTarget(sAppId);
+				if (Utils.hasValue(target)) {
+					url  = _sServerUrl + target;
+				}
+				_systemLogger.log(Level.FINEST, _sModule, sMethod, "Using local samllogout url:" + url);
+				// RH, 20191118, sn
+
+				
 				// 20120611, Bauke: added "usi"
 				String sUsi = (String)_htTGTContext.get("usi");
 				if (Utils.hasValue(sUsi))  // overwrite
@@ -3389,7 +3398,8 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 
 		// 20120712, Bauke, not needed, ASelectAuthenticationProfile has already read the TGT
 		//_htTGTContext = _tgtManager.getTGT(sTgt);
-		if (_htTGTContext == null) {
+//		if (_htTGTContext == null) {	// RH, 20191118, o	// should also check tgt validity
+			if ( _htTGTContext == null  || Utils.hasValue((String)_htTGTContext.get("invalidatedby")) ) {	// RH, 20191118, n
 			return -1;
 		}
 		if (!((String)_htTGTContext.get("uid")).equals(sUid)) {
