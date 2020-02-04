@@ -347,6 +347,25 @@ public abstract class Saml20_BaseHandler extends ProtoRequestHandler
 //			String url = metadataManager.getLocation(sFederationUrl, SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME,	// RH, 20190322, o
 			String url = metadataManager.getLocation(sFederationGroup, sFederationUrl, SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME,	// RH, 20190322, n
 					SAMLConstants.SAML2_REDIRECT_BINDING_URI);
+			// RH, 20200110, sn
+			String binding = null;
+			if (url != null) {	// for now Redirect is preferred, this should be based on isDefault and index 
+				binding = "HTTP-Redirect";
+				
+			} else {
+				url = metadataManager.getLocation(sFederationGroup, sFederationUrl, SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME,	// RH, 20190322, n
+						SAMLConstants.SAML2_POST_BINDING_URI);
+				if (url != null) {
+					binding = "HTTP-POST";
+				} else {
+					url = metadataManager.getLocation(sFederationGroup, sFederationUrl, SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME,	// RH, 20190322, n
+							SAMLConstants.SAML2_POST_SIMPLE_SIGN_BINDING_URI);
+					if (url != null) {
+						binding = "HTTP-POST-SimpleSign";
+					}
+				}
+			}
+			// RH, 20200110, en
 			if (url != null) {
 				// RH, 20180918, sn
 				PrivateKey specialKey = null;
@@ -366,6 +385,8 @@ public abstract class Saml20_BaseHandler extends ProtoRequestHandler
 				if (partnerData != null && partnerData.getLocalIssuer() != null) {
 					sIssuer = partnerData.getLocalIssuer();
 				}
+				logoutRequestSender.setBinding(binding);// RH, 20200110, n
+
 				// RH, 20190129, sn
 				logoutRequestSender.sendLogoutRequest(request, response, sTgT, url, sIssuer/* issuer */, sNameID,
 						"urn:oasis:names:tc:SAML:2.0:logout:user", sLogoutReturnUrl, sessionindexes, partnerData);
