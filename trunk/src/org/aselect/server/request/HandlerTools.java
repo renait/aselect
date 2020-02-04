@@ -133,12 +133,29 @@ public class HandlerTools
 		String sValue = sCookieName + "=" + sCookieValue;
 		if (sCookieDomain != null)
 			sValue += "; Domain=" + sCookieDomain;
-		sValue += "; Version=1; Path=" + sCookiePath; // was: "/aselectserver/server";
+		// RH, 20200203, sn
+		if (addedSecurity != null && addedSecurity.contains("cookie_versionobsolete")) {
+			sValue += "; Path=" + sCookiePath; // was: "/aselectserver/server";
+		} else {
+		// RH, 20200203, en
+			sValue += "; Version=1; Path=" + sCookiePath; // was: "/aselectserver/server";
+		}	// RH, 20200203, n
 		// if (iAge != -1) sValue += "; expires=<date>"
 		// format: Wdy, DD-Mon-YYYY HH:MM:SS GMT, e.g.: Fri, 31-Dec-2010, 23:59:59 GMT
 
 		if (iAge >= 0)
 			sValue += "; Max-Age=" + iAge;
+
+		// RH, 20200203, sn
+		if (addedSecurity != null && addedSecurity.contains("cookie_samesitestrict")) {
+			sValue += "; SameSite=Strict";
+		} else if (addedSecurity != null && addedSecurity.contains("cookie_samesitelax")) {
+			sValue += "; SameSite=Lax";
+		} else {	// will be the new default
+			sValue += "; SameSite=None";
+		}
+		// RH, 20200203, en
+		
 
 		if (addedSecurity != null && addedSecurity.contains("cookies") && httpOnly == 1) {
 				sValue += "; Secure; HttpOnly";
