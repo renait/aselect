@@ -176,6 +176,12 @@ public class MetaDataManagerSp extends AbstractMetaDataManager
 				idpData.setSuppresssforcedauthn(suppressforcedauthn);
 			// RH, 20190412, en
 
+			// RH, 20200121, sn
+			String sAssertionIssierPattern = Utils.getSimpleParam(_configManager, _systemLogger, idpSection, "assertionissuerpattern", false);
+			if (sAssertionIssierPattern != null)
+				idpData.setAssertionIssuerPattern(sAssertionIssierPattern);
+			// RH, 20200121, en
+
 			// RH, 20181005, sn
 			String idpentryproviderid = Utils.getParamFromSection(_configManager, _systemLogger, idpSection, "authnrequest_scoping", "authnrequest_providerid", false);
 			if (idpentryproviderid != null)
@@ -413,7 +419,11 @@ public class MetaDataManagerSp extends AbstractMetaDataManager
 				}
 
 				Object contactSection = Utils.getSimpleSection(_configManager, _systemLogger, metadataSection, "contactperson", false);
-				if (contactSection != null) {
+//				if (contactSection != null) {
+				if (contactSection == null) {
+					_systemLogger.log(Level.CONFIG, MODULE, sMethod, "No contactperson found in metadata section for: "+ sId);
+				}
+				while (contactSection != null) {
 					String metacontacttype = Utils.getSimpleParam(_configManager, _systemLogger, contactSection, "contacttype", false);
 					if (metacontacttype == null) {
 						_systemLogger.log(Level.WARNING, MODULE, sMethod, "No contacttype found in metadata section for: "+ sId + ", contacttype is mandatory if contactperson present !");
@@ -423,10 +433,14 @@ public class MetaDataManagerSp extends AbstractMetaDataManager
 					String metacontactemail = Utils.getSimpleParam(_configManager, _systemLogger, contactSection, "emailaddress", false);
 					String metacontactephone = Utils.getSimpleParam(_configManager, _systemLogger, contactSection, "telephonenumber", false);
 
-					idpData.getMetadata4partner().setContactInfo(metacontacttype, metacontactname, metacontactsurname, metacontactemail, metacontactephone);
-				} else {
-					_systemLogger.log(Level.CONFIG, MODULE, sMethod, "No contactperson found in metadata section for: "+ sId);
-				}
+//					idpData.getMetadata4partner().setContactInfo(metacontacttype, metacontactname, metacontactsurname, metacontactemail, metacontactephone);
+					idpData.getMetadata4partner().addContactInfo(idpData.new ContactInfo(metacontacttype, metacontactname, metacontactsurname, metacontactemail, metacontactephone));
+					
+					contactSection = _configManager.getNextSection(contactSection);
+				}	
+//				} else {
+//					_systemLogger.log(Level.CONFIG, MODULE, sMethod, "No contactperson found in metadata section for: "+ sId);
+//				}
 			} else {
 				_systemLogger.log(Level.CONFIG, MODULE, sMethod, "No metadata section found for: "+ sId);
 			}
