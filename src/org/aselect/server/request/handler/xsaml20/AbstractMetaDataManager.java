@@ -25,6 +25,8 @@ import java.security.cert.CertificateExpiredException;
 import java.security.cert.CertificateNotYetValidException;
 import java.util.AbstractMap;
 import java.util.ArrayList;
+import java.util.Collections;
+import java.util.Comparator;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
@@ -1030,7 +1032,7 @@ public abstract class AbstractMetaDataManager
 	{
 		String sMethod = "getAttrFromElementBinding " + Thread.currentThread().getId();
 		String location = null;
-		String sDefaultLocation = null;
+//		String sDefaultLocation = null;	// RH, 20200203, o
 
 //		_systemLogger.log(Level.INFO, MODULE, sMethod, "myRole="+getMyRole()+" entityId=" + entityId + " elementName=" + elementName
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "myRole="+getMyRole()+" resourceGroup=" + resourceGroup+" entityId=" + entityId + " elementName=" + elementName
@@ -1052,45 +1054,149 @@ public abstract class AbstractMetaDataManager
 		else {
 			try {
 				Element domDescriptor = marshallDescriptor(descriptor);
-				if (domDescriptor == null)
-					_systemLogger.log(Level.WARNING, MODULE, sMethod, "marshallDescriptor failed");
-				// following line may throw npe, fix this
-				NodeList nodeList = domDescriptor.getChildNodes();
-
-				// follow saml specs more precicely here, fix this
-				//_systemLogger.log(Level.FINE, MODULE, sMethod, "Try "+nodeList.getLength()+" entries");
-				for (int i = 0; i < nodeList.getLength(); i++) {
-					Node childNode = nodeList.item(i);
-					//_systemLogger.log(Level.FINE, MODULE, sMethod, "Node "+childNode.getLocalName());
-					if (elementName.equals(childNode.getLocalName())) {
-						NamedNodeMap nodeMap = childNode.getAttributes();
-						String bindingMDValue = nodeMap.getNamedItem("Binding").getNodeValue();
-						Node nIsDefault = nodeMap.getNamedItem("isDefault");
-						boolean isDefault = false;
-						if (nIsDefault != null && "true".equals(nIsDefault.getNodeValue()))
-							isDefault = true;
-						_systemLogger.log(Level.FINE, MODULE, sMethod, "Try binding="+bindingMDValue+" isDefault="+isDefault);
-						if ((!Utils.hasValue(requestedBinding) && isDefault) || bindingMDValue.equals(requestedBinding)) {
-							Node node = nodeMap.getNamedItem(attrName);
+//				if (domDescriptor == null)	// RH, 20200203, o
+//				_systemLogger.log(Level.WARNING, MODULE, sMethod, "marshallDescriptor failed");	// RH, 20200203, o
+				if (domDescriptor != null) { 	// RH, 20200203, o
+					NodeList nodeList = domDescriptor.getChildNodes();
+	
+					// RH, 20200127, so				
+					/*
+					// follow saml specs more precisely here, fix this
+					//_systemLogger.log(Level.FINE, MODULE, sMethod, "Try "+nodeList.getLength()+" entries");
+					for (int i = 0; i < nodeList.getLength(); i++) {
+						Node childNode = nodeList.item(i);
+						//_systemLogger.log(Level.FINE, MODULE, sMethod, "Node "+childNode.getLocalName());
+						if (elementName.equals(childNode.getLocalName())) {
+							NamedNodeMap nodeMap = childNode.getAttributes();
+							String bindingMDValue = nodeMap.getNamedItem("Binding").getNodeValue();
+							Node nIsDefault = nodeMap.getNamedItem("isDefault");
+							boolean isDefault = false;
+							if (nIsDefault != null && "true".equals(nIsDefault.getNodeValue()))
+								isDefault = true;
+							_systemLogger.log(Level.FINE, MODULE, sMethod, "Try binding="+bindingMDValue+" isDefault="+isDefault);
+							if ((!Utils.hasValue(requestedBinding) && isDefault) || bindingMDValue.equals(requestedBinding)) {
+								Node node = nodeMap.getNamedItem(attrName);
+								if (node != null) {
+									location = node.getNodeValue();
+									if (hmBinding != null)
+										hmBinding.put("binding", bindingMDValue);
+									_systemLogger.log(Level.FINER, MODULE, sMethod, "Found location for entityId="
+											+ entityId + " elementName=" + elementName + " bindingName=" + requestedBinding
+											+ " attrName=" + attrName + " location=" + location+" binding="+bindingMDValue);
+								}
+								else {
+									if (hmBinding != null)
+										hmBinding.clear();
+									_systemLogger.log(Level.FINER, MODULE, sMethod, "Did not find location for entityId="
+											+ entityId + " elementName=" + elementName + " bindingName=" + requestedBinding
+											+ " attrName=" + attrName + " locatione=" + location);
+								}
+								break;  // ready
+							}
+						}
+					}
+					
+					*/
+					// RH, 20200127, eo				
+	
+					// RH, 20200127, sn				
+					List<Node> entities = new ArrayList<Node>();
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "nodeList.getLength():" + nodeList.getLength());
+					for (int i = 0; i < nodeList.getLength(); i++) {	// only add Elements of interest
+						if (elementName.equals(nodeList.item(i).getLocalName())) {
+							entities.add( nodeList.item(i));
+							_systemLogger.log(Level.FINEST, MODULE, sMethod, "added nodeList.item: " + i + " " + nodeList.item(i).getLocalName());
+						}
+					}
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Number of elements to compare:" + entities.size());
+					
+					if (!entities.isEmpty()) {
+				        Collections.sort(entities, new Comparator<Node>() {
+				            public int compare(Node node, Node node1) {
+				            	// we will reverse order for convenience, so items of least interest are at the end
+				            	// Binding is mandatory for the nodes we're interested in but we'll account for null anyway
+								NamedNodeMap nodeMap = node.getAttributes();
+								if (nodeMap == null) return 1;	// node is of less interest than node1
+								String bindingMDValue = nodeMap.getNamedItem("Binding").getNodeValue();
+								if (bindingMDValue == null) return 1;	// node is of less interest than node1
+								Node nIsDefault = nodeMap.getNamedItem("isDefault");
+								if ( nIsDefault != null && 
+										!("true".equalsIgnoreCase(nIsDefault.getNodeValue()) || "false".equalsIgnoreCase(nIsDefault.getNodeValue())) ) {
+									_systemLogger.log(Level.WARNING, MODULE, sMethod, "Encountered illegal value for isDefault, ignored. Illegal value= " + nIsDefault.getNodeValue());
+									nIsDefault = null;
+								}
+		
+								NamedNodeMap nodeMap1 = node1.getAttributes();
+								if (nodeMap1 == null) return -1;	// node is of more interest than node1
+								String bindingMDValue1 = nodeMap1.getNamedItem("Binding").getNodeValue();
+								if (bindingMDValue1 == null) return -1;	// node is of more interest than node1
+								Node nIsDefault1 = nodeMap1.getNamedItem("isDefault");
+								if ( nIsDefault1 != null && 
+										!("true".equalsIgnoreCase(nIsDefault1.getNodeValue()) || "false".equalsIgnoreCase(nIsDefault1.getNodeValue())) ) {
+									_systemLogger.log(Level.WARNING, MODULE, sMethod, "Encountered illegal value for isDefault, ignored. Illegal value= " + nIsDefault1.getNodeValue());
+									nIsDefault1 = null;
+								}
+								
+								// binding takes precedence
+								if (bindingMDValue.equals(requestedBinding) && !bindingMDValue1.equals(requestedBinding)) {
+									return -1;
+				        	
+								} else if (bindingMDValue1.equals(requestedBinding) && !bindingMDValue.equals(requestedBinding)) {
+									return 1;
+								}
+								// max one should have isDefault=true but we'll allow for multiple 
+								if (nIsDefault != null) {
+									if ("true".equalsIgnoreCase(nIsDefault.getNodeValue())) {
+										if (nIsDefault1 == null || !"false".equalsIgnoreCase(nIsDefault1.getNodeValue())) {
+											return -1;
+										}
+									} else {	// nIsDefault == false
+										if (nIsDefault1 == null || "true".equalsIgnoreCase(nIsDefault1.getNodeValue())) {
+											return 1;
+										}
+									}
+								} else {	//	nIsDefault == null
+									if ( nIsDefault1 != null ) {
+										if ("true".equalsIgnoreCase(nIsDefault1.getNodeValue())) {	// node is of less interest than node1
+											return 1;
+										} else {	// nIsDefault1 == false, // node is of more interest than node1
+											return -1;
+										}
+									}
+								}
+								// This (java) sort is guaranteed to be stable. It means that equal elements will not be reordered as a result of the sort.
+								// So to preserve order it should be sufficient to return zero
+								return 0;
+				            }
+				        });
+		
+						Node preferredNode = entities.get(0);
+						NamedNodeMap preferredMap = preferredNode.getAttributes();
+						if ( requestedBinding == null || preferredMap.getNamedItem("Binding").getNodeValue().equals(requestedBinding) ) {
+							Node node = preferredMap.getNamedItem(attrName);
 							if (node != null) {
 								location = node.getNodeValue();
 								if (hmBinding != null)
-									hmBinding.put("binding", bindingMDValue);
-								_systemLogger.log(Level.FINER, MODULE, sMethod, "Found location for entityId="
+									hmBinding.put("binding", preferredMap.getNamedItem("Binding").getNodeValue());
+								_systemLogger.log(Level.FINER, MODULE, sMethod, "Found (response)location for entityId="
 										+ entityId + " elementName=" + elementName + " bindingName=" + requestedBinding
-										+ " attrName=" + attrName + " location=" + location+" binding="+bindingMDValue);
+										+ " attrName=" + attrName + " (response)location=" + location+" binding="+preferredMap.getNamedItem("Binding").getNodeValue());
 							}
 							else {
 								if (hmBinding != null)
 									hmBinding.clear();
 								_systemLogger.log(Level.FINER, MODULE, sMethod, "Did not find location for entityId="
 										+ entityId + " elementName=" + elementName + " bindingName=" + requestedBinding
-										+ " attrName=" + attrName + " locatione=" + location);
+										+ " attrName=" + attrName + " (response)location=" + location);
 							}
-							break;  // ready
 						}
+					} else {
+						_systemLogger.log(Level.WARNING, MODULE, sMethod, "No descriptors found for requested elementname: " + elementName);
 					}
-				}
+					// RH, 20200127, en
+				} else { // RH, 20200203, sn
+					_systemLogger.log(Level.WARNING, MODULE, sMethod, "marshallDescriptor returned null");
+				} // RH, 20200203, en
 			}
 			catch (MarshallingException e) {
 				_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Marshalling failed with the following error: ", e);
@@ -1102,7 +1208,7 @@ public abstract class AbstractMetaDataManager
 				throw new ASelectException(Errors.ERROR_ASELECT_INIT_ERROR, e);
 			}
 		}
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "Return " + location);
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "Returning (response)location: " + location);
 		return location;
 	}
 

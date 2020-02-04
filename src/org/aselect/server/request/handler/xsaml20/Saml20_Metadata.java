@@ -31,6 +31,7 @@ import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.Utils;
+import org.joda.time.DateTime;
 import org.opensaml.DefaultBootstrap;
 import org.opensaml.common.xml.SAMLConstants;
 import org.opensaml.xml.ConfigurationException;
@@ -99,6 +100,7 @@ public class Saml20_Metadata extends ProtoRequestHandler
 	private boolean addkeyname2descriptors = DEFAULT_ADDKEYNAME2DESCRIPTORS;	// RH, 20161007, n
 	
 	private String requestedGroupId = null;	// RH, 20190311, n
+	private DateTime epoch = null;	// RH, 20200124, n
 
 	protected XMLObjectBuilderFactory _oBuilderFactory;
 
@@ -135,9 +137,23 @@ public class Saml20_Metadata extends ProtoRequestHandler
 				setEntityIdIdp(_configManager.getParam(oASelect, "redirect_url"));
 
 				String sValidUntil = ASelectConfigManager.getSimpleParam(oConfig, "valid_until", false);
+				Object oValidUntil = null;// RH, 20200124, n
 				if (sValidUntil != null) {
+					oValidUntil = ASelectConfigManager.getSimpleSection(oConfig, "valid_until", false);// RH, 20200124, n
 					setValidUntil(new Long(Long.parseLong(sValidUntil) * 1000));
 				}
+				// RH, 20200124, sn
+				String sEpoch = null;
+				if (oValidUntil != null) {
+					sEpoch = ASelectConfigManager.getSimpleParam(oValidUntil, "epoch", false);
+				}
+				if (sEpoch == null) {
+					sEpoch = ASelectConfigManager.getSimpleParam(oConfig, "epoch", false);
+				}
+				if (sEpoch != null) {
+					setEpoch(DateTime.parse(sEpoch));
+				}
+				// RH, 20200124, sn
 				String sCacheDuration = ASelectConfigManager.getSimpleParam(oConfig, "cache_duration", false);
 				if (sCacheDuration != null) {
 					setCacheDuration(new Long(Long.parseLong(sCacheDuration) * 1000));
@@ -745,6 +761,20 @@ public class Saml20_Metadata extends ProtoRequestHandler
 	public synchronized void setValidUntil(Long validUntil)
 	{
 		this.validUntil = validUntil;
+	}
+
+	/**
+	 * @return the epoch
+	 */
+	public synchronized DateTime getEpoch() {
+		return epoch;
+	}
+
+	/**
+	 * @param epoch the epoch to set
+	 */
+	public synchronized void setEpoch(DateTime epoch) {
+		this.epoch = epoch;
 	}
 
 	/**

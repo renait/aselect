@@ -257,6 +257,7 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 		entityDescriptor.setEntityID(getEntityIdIdp());	// RH, 20110111, n
 		entityDescriptor.setID(SamlTools.generateIdentifier(_systemLogger, MODULE));
 
+		if (getEpoch() != null)	tStamp = getEpoch();	// RH, 20200124, n
 		if (getValidUntil() != null)
 			entityDescriptor.setValidUntil(tStamp.plus(getValidUntil().longValue()));
 		if (getCacheDuration() != null)
