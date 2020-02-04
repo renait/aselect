@@ -1,5 +1,7 @@
 package org.aselect.server.utils;
 
+import java.security.PrivateKey;
+import java.security.PublicKey;
 import java.util.HashMap;
 import java.util.LinkedList;
 import java.util.logging.Level;
@@ -178,6 +180,7 @@ public class AttributeSetter
 	{
 		final String sMethod = "attributeProcessing";
 		HashMap htNewAttrs = new HashMap();
+
 		try {
 			String sValue = null;
 			
@@ -254,16 +257,34 @@ public class AttributeSetter
 				if (setter.getOperator() != null) {
 					String slValue = sValue;
 					sysLog.log(Level.FINEST, MODULE, sMethod, "Using Operator="+setter.getOperator());
-					Object orValue = (setter.isDestTgt())? htTGTContext.get(sDest): hmAttributes.get(sDest);
-					if (orValue == null)
-						continue;
-					String srValue = orValue.toString();
-					if (!Utils.hasValue(srValue))
-						continue;
+//					Object orValue = (setter.isDestTgt())? htTGTContext.get(sDest): hmAttributes.get(sDest);
+//					if (orValue == null)
+//						continue;
+//					String srValue = orValue.toString();
+//					if (!Utils.hasValue(srValue))
+//						continue;
 					if ("==".equals(setter.getOperator())) {
+						Object orValue = (setter.isDestTgt())? htTGTContext.get(sDest): hmAttributes.get(sDest);
+						if (orValue == null)
+							continue;
+						String srValue = orValue.toString();
+						if (!Utils.hasValue(srValue))
+							continue;
 						sValue = Boolean.toString(slValue.equals(srValue));
 						sysLog.log(Level.FINEST, MODULE, sMethod, "Comparing:" + sSrc + " with:" + sDest + " results:" + sValue);
+					} 
+					// RH, 20190927, sn
+					else if ("DECRYPT".equalsIgnoreCase(setter.getOperator())) {
+						ASelectConfigManager _configManager = ASelectConfigManager.getHandle();
+						PrivateKey secretKey = _configManager.getDefaultPrivateKey();
+						sValue = Auxiliary.decryptRSAString(slValue, secretKey, sysLog);
+					} else if ("ENCRYPT".equalsIgnoreCase(setter.getOperator())) {
+						ASelectConfigManager _configManager = ASelectConfigManager.getHandle();
+						PublicKey pubKey = _configManager.getDefaultCertificate().getPublicKey();
+						sValue = Auxiliary.encryptRSAString(slValue, pubKey, sysLog);
 					}
+					// RH, 20190927, en
+					
 				}
 				// RH, 20190208, en
 				
