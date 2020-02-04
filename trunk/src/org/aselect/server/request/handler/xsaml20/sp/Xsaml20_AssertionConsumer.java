@@ -16,6 +16,7 @@ import java.io.PrintWriter;
 import java.io.StringReader;
 import java.security.PrivateKey;
 import java.security.PublicKey;
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -27,6 +28,7 @@ import java.util.Vector;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.http.HttpServletRequest;
@@ -62,6 +64,7 @@ import org.opensaml.common.SAMLObject;
 import org.opensaml.common.SAMLObjectBuilder;
 import org.opensaml.common.SAMLVersion;
 import org.opensaml.common.xml.SAMLConstants;
+import org.opensaml.saml2.core.Advice;
 import org.opensaml.saml2.core.Artifact;
 import org.opensaml.saml2.core.ArtifactResolve;
 import org.opensaml.saml2.core.ArtifactResponse;
@@ -544,6 +547,9 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 					// RH, 20190225, sn
 					// Try Encrypted Assertion first
 					Assertion samlAssertion = null;
+/*			
+*/
+/*					
 					List<EncryptedAssertion> encAsses = samlResponse.getEncryptedAssertions();
 					if (encAsses != null && samlResponse.getEncryptedAssertions().size() > 0) { // For now we support either Encrypted or normal Assertions, not both
 						_systemLogger.log(Level.FINE, MODULE, sMethod, "Number of EncryptedAssertions found: " +  samlResponse.getEncryptedAssertions().size());
@@ -557,6 +563,41 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 						_systemLogger.log(Level.SEVERE, MODULE, sMethod, "No (readable) Assertion present in Response");
 						throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 					}
+*/					
+//					List<EncryptedAssertion> encAsses = samlResponse.getEncryptedAssertions();
+					// RH, 20200121, sn
+					List<Assertion> asses = new ArrayList<Assertion>();
+					List <Object> responseList = new ArrayList<Object>();
+					responseList.add(samlResponse);
+					getNestedAssertions(responseList, asses);
+					_systemLogger.log(Level.FINE, MODULE, sMethod, "Total number of Assertions found: " +  asses.size());
+					if (asses.size() == 0) {	// There should be at least one
+						_systemLogger.log(Level.SEVERE, MODULE, sMethod, "No (readable) Assertion present in Response");
+						throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
+					}
+					PartnerData fedPartnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(_sResourceGroup, sFederationUrl);	// RH, 20190325, o	// RH, 20200120, n
+					Pattern specificIssuer = null;
+					if (fedPartnerData.getAssertionIssuerPattern() != null) {
+						try {
+							specificIssuer = Pattern.compile(fedPartnerData.getAssertionIssuerPattern());	// maybe we should do this once in initialisation
+						} catch (PatternSyntaxException pex) {
+							throw new ASelectException(Errors.ERROR_ASELECT_CONFIG_ERROR, pex);
+						}
+
+					}
+					
+					for (Assertion a : asses) {
+						// for testing show all Issuers
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Found Assertion Issuer:" + a.getIssuer().getValue());
+						if (specificIssuer != null && specificIssuer.matcher(a.getIssuer().getValue()).matches()) {
+							_systemLogger.log(Level.INFO, MODULE, sMethod, "Found Assertion Issuer match for pattern:" + specificIssuer);
+							samlAssertion = a;
+						}
+					}
+
+					if (samlAssertion == null) samlAssertion = asses.get(0);	// For now/test get first like we used to
+					// RH, 20200121, en
+					
 					// RH, 20190225, en
 					// RH, 20190225, so
 //					_systemLogger.log(Level.FINE, MODULE, sMethod, "Number of Assertions found: " +  samlResponse.getAssertions().size());
@@ -1367,6 +1408,39 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 		return htCredentials;
 	}
 
+	/**
+	 * 
+	 * @param samlObjects
+	 * @param assertions
+	 */
+	public <T> void getNestedAssertions(List<T> samlObjects, final List<Assertion> assertions) {	// maybe use Collection for List
+		String sMethod = "getNestedAssertions";
+		if (samlObjects != null) {
+			for (T samlObject : samlObjects) {
+				if (samlObject instanceof EncryptedAssertion) {
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Found samlObjects of type EncryptedAssertion");
+					Assertion assertion = (Assertion) SamlTools.decryptSamlObject((EncryptedAssertion)samlObject);
+					ArrayList<Assertion> l = new ArrayList<Assertion>();
+					l.add(assertion);
+					getNestedAssertions(l, assertions);
+				} else if (samlObject instanceof Assertion) {
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Found samlObjects of type Assertion");
+						assertions.add((Assertion)samlObject);
+						if (((Assertion)samlObject).getAdvice() != null) {
+							getNestedAssertions(((Assertion)samlObject).getAdvice().getEncryptedAssertions(), assertions);
+							getNestedAssertions(((Assertion)samlObject).getAdvice().getAssertions(), assertions);
+						}
+				} else if (samlObject instanceof Response) {
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Found samlObjects of type Response");
+					getNestedAssertions(((Response)samlObject).getEncryptedAssertions(), assertions);
+					getNestedAssertions(((Response)samlObject).getAssertions(), assertions);
+				}
+			}
+		} else {
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "samlObjects list null, exiting recursion level");
+		}
+		return;
+	}
 	/**
 	 * Checks if is signing required.
 	 * 

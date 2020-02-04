@@ -77,6 +77,8 @@ public class PartnerData
 	private String p_point = null;
 	// RH, 20181102, en
 
+	private String assertionIssuerPattern = null;	// RH, 20200121, n
+
 	public PartnerData(String sId)
 	{
 		partnerID = sId;
@@ -260,6 +262,15 @@ public class PartnerData
 
 	public synchronized void setIdpentryproviderid(String idpentryproviderid) {
 		this.idpentryproviderid = idpentryproviderid;
+	}
+
+	public synchronized String getAssertionIssuerPattern() {
+		return assertionIssuerPattern;
+	}
+
+
+	public synchronized void setAssertionIssuerPattern(String assertionIssuerPattern) {
+		this.assertionIssuerPattern = assertionIssuerPattern;
 	}
 
 	// Simple wrapper for crypto info
@@ -615,6 +626,53 @@ public class PartnerData
 
 	}
 
+
+	// Simple wrapper for ContactInfo info
+	public class ContactInfo
+	{
+		// contact data
+		String metacontacttype = null;
+		String metacontactname = null;
+		String metacontactsurname = null;
+		String metacontactemail = null;
+		String metacontactephone = null;
+
+		public ContactInfo(String metacontacttype, String metacontactname, String metacontactsurname,
+				String metacontactemail, String metacontactephone)
+		{
+			this.metacontacttype = metacontacttype;
+			this.metacontactname = metacontactname;
+			this.metacontactsurname = metacontactsurname;
+			this.metacontactemail = metacontactemail;
+			this.metacontactephone = metacontactephone;
+		}
+
+		@Override
+		public String toString() {
+			return "ContactInfo:" + new ReflectionToStringBuilder( this, new StandardToStringStyle()).toString();
+		}
+
+		public synchronized String getMetacontacttype() {
+			return metacontacttype;
+		}
+
+		public synchronized String getMetacontactname() {
+			return metacontactname;
+		}
+
+		public synchronized String getMetacontactsurname() {
+			return metacontactsurname;
+		}
+
+		public synchronized String getMetacontactemail() {
+			return metacontactemail;
+		}
+
+		public synchronized String getMetacontactephone() {
+			return metacontactephone;
+		}
+	}
+	
 	
 	// SImple wrapper class for specific data 
 	public class Metadata4Partner
@@ -638,11 +696,12 @@ public class PartnerData
 		private String metaorgurllang = null;
 		
 		// contact data
-		String metacontacttype = null;
-		String metacontactname = null;
-		String metacontactsurname = null;
-		String metacontactemail = null;
-		String metacontactephone = null;
+//		String metacontacttype = null;
+//		String metacontactname = null;
+//		String metacontactsurname = null;
+//		String metacontactemail = null;
+//		String metacontactephone = null;
+		private Vector<ContactInfo> metacontactinfo = new Vector<ContactInfo>();
 
 		
 		private Vector<NamespaceInfo> namespaces = new Vector<NamespaceInfo>();
@@ -685,27 +744,27 @@ public class PartnerData
 			
 		}
 
-		// Set Contact info, only change values if not null
-		public void setContactInfo(		String metacontacttype,	String metacontactname, String metacontactsurname,
-																String metacontactemail, String metacontactephone) {
-			if (metacontacttype != null) {
-				this.metacontacttype = metacontacttype;
-			}
-			if (metacontactname != null) {
-				this.metacontactname = metacontactname;
-			}
-			if (metacontactsurname != null) {
-				this.metacontactsurname = metacontactsurname;
-			}
-			if (metacontactemail != null) {
-				this.metacontactemail = metacontactemail;
-			}
-			if (metacontactephone != null) {
-				this.metacontactephone = metacontactephone;
-			}
-			
-			
-		}
+//		// Set Contact info, only change values if not null
+//		public void setContactInfo(		String metacontacttype,	String metacontactname, String metacontactsurname,
+//																String metacontactemail, String metacontactephone) {
+//			if (metacontacttype != null) {
+//				this.metacontacttype = metacontacttype;
+//			}
+//			if (metacontactname != null) {
+//				this.metacontactname = metacontactname;
+//			}
+//			if (metacontactsurname != null) {
+//				this.metacontactsurname = metacontactsurname;
+//			}
+//			if (metacontactemail != null) {
+//				this.metacontactemail = metacontactemail;
+//			}
+//			if (metacontactephone != null) {
+//				this.metacontactephone = metacontactephone;
+//			}
+//			
+//			
+//		}
 
 		/**
 		 * @return the metaorgname
@@ -755,46 +814,71 @@ public class PartnerData
 			return metaorgurllang;
 		}
 
+//		/**
+//		 * @return the metacontacttype
+//		 */
+//		public synchronized String getMetacontacttype()
+//		{
+//			return metacontacttype;
+//		}
+//
+//		/**
+//		 * @return the metacontactname
+//		 */
+//		public synchronized String getMetacontactname()
+//		{
+//			return metacontactname;
+//		}
+//
+//		/**
+//		 * @return the metacontactsurname
+//		 */
+//		public synchronized String getMetacontactsurname()
+//		{
+//			return metacontactsurname;
+//		}
+//
+//		/**
+//		 * @return the metacontactemail
+//		 */
+//		public synchronized String getMetacontactemail()
+//		{
+//			return metacontactemail;
+//		}
+//
+//		/**
+//		 * @return the metacontactephone
+//		 */
+//		public synchronized String getMetacontactephone()
+//		{
+//			return metacontactephone;
+//		}
+
 		/**
-		 * @return the metacontacttype
+		 * @return the metacontactinfo
 		 */
-		public synchronized String getMetacontacttype()
+		public synchronized Vector<ContactInfo> getContactInfo()
 		{
-			return metacontacttype;
+			return metacontactinfo;
 		}
 
 		/**
-		 * @return the metacontactname
+		 * @param contactinfo the metacontactinfo to add
 		 */
-		public synchronized String getMetacontactname()
-		{
-			return metacontactname;
+		public void addContactInfo(ContactInfo contactinfo) {
+			metacontactinfo.addElement(contactinfo);
 		}
-
+		
 		/**
-		 * @return the metacontactsurname
+		 * @param contactinfo the metacontactinfo to remove
+		 * @return true if contactinfo was present
 		 */
-		public synchronized String getMetacontactsurname()
-		{
-			return metacontactsurname;
+		public boolean removeContactInfo(ContactInfo contactinfo) {
+			return metacontactinfo.removeElement(contactinfo);
 		}
 
-		/**
-		 * @return the metacontactemail
-		 */
-		public synchronized String getMetacontactemail()
-		{
-			return metacontactemail;
-		}
-
-		/**
-		 * @return the metacontactephone
-		 */
-		public synchronized String getMetacontactephone()
-		{
-			return metacontactephone;
-		}
-
+		
+		
 		/**
 		 * @return the addkeyname
 		 */
@@ -869,7 +953,7 @@ public class PartnerData
 
 		
 		/**
-		 * @return the handlers
+		 * @return the namespaces
 		 */
 		public synchronized Vector<NamespaceInfo> getNamespaceInfo()
 		{
