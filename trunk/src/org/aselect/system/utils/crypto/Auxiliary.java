@@ -17,6 +17,8 @@ package org.aselect.system.utils.crypto;
 
 import java.io.BufferedInputStream;
 import java.io.ByteArrayInputStream;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
 import java.io.IOException;
 import java.io.ObjectInputStream;
 import java.io.ObjectOutputStream;
@@ -36,9 +38,11 @@ import java.security.KeyStoreException;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.security.NoSuchProviderException;
+import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.security.SecureRandom;
 import java.security.SignatureException;
+import java.security.UnrecoverableKeyException;
 import java.security.cert.CertPath;
 import java.security.cert.CertPathValidator;
 import java.security.cert.CertPathValidatorException;
@@ -83,10 +87,8 @@ import javax.crypto.spec.SecretKeySpec;
 import javax.xml.bind.DatatypeConverter;
 
 import org.aselect.system.logging.ISystemLogger;
-import org.aselect.system.logging.SystemLogger;
 import org.aselect.system.utils.Base64Codec;
 import org.aselect.system.utils.Utils;
-import org.opensaml.ws.wssecurity.impl.TimestampUnmarshaller;
 
 public  final class Auxiliary
 {	
@@ -878,6 +880,194 @@ public  final class Auxiliary
 		return null;
 	}
 	
+	// RH, 20190927, sn
+	public static synchronized String encryptRSAString(String plain, PublicKey pub_key, ISystemLogger oSystemLogger)
+	{
+		return encryptRSAString(plain, pub_key, null, oSystemLogger);
+	}
+	
+	public static synchronized String encryptRSAString(String plain, PublicKey pub_key, String encoding, ISystemLogger oSystemLogger)
+	{
+		String sMethod = "encryptRSAString";
+
+		String encrypted = null;
+		if (plain != null) {
+			if (encoding == null) { encoding = "UTF-8"; }
+			if (pub_key != null) {
+				Cipher _cipher;
+				try {
+					_cipher = Cipher.getInstance("RSA/ECB/OAEPPadding");
+					// alternatives could be "RSA/None/NoPadding" or "RSA/ECB/PKCS1Padding" or "RSA/ECB/OAEPWITHSHA-256ANDMGF1PADDING"
+					try {
+						_cipher.init(Cipher.ENCRYPT_MODE, pub_key);
+						byte[] baCipher =_cipher.doFinal(plain.getBytes(encoding));
+						encrypted =  Utils.byteArrayToHexString(baCipher);
+					} catch (InvalidKeyException e) {
+						LogWrapper.log(oSystemLogger, Level.WARNING, MODULE, sMethod, "InvalidKeyException: " + e.getMessage());
+					} catch (IllegalBlockSizeException e) {
+						LogWrapper.log(oSystemLogger, Level.WARNING, MODULE, sMethod, "IllegalBlockSizeException: " + e.getMessage());
+					} catch (BadPaddingException e) {
+						LogWrapper.log(oSystemLogger, Level.WARNING, MODULE, sMethod, "BadPaddingException: " + e.getMessage());
+					} catch (UnsupportedEncodingException e) {
+						LogWrapper.log(oSystemLogger, Level.WARNING, MODULE, sMethod, "UnsupportedEncodingException: " + e.getMessage());
+					}
+				} catch (NoSuchAlgorithmException e) {
+					LogWrapper.log(oSystemLogger, Level.WARNING, MODULE, sMethod, "NoSuchAlgorithmException: " + e.getMessage());
+				} catch (NoSuchPaddingException e) {
+					LogWrapper.log(oSystemLogger, Level.WARNING, MODULE, sMethod, "NoSuchPaddingException: " + e.getMessage());
+				}
+			} else {
+				LogWrapper.log(oSystemLogger, Level.WARNING, MODULE, sMethod, "No public key provided for encryption");
+			}
+		} else {
+			LogWrapper.log(oSystemLogger, Level.FINER, MODULE, sMethod, "plain text == null, no encryption done!");
+		}
+		return encrypted;
+	}
+
+	public static synchronized String decryptRSAString(String sEncodedText, PrivateKey secretKey, ISystemLogger oSystemLogger)
+	{
+		return decryptRSAString(sEncodedText, secretKey, null, oSystemLogger);
+	}
+	
+	public static synchronized String decryptRSAString(String sEncryptedText, PrivateKey secretKey, String encoding, ISystemLogger oSystemLogger)
+	{
+		String sMethod = "decryptRSAString";
+		
+		String decrypted = null;
+		if (sEncryptedText != null) {
+			if (encoding == null) { encoding = "UTF-8"; }
+			if (secretKey != null) {
+				Cipher _cipher;
+				try {
+					_cipher = Cipher.getInstance("RSA/ECB/OAEPPadding");
+					// alternatives could be "RSA/None/NoPadding" or "RSA/ECB/PKCS1Padding" or "RSA/ECB/OAEPWITHSHA-256ANDMGF1PADDING"
+					try {
+						_cipher.init(Cipher.DECRYPT_MODE, secretKey);
+						byte[] baData = Utils.hexStringToByteArray(sEncryptedText);
+						decrypted = new String(_cipher.doFinal(baData), encoding);
+					} catch (InvalidKeyException e) {
+						LogWrapper.log(oSystemLogger, Level.WARNING, MODULE, sMethod, "InvalidKeyException: " + e.getMessage());
+					} catch (UnsupportedEncodingException e) {
+						LogWrapper.log(oSystemLogger, Level.WARNING, MODULE, sMethod, "UnsupportedEncodingException: " + e.getMessage());
+					} catch (IllegalBlockSizeException e) {
+						LogWrapper.log(oSystemLogger, Level.WARNING, MODULE, sMethod, "IllegalBlockSizeException: " + e.getMessage());
+					} catch (BadPaddingException e) {
+						LogWrapper.log(oSystemLogger, Level.WARNING, MODULE, sMethod, "BadPaddingException: " + e.getMessage());
+					}
+				} catch (NoSuchAlgorithmException e) {
+					LogWrapper.log(oSystemLogger, Level.WARNING, MODULE, sMethod, "NoSuchAlgorithmException: " + e.getMessage());
+				} catch (NoSuchPaddingException e) {
+					LogWrapper.log(oSystemLogger, Level.WARNING, MODULE, sMethod, "NoSuchPaddingException: " + e.getMessage());
+				}
+			} else {
+				LogWrapper.log(oSystemLogger, Level.WARNING, MODULE, sMethod, "No private key provided for encryption");
+			}
+		} else {
+			LogWrapper.log(oSystemLogger, Level.FINER, MODULE, sMethod, "encrypted text == null, no decryption done!");
+		}
+		return decrypted;
+	}
+	// RH, 20190927, en
+
+	// RH, 20191001, sn
+	public static synchronized PrivateKey getPrivateKeyFromLocation(String location, String pw, String alias, ISystemLogger oSystemLogger) {
+		KeyStore ks = loadKeystore(location, oSystemLogger);
+		PrivateKey _oPrivateKey =  getPrivateKeyFromKeystore(ks, pw, alias, oSystemLogger);
+		return _oPrivateKey;
+	}
+
+	public static synchronized PublicKey getPublicKeyFromLocation(String location, String alias, ISystemLogger oSystemLogger) {
+		KeyStore ks = loadKeystore(location, oSystemLogger);
+		PublicKey _oPublicKey =  getPublicKeyFromKeystore(ks, alias, oSystemLogger);
+		return _oPublicKey;
+	}
+
+	public static synchronized KeyStore loadKeystore(String location, ISystemLogger oSystemLogger) {
+		String sMethod = "loadKeystore";
+		
+		if (location == null) {
+			LogWrapper.log(oSystemLogger, Level.WARNING, MODULE, sMethod, "No location provided");
+			return null;
+		}
+		KeyStore ks = null;
+		try {
+			ks = KeyStore.getInstance("JKS");
+			ks.load(new FileInputStream(location), null);
+		} catch (KeyStoreException e) {
+			LogWrapper.log(oSystemLogger, Level.WARNING, MODULE, sMethod, "KeyStoreException: " + e.getMessage());
+		} catch (NoSuchAlgorithmException e) {
+			LogWrapper.log(oSystemLogger, Level.WARNING, MODULE, sMethod, "NoSuchAlgorithmException: " + e.getMessage());
+		} catch (CertificateException e) {
+			LogWrapper.log(oSystemLogger, Level.WARNING, MODULE, sMethod, "CertificateException: " + e.getMessage());
+		} catch (FileNotFoundException e) {
+			LogWrapper.log(oSystemLogger, Level.WARNING, MODULE, sMethod, "FileNotFoundException: " + e.getMessage());
+		} catch (IOException e) {
+			LogWrapper.log(oSystemLogger, Level.WARNING, MODULE, sMethod, "IOException: " + e.getMessage());
+		}
+		return ks;
+	}
+	
+	public static synchronized PrivateKey getPrivateKeyFromKeystore(KeyStore ks, String pw, String alias, ISystemLogger oSystemLogger) {
+		String sMethod = "getCertificateFromKeystore";
+
+		if (ks == null) {
+			LogWrapper.log(oSystemLogger, Level.WARNING, MODULE, sMethod, "No KeyStore provided");
+			return null;
+		}
+
+		char[] caPasswordChars = pw.toCharArray();
+		PrivateKey _oPrivateKey = null;
+		try {
+			_oPrivateKey = (PrivateKey) ks.getKey(alias, caPasswordChars);
+		} catch (UnrecoverableKeyException e) {
+			LogWrapper.log(oSystemLogger, Level.WARNING, MODULE, sMethod, "UnrecoverableKeyException: " + e.getMessage());
+		} catch (KeyStoreException e) {
+			LogWrapper.log(oSystemLogger, Level.WARNING, MODULE, sMethod, "KeyStoreException: " + e.getMessage());
+		} catch (NoSuchAlgorithmException e) {
+			LogWrapper.log(oSystemLogger, Level.WARNING, MODULE, sMethod, "NoSuchAlgorithmException: " + e.getMessage());
+		}
+		return _oPrivateKey;
+	}
+
+	public static synchronized PublicKey getPublicKeyFromKeystore(KeyStore ks, String alias, ISystemLogger oSystemLogger) {
+		java.security.cert.X509Certificate x509Cert = getCertificateFromKeystore(ks, alias, oSystemLogger);
+		PublicKey _oPublicKey = getPublicKeyFromCert(x509Cert, oSystemLogger);
+		return _oPublicKey;
+	}
+
+	public static synchronized java.security.cert.X509Certificate getCertificateFromKeystore(KeyStore ks, String alias, ISystemLogger oSystemLogger) {
+		String sMethod = "getCertificateFromKeystore";
+
+		if (ks == null) {
+			LogWrapper.log(oSystemLogger, Level.WARNING, MODULE, sMethod, "No KeyStore provided");
+			return null;
+		}
+		if (alias == null) {
+			LogWrapper.log(oSystemLogger, Level.WARNING, MODULE, sMethod, "No alias provided");
+			return null;
+		}
+		java.security.cert.X509Certificate x509Cert = null;
+		try {
+			x509Cert = (java.security.cert.X509Certificate) ks
+				.getCertificate(alias);
+		} catch (KeyStoreException e) {
+			LogWrapper.log(oSystemLogger, Level.WARNING, MODULE, sMethod, "KeyStoreException: " + e.getMessage());
+		}
+		return x509Cert;
+	}
+
+	public static synchronized PublicKey getPublicKeyFromCert(java.security.cert.X509Certificate x509Cert, ISystemLogger oSystemLogger) {
+		String sMethod = "getPublicKeyFromCert";
+
+		if (x509Cert == null) {
+			LogWrapper.log(oSystemLogger, Level.WARNING, MODULE, sMethod, "No X509Certificate provided");
+			return null;
+		}
+		PublicKey _oPublicKey = x509Cert.getPublicKey();
+		return _oPublicKey;
+	}
+	// RH, 20191001, en
 	
 	
 	private static void usage(PrintStream outStream) {
