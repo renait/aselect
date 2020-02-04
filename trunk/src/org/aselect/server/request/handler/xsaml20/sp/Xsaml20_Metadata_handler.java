@@ -30,6 +30,7 @@ import org.aselect.server.request.handler.xsaml20.PartnerData;
 import org.aselect.server.request.handler.xsaml20.PartnerData.NamespaceInfo;
 import org.aselect.server.request.handler.xsaml20.Saml20_Metadata;
 import org.aselect.server.request.handler.xsaml20.SamlTools;
+import org.aselect.server.request.handler.xsaml20.PartnerData.ContactInfo;
 import org.aselect.server.request.handler.xsaml20.PartnerData.HandlerInfo;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectConfigException;
@@ -278,6 +279,7 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 		entityDescriptor.setEntityID((sLocalIssuer != null)? sLocalIssuer: getEntityIdIdp());
 		entityDescriptor.setID(SamlTools.generateIdentifier(_systemLogger, MODULE));
 
+		if (getEpoch() != null)	tStamp = getEpoch();	// RH, 20200124, n
 		if (getValidUntil() != null)
 			entityDescriptor.setValidUntil(tStamp.plus(getValidUntil().longValue()));
 		if (getCacheDuration() != null)
@@ -609,58 +611,109 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 
 		
 		//	publish ContactPerson info
-		if (partnerData != null && partnerData.getMetadata4partner().getMetacontacttype() != null) {	// If ContactPerson present  ContactType  is mandatory so check  ContactType
-			_systemLogger.log(Level.INFO, MODULE, sMethod, "Setting ContactPerson info");
 
-			SAMLObjectBuilder<ContactPerson> contactBuilder = (SAMLObjectBuilder<ContactPerson>) _oBuilderFactory
-			.getBuilder(ContactPerson.DEFAULT_ELEMENT_NAME);
-			ContactPerson contact = contactBuilder.buildObject();
+//		if (partnerData != null && partnerData.getMetadata4partner().getMetacontacttype() != null) {	// If ContactPerson present  ContactType  is mandatory so check  ContactType
+//			_systemLogger.log(Level.INFO, MODULE, sMethod, "Setting ContactPerson info");
+		if (partnerData != null && partnerData.getMetadata4partner().getContactInfo().size() > 0) {	// Get ContactPerson(s) to publish from partnerdata
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "Using ContactInfo for ContactInfo");
 
-			if (ContactPersonTypeEnumeration.ADMINISTRATIVE.toString().equalsIgnoreCase(partnerData.getMetadata4partner().getMetacontacttype())) {
-				contact.setType(ContactPersonTypeEnumeration.ADMINISTRATIVE);
-			} else	if (ContactPersonTypeEnumeration.BILLING.toString().equalsIgnoreCase(partnerData.getMetadata4partner().getMetacontacttype())) {
-				contact.setType(ContactPersonTypeEnumeration.BILLING);
-			} else if (ContactPersonTypeEnumeration.SUPPORT.toString().equalsIgnoreCase(partnerData.getMetadata4partner().getMetacontacttype())) {
-				contact.setType(ContactPersonTypeEnumeration.SUPPORT);
-			} else 	if (ContactPersonTypeEnumeration.TECHNICAL.toString().equalsIgnoreCase(partnerData.getMetadata4partner().getMetacontacttype())) {
-				contact.setType(ContactPersonTypeEnumeration.TECHNICAL);
-			}	else {
-				contact.setType(ContactPersonTypeEnumeration.OTHER);
-			}
+			Enumeration<ContactInfo> eContactInfos = partnerData.getMetadata4partner().getContactInfo().elements();
+			while (eContactInfos.hasMoreElements()) {
+				ContactInfo eContactInfo = eContactInfos.nextElement();
 
-			if (partnerData.getMetadata4partner().getMetacontactname() != null) {
-				SAMLObjectBuilder<GivenName> givenNameBuilder = (SAMLObjectBuilder<GivenName>) _oBuilderFactory
-				.getBuilder(GivenName.DEFAULT_ELEMENT_NAME);
-				GivenName givenName = givenNameBuilder.buildObject();
-				givenName.setName(partnerData.getMetadata4partner().getMetacontactname());
-				contact.setGivenName(givenName);
-			}
+				SAMLObjectBuilder<ContactPerson> contactBuilder = (SAMLObjectBuilder<ContactPerson>) _oBuilderFactory
+				.getBuilder(ContactPerson.DEFAULT_ELEMENT_NAME);
+				ContactPerson contact = contactBuilder.buildObject();
 
-			if (partnerData.getMetadata4partner().getMetacontactsurname() != null) {
-				SAMLObjectBuilder<SurName> surNameBuilder = (SAMLObjectBuilder<SurName>) _oBuilderFactory
-				.getBuilder(SurName.DEFAULT_ELEMENT_NAME);
-				SurName surName = surNameBuilder.buildObject();
-				surName.setName(partnerData.getMetadata4partner().getMetacontactsurname());
-				contact.setSurName(surName);
-			}
+//			if (ContactPersonTypeEnumeration.ADMINISTRATIVE.toString().equalsIgnoreCase(partnerData.getMetadata4partner().getMetacontacttype())) {
+//				contact.setType(ContactPersonTypeEnumeration.ADMINISTRATIVE);
+//			} else	if (ContactPersonTypeEnumeration.BILLING.toString().equalsIgnoreCase(partnerData.getMetadata4partner().getMetacontacttype())) {
+//				contact.setType(ContactPersonTypeEnumeration.BILLING);
+//			} else if (ContactPersonTypeEnumeration.SUPPORT.toString().equalsIgnoreCase(partnerData.getMetadata4partner().getMetacontacttype())) {
+//				contact.setType(ContactPersonTypeEnumeration.SUPPORT);
+//			} else 	if (ContactPersonTypeEnumeration.TECHNICAL.toString().equalsIgnoreCase(partnerData.getMetadata4partner().getMetacontacttype())) {
+//				contact.setType(ContactPersonTypeEnumeration.TECHNICAL);
+//			}	else {
+//				contact.setType(ContactPersonTypeEnumeration.OTHER);
+//			}
 
-			if (partnerData.getMetadata4partner().getMetacontactemail() != null) {
-				SAMLObjectBuilder<EmailAddress> emailBuilder = (SAMLObjectBuilder<EmailAddress>) _oBuilderFactory
-				.getBuilder(EmailAddress.DEFAULT_ELEMENT_NAME);
-				EmailAddress email = emailBuilder.buildObject();
-				email.setAddress(partnerData.getMetadata4partner().getMetacontactemail());
-				contact.getEmailAddresses().add(email);
-			}
+				if (ContactPersonTypeEnumeration.ADMINISTRATIVE.toString().equalsIgnoreCase(eContactInfo.getMetacontacttype())) {
+					contact.setType(ContactPersonTypeEnumeration.ADMINISTRATIVE);
+				} else	if (ContactPersonTypeEnumeration.BILLING.toString().equalsIgnoreCase(eContactInfo.getMetacontacttype())) {
+					contact.setType(ContactPersonTypeEnumeration.BILLING);
+				} else if (ContactPersonTypeEnumeration.SUPPORT.toString().equalsIgnoreCase(eContactInfo.getMetacontacttype())) {
+					contact.setType(ContactPersonTypeEnumeration.SUPPORT);
+				} else 	if (ContactPersonTypeEnumeration.TECHNICAL.toString().equalsIgnoreCase(eContactInfo.getMetacontacttype())) {
+					contact.setType(ContactPersonTypeEnumeration.TECHNICAL);
+				}	else {
+					contact.setType(ContactPersonTypeEnumeration.OTHER);
+				}
 			
-			if (partnerData.getMetadata4partner().getMetacontactephone() != null) {
-				SAMLObjectBuilder<TelephoneNumber> phonelBuilder = (SAMLObjectBuilder<TelephoneNumber>) _oBuilderFactory
-				.getBuilder(TelephoneNumber.DEFAULT_ELEMENT_NAME);
-				TelephoneNumber phone = phonelBuilder.buildObject();
-				phone.setNumber(partnerData.getMetadata4partner().getMetacontactephone());
-				contact.getTelephoneNumbers().add(phone);
+//			if (partnerData.getMetadata4partner().getMetacontactname() != null) {
+//				SAMLObjectBuilder<GivenName> givenNameBuilder = (SAMLObjectBuilder<GivenName>) _oBuilderFactory
+//				.getBuilder(GivenName.DEFAULT_ELEMENT_NAME);
+//				GivenName givenName = givenNameBuilder.buildObject();
+//				givenName.setName(partnerData.getMetadata4partner().getMetacontactname());
+//				contact.setGivenName(givenName);
+//			}
+//
+//			if (partnerData.getMetadata4partner().getMetacontactsurname() != null) {
+//				SAMLObjectBuilder<SurName> surNameBuilder = (SAMLObjectBuilder<SurName>) _oBuilderFactory
+//				.getBuilder(SurName.DEFAULT_ELEMENT_NAME);
+//				SurName surName = surNameBuilder.buildObject();
+//				surName.setName(partnerData.getMetadata4partner().getMetacontactsurname());
+//				contact.setSurName(surName);
+//			}
+//
+//			if (partnerData.getMetadata4partner().getMetacontactemail() != null) {
+//				SAMLObjectBuilder<EmailAddress> emailBuilder = (SAMLObjectBuilder<EmailAddress>) _oBuilderFactory
+//				.getBuilder(EmailAddress.DEFAULT_ELEMENT_NAME);
+//				EmailAddress email = emailBuilder.buildObject();
+//				email.setAddress(partnerData.getMetadata4partner().getMetacontactemail());
+//				contact.getEmailAddresses().add(email);
+//			}
+//			
+//			if (partnerData.getMetadata4partner().getMetacontactephone() != null) {
+//				SAMLObjectBuilder<TelephoneNumber> phonelBuilder = (SAMLObjectBuilder<TelephoneNumber>) _oBuilderFactory
+//				.getBuilder(TelephoneNumber.DEFAULT_ELEMENT_NAME);
+//				TelephoneNumber phone = phonelBuilder.buildObject();
+//				phone.setNumber(partnerData.getMetadata4partner().getMetacontactephone());
+//				contact.getTelephoneNumbers().add(phone);
+//			}
+			
+				if (eContactInfo.getMetacontactname() != null) {
+					SAMLObjectBuilder<GivenName> givenNameBuilder = (SAMLObjectBuilder<GivenName>) _oBuilderFactory
+					.getBuilder(GivenName.DEFAULT_ELEMENT_NAME);
+					GivenName givenName = givenNameBuilder.buildObject();
+					givenName.setName(eContactInfo.getMetacontactname());
+					contact.setGivenName(givenName);
+				}
+	
+				if (eContactInfo.getMetacontactsurname() != null) {
+					SAMLObjectBuilder<SurName> surNameBuilder = (SAMLObjectBuilder<SurName>) _oBuilderFactory
+					.getBuilder(SurName.DEFAULT_ELEMENT_NAME);
+					SurName surName = surNameBuilder.buildObject();
+					surName.setName(eContactInfo.getMetacontactsurname());
+					contact.setSurName(surName);
+				}
+	
+				if (eContactInfo.getMetacontactemail() != null) {
+					SAMLObjectBuilder<EmailAddress> emailBuilder = (SAMLObjectBuilder<EmailAddress>) _oBuilderFactory
+					.getBuilder(EmailAddress.DEFAULT_ELEMENT_NAME);
+					EmailAddress email = emailBuilder.buildObject();
+					email.setAddress(eContactInfo.getMetacontactemail());
+					contact.getEmailAddresses().add(email);
+				}
+				
+				if (eContactInfo.getMetacontactephone() != null) {
+					SAMLObjectBuilder<TelephoneNumber> phonelBuilder = (SAMLObjectBuilder<TelephoneNumber>) _oBuilderFactory
+					.getBuilder(TelephoneNumber.DEFAULT_ELEMENT_NAME);
+					TelephoneNumber phone = phonelBuilder.buildObject();
+					phone.setNumber(eContactInfo.getMetacontactephone());
+					contact.getTelephoneNumbers().add(phone);
+				}
+				entityDescriptor.getContactPersons().add(contact);
 			}
-		
-			entityDescriptor.getContactPersons().add(contact);
 		}		//	End publish ContactPerson info
 
 		
