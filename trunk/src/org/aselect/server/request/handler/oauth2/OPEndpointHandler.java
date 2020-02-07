@@ -37,9 +37,6 @@ import javax.servlet.ServletConfig;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
-import net.sf.json.JSONObject;
-import net.sf.json.JSONSerializer;
-
 import org.aselect.server.application.ApplicationManager;
 import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.server.crypto.CryptoEngine;
@@ -52,7 +49,6 @@ import org.aselect.system.exception.ASelectCommunicationException;
 import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.exception.ASelectStorageException;
-import org.aselect.system.logging.SystemLogger;
 import org.aselect.system.utils.BASE64Decoder;
 import org.aselect.system.utils.BASE64Encoder;
 import org.aselect.system.utils.Tools;
@@ -62,6 +58,9 @@ import org.jose4j.jws.AlgorithmIdentifiers;
 import org.jose4j.jws.JsonWebSignature;
 import org.jose4j.jwt.JwtClaims;
 import org.jose4j.lang.JoseException;
+
+import net.sf.json.JSONObject;
+import net.sf.json.JSONSerializer;
 
 /**
  * OAUTH2 Authorization RequestHandler. <br>
@@ -81,11 +80,12 @@ public class OPEndpointHandler extends ProtoRequestHandler
 	private static final String RESPONSE_MODE_QUERY = "query";
 	private static final String RESPONSE_MODE_FORM_POST = "form_post";
 	private final static String MODULE = "OPEndpointHandler";
-	private final static String AUTH_CODE_PREFIX = "AUTH_CODE";
-	private final static String ID_TOKEN_PREFIX = "ID_TOKEN";
+	protected final static String AUTH_CODE_PREFIX = "AUTH_CODE";
+	protected final static String ID_TOKEN_PREFIX = "ID_TOKEN";
 	
-	private static final String DEFAULT_EXPIRES_IN = "900";	// defaults to 15 minutes
+	protected static final String DEFAULT_EXPIRES_IN = "900";	// defaults to 15 minutes
 //	private static final String DEFAULT_PW_HASH_METHOD = "SHA-256";
+	protected static final boolean DEFAULT_PROMPT_SUPPORTED = false;	// RH, 20191206, n
 	
 	private static HashMap<String, String> _client_ids = null;
 	
@@ -106,6 +106,9 @@ public class OPEndpointHandler extends ProtoRequestHandler
 	private static HashMap<String, String> _forced_app_ids = null;	// RH 20181129, n
 	private	String _forced_app_parameter = null;
 
+	private	boolean prompt_supported = DEFAULT_PROMPT_SUPPORTED;
+	private String sConsentTemplate = null;
+	
 
 	/* @param oServletConfig
 	 *            the o servlet config
@@ -195,8 +198,14 @@ public class OPEndpointHandler extends ProtoRequestHandler
 
 			try {
 				if (_configManager.getParam(oConfig, "post_template") != null) {
-					_sPostTemplate = readTemplateFromConfig(oConfig, "post_template");
-					setPostTemplate(_sPostTemplate);
+					// RH, 20191205, so
+//					_sPostTemplate = readTemplateFromConfig(oConfig, "post_template");
+//					setPostTemplate(_sPostTemplate);
+					// RH, 20191205, eo
+					// RH, 20191205, sn
+					String sPostTemplate = readTemplateFromConfig(oConfig, "post_template");
+					setPostTemplate(sPostTemplate);
+					// RH, 20191205, en
 				}
 			}
 			catch (ASelectConfigException e) {
@@ -233,6 +242,25 @@ public class OPEndpointHandler extends ProtoRequestHandler
 			}
 			// RH, 20181203, en
 
+			// RH, 20191206, sn
+			try {
+				String sPrompt_supprted = _configManager.getParam(oConfig, "prompt_supported");
+				setPrompt_supported(Boolean.parseBoolean(sPrompt_supprted));
+			}
+			catch (ASelectConfigException e) {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config item 'prompt_supported' found, defaults to:" + DEFAULT_PROMPT_SUPPORTED);
+			}
+			try {
+				if (_configManager.getParam(oConfig, "consent_template") != null) {
+					String sConsentTemplate = readTemplateFromConfig(oConfig, "consent_template");
+					setConsentTemplate(sConsentTemplate);
+
+				}
+			}
+			catch (ASelectConfigException e) {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config item 'consent_template' found, disabled");
+			}
+			// RH, 20191206, en
 		}
 		catch (ASelectException e) {
 			throw e;
@@ -261,7 +289,7 @@ public class OPEndpointHandler extends ProtoRequestHandler
 		String uid = defaultUID;
 		String extractedAselect_credentials = null;
 	    
-
+		ITokenMachine tokenMachine = createTokenMachine();
 		
 		// verify this is a authorization request here. e.g. url end with _authorize and/or if it is's a GET
 		// rfc6749 says authorization endpoint must support GET, may support POST
@@ -293,9 +321,9 @@ public class OPEndpointHandler extends ProtoRequestHandler
 					outwriter = Utils.prepareForHtmlOutput(servletRequest , servletResponse, "application/json" );
 					//
 					Utils.setDisableCachingHttpHeaders(servletRequest , servletResponse);	// RH, 20190606
-		   			int  return_status = 400; // default
+//		   			int  return_status = 400; // default, already set by TokenMachine contructor
 	
-					HashMap<String, String> return_parameters = new HashMap<String, String>();
+//					HashMap<String, String> return_parameters = new HashMap<String, String>();
 					boolean client_may_pass = false;
 					////
 				   	if (code.length() > 0) {	// retrieve access_token
@@ -306,7 +334,7 @@ public class OPEndpointHandler extends ProtoRequestHandler
 							String access_token = (String)history.get(AUTH_CODE_PREFIX + code);
 							_systemLogger.log(Level.FINEST, MODULE, sMethod, "Retrieved access token: " + Auxiliary.obfuscate(access_token));
 	
-	
+							access_token = extractAccessToken(access_token);
 				   		
 						BASE64Decoder b64dec = new BASE64Decoder();
 						byte[] bytes_access_token = b64dec.decodeBuffer(access_token);
@@ -345,8 +373,10 @@ public class OPEndpointHandler extends ProtoRequestHandler
 								else {
 									_systemLogger.log(Level.WARNING, MODULE, sMethod,
 											"No auth header and client_id not valid");
-									return_parameters.put("error", "invalid_client");
-									return_status = 400; // default
+									//	return_parameters.put("error", "invalid_client");
+									tokenMachine.setParameter("error", "invalid_client");
+									//	return_status = 400; // default
+									tokenMachine.setStatus(400);
 								}
 							}
 							else {
@@ -357,27 +387,9 @@ public class OPEndpointHandler extends ProtoRequestHandler
 	
 				   		if (client_may_pass) {	// All well
 		
-							// Also retrieve the id_token if there is one (Must have been requested with scope parameter in earlier Auth request
-							String saved_scope = (String)tgt.get("oauthsessionscope");
-
-				   			if (saved_scope != null && saved_scope.contains("openid")) {
-								String id_token = (String)history.get(ID_TOKEN_PREFIX + code);
-								if (id_token != null) {
-									// we should generate new id_token with proper appidacr
-						   			return_parameters.put("id_token", id_token );
-						   			try {
-						   				history.remove(ID_TOKEN_PREFIX + code);	// we'll have to handle if there would be a problem with remove
-										_systemLogger.log(Level.FINEST, MODULE, sMethod, "Removed id token from local storage using auth code: " + Auxiliary.obfuscate(code));
-						   			} catch (ASelectStorageException ase2) {
-										_systemLogger.log(Level.WARNING, MODULE, sMethod, "Ignoring problem removing id token from temp storage: " + ase2.getMessage());
-						   			}
-								}
-				   			}
-							
-				   			return_parameters.put("access_token", access_token );
-				   			return_parameters.put("token_type", "bearer" );
-				   			return_parameters.put("expires_in", DEFAULT_EXPIRES_IN );
-				   			return_status = 200; // all well
+//							return_status = supplyReturnParameters(code, return_parameters, history, access_token, tgt, appidacr);
+							int status = supplyReturnParameters(code, tokenMachine, history, access_token, tgt, appidacr);
+							tokenMachine.setStatus(status);
 				   			try {
 				   				history.remove(AUTH_CODE_PREFIX + code);	// we'll have to handle if there would be a problem with remove
 								_systemLogger.log(Level.FINEST, MODULE, sMethod, "Removed access token from local storage using auth code: " + Auxiliary.obfuscate(code));
@@ -386,25 +398,34 @@ public class OPEndpointHandler extends ProtoRequestHandler
 				   			}
 					   			
 				   		} else {
-				   			return_parameters.put("error", "client_authentication_failed" );
-				   			return_status = 401;
-							servletResponse.setHeader("WWW-Authenticate", "Bearer realm=\"" + _sMyServerID + "\"" + " , " + "error=" + "\"" + return_parameters.get("error") + "\"");
+				   			//	return_parameters.put("error", "client_authentication_failed" );
+				   			tokenMachine.setParameter("error", "client_authentication_failed" );
+				   			//	return_status = 401;
+				   			tokenMachine.setStatus(401);
+							//	servletResponse.setHeader("WWW-Authenticate", "Bearer realm=\"" + _sMyServerID + "\"" + " , " + "error=" + "\"" + return_parameters.get("error") + "\"");
+							servletResponse.setHeader("WWW-Authenticate", "Bearer realm=\"" + _sMyServerID + "\"" + " , " + "error=" + "\"" + tokenMachine.getParameter("error") + "\"");
 				   			
 				   		}
 					} catch (ASelectStorageException ase){
 						_systemLogger.log(Level.FINE, MODULE, sMethod, "Could not retrieve authentication code from temp storage: " + ase.getMessage());
-			   			return_parameters.put("error", "invalid_request" );
-			   			return_status = 400; // default
+			   			//	return_parameters.put("error", "invalid_request" );
+			   			tokenMachine.setParameter("error", "invalid_request" );
+			   			//	return_status = 400; // default
+			   			tokenMachine.setStatus(400);
 					}
 			   		} else {	// handle empty code
 		   				// return error 
 						_systemLogger.log(Level.FINE, MODULE, sMethod, "Empty code parameter received");
-			   			return_parameters.put("error", "invalid_grant" );
-			   			return_status = 400; // default
+			   			//	return_parameters.put("error", "invalid_grant" );
+			   			tokenMachine.setParameter("error", "invalid_grant" );
+			   			//	return_status = 400; // default
+			   			tokenMachine.setStatus(400);
 			   		}
-			   		servletResponse.setStatus(return_status);
+//			   		servletResponse.setStatus(return_status);
+			   		servletResponse.setStatus(tokenMachine.getStatus());
 			   		// return all JSON
-		   			String out = ((JSONObject) JSONSerializer.toJSON( return_parameters )).toString(0); 
+		   			//	String out = ((JSONObject) JSONSerializer.toJSON( return_parameters )).toString(0); 
+		   			String out = tokenMachine.toJSONString();
 					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Writing to client: " + out);
 					outwriter.println(out);
 				}
@@ -428,9 +449,36 @@ public class OPEndpointHandler extends ProtoRequestHandler
 				throw new ASelectException("Token request should be POST");
 			}
 		} else {	// Not a token request
-			// and we don't have credentials yet
+			// and we might don't have credentials yet
 	    	extractedAselect_credentials = servletRequest.getParameter("aselect_credentials");
-	
+
+	    	// RH, 20191205, sn
+       		String prompt	 =  servletRequest.getParameter("prompt");
+			ArrayList<String> prompts = new ArrayList<String>();
+
+       		if (isPrompt_supported() && prompt != null) {
+    			StringTokenizer tkn = new StringTokenizer(prompt);	// allow various separators, not only space
+    			while (tkn.hasMoreTokens()) {
+    				prompts.add(tkn.nextToken());
+    			}
+    			if ( prompts.contains("none") && prompts.size() > 1 ) {
+    				// Specs not clear on type of error
+    				_systemLogger.log(Level.WARNING, MODULE, sMethod, "prompt contains 'none' and some other value");
+    				throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
+    			}
+       			// prompt can have only distinct values
+       			// none : id we have extractedAselect_credentials we should validate them (and maybe also validate consent) and pass the user
+       			// else we should return an error
+       			// not implemented yet
+       			// login : prompt for reauthentication and pass user or return error if authentication fails
+       			// not implemented yet, we should probably remove the tgt and set extractedAselect_credentials = null
+       			// consent : prompt consent screen before continuing, error if no consent given
+       			// not implemented yet
+       			// select_account : prompt user to select an account, error if no account selected
+       			// not implemented yet
+       		}
+	    	// RH, 20191205, en
+
 	    	if (extractedAselect_credentials == null) {		// For now we don't care about previous authentication, let aselect handle that
 		    	// authenticate to the aselect server
 	    		String ridReqURL = aselectServerURL;
@@ -443,6 +491,7 @@ public class OPEndpointHandler extends ProtoRequestHandler
 	    		String response_type = servletRequest.getParameter("response_type");
 	       		String scope	 =  servletRequest.getParameter("scope");
 	       		String state	 =  servletRequest.getParameter("state");
+	       		String aud	 =  servletRequest.getParameter("aud");	// RH, 20191205, n	// additional audience(s) in claim
 	       		
 	       		// RH, 20190905, sn
 	       		String response_mode	 =  servletRequest.getParameter("response_mode");
@@ -499,6 +548,23 @@ public class OPEndpointHandler extends ProtoRequestHandler
 					redirectURI = validURIs.keySet().iterator().next();	// just get the first, list should contain only one value if no redirect_uri specified 
 				}
 
+				// RH, 20191206, sn
+    			if ( prompts.contains("none") ) {
+					_systemLogger.log(Level.WARNING, MODULE, sMethod, "Not logged in and prompt==none");
+					String error_redirect = null;
+					try {
+			        	String error = "login_required";
+						error_redirect = redirectURI.toString() + (redirectURI.toString().contains("?") ? "&" : "?") + "error=" + error 
+								+ ( ( state != null ) ? ("&state=" + state) : "");
+						servletResponse.sendRedirect(error_redirect);
+						///////////////////////////////////////////
+						return null;
+					} catch (IOException iox){
+						_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not redirect user to: " + error_redirect);
+						throw new ASelectCommunicationException(Errors.ERROR_ASELECT_IO);
+					}
+    			}
+				// RH, 20191206, sn
 				
 	    		if ( response_type != null ) {
 	           		// Allow response_type 'id_token' and/or 'code'
@@ -577,6 +643,7 @@ public class OPEndpointHandler extends ProtoRequestHandler
 	//			    				"&check-signature=" + URLEncoder.encode(ridCheckSignature, "UTF-8") +
 		    				"&app_id=" + URLEncoder.encode(sAppId, "UTF-8");
 					_systemLogger.log(Level.FINER, MODULE, sMethod, "Requesting rid from: " + ridReqURL + " , with app_url: " + ridAppURL + " , and app_id: " + sAppId);
+//					_systemLogger.log(Level.FINEST, MODULE, sMethod, "ridURL: " + Auxiliary.obfuscate(ridURL));
 	
 	    			URL url = new URL(ridURL); 
 	    			
@@ -644,7 +711,7 @@ public class OPEndpointHandler extends ProtoRequestHandler
 				_systemLogger.log(Level.FINER, MODULE, sMethod, "oauthsessionid: " +javaxSessionid);
 	
 				_htSessionContext.put("oauthsessionid", javaxSessionid);
-				_htSessionContext.put("oauthsessionresp_types", resp_types);	// not sure if we can handle ArrayList<String> here
+				_htSessionContext.put("oauthsessionresp_types", resp_types);
 				if (scope != null) {
 					_htSessionContext.put("oauthsessionscope", scope);
 				}
@@ -667,6 +734,15 @@ public class OPEndpointHandler extends ProtoRequestHandler
 					_htSessionContext.put("oauthsessionresponse_mode", response_mode);
 				}
 				// RH, 20190905, en
+				
+				// RH, 20191206, sn
+				if (aud != null) {
+					_htSessionContext.put("oauthsessionaud", aud);
+				}
+				if (prompts.size() > 0) {
+					_htSessionContext.put("oauthsessionprompts", prompts);
+				}
+				// RH, 20191206, en
 				
 				_oSessionManager.updateSession(extractedRid, _htSessionContext);
 				
@@ -732,6 +808,63 @@ public class OPEndpointHandler extends ProtoRequestHandler
 					}
 				}
 				
+				// RH, 20191206, sn
+				/////////////////////// Request user consent
+				String oauthsessionconsent = (String)htTGTContext.get("oauthsessionconsent");
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "oauthsessionconsent: " + oauthsessionconsent);
+//				if (oauthsessionconsent == null) {	// maybe check for which claims here	// RH, 20200207, o
+				// fix, Only request consent if consent form has been configured
+				if (getConsentTemplate() != null && oauthsessionconsent == null) {	// maybe check for which claims here	// RH, 20200207, n
+		    		String formToken = servletRequest.getParameter("form_token");
+		    		String userconsent = servletRequest.getParameter("consent");
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "form_token: " + formToken + ", consent: " + userconsent);
+
+		    		if (formToken == null || userconsent == null) {
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "No form_token or consent, start requesting consent");
+						extractedAselect_credentials = servletRequest.getParameter("aselect_credentials");
+						HashMap<String, String> parms = new HashMap<>();
+						parms.put("aselect_credentials", extractedAselect_credentials);
+						byte[] baFormToken = new byte[32];
+						CryptoEngine.nextRandomBytes(baFormToken);
+						formToken = Utils.byteArrayToHexString(baFormToken);
+						htTGTContext.put("oauthsessionform_token", formToken);
+						_tgtManager.updateTGT(sTgt, htTGTContext);
+						parms.put("form_token", formToken);
+						parms.put("a-select-server", _sMyServerID);
+						parms.put("consent", "OK");	// maybe put requested claims in consent
+						String rid = (String)htTGTContext.get("rid");
+						parms.put("rid", rid);
+						//	parms.put("cancel", "");		// not sure yet what to do with cancel
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Requesting consent from user");
+						
+						requestConsent(servletRequest, servletResponse, getIdpfEndpointUrl(), parms);
+						// maybe do some cleanup here
+						return null;
+		    		} else {
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Received form_token and consent, continuing");
+		    			String savedFormToken = (String)htTGTContext.get("oauthsessionform_token");
+		    			
+//		    			if (!savedFormToken.equals(savedFormToken)) {	// RH, 20200207, o
+		    			if (!formToken.equals(savedFormToken)) {	// RH, 20200207, n
+		    				// form has been tempered with or not our request
+							_systemLogger.log(Level.WARNING, MODULE, sMethod, "Form has been tempered with or not our request");
+							throw new ASelectCommunicationException(Errors.ERROR_ASELECT_SERVER_INVALID_SESSION);
+		    			} else {
+		    				if (!"OK".equals(userconsent)) {
+		    					// return error
+		    					// transferToClient with error
+		    				} else {
+		    					// all well, continue
+		    					oauthsessionconsent = "OK";	// maybe put requested claims instead of OK
+								htTGTContext.put("oauthsessionconsent", oauthsessionconsent);
+								_tgtManager.updateTGT(sTgt, htTGTContext);
+		    				}
+		    			}
+		    		}
+				}
+				//////////////////////////////////
+				// RH, 20191206, sn
+				
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "Handle the aselectserver response");
 				String sAppId = (String)htTGTContext.get("app_id");
 				String finalResult  = verify_credentials(servletRequest, extractedAselect_credentials, sAppId);
@@ -793,23 +926,18 @@ public class OPEndpointHandler extends ProtoRequestHandler
 
 					String saved_scope = (String)htTGTContext.get("oauthsessionscope");
 					ArrayList<String> saved_resp_types = (ArrayList<String>)htTGTContext.get("oauthsessionresp_types");	// not sure if we support this
-		        	// generate authorization_code
-		    		byte[] baRandomBytes = new byte[32];
+		        	String generated_authorization_code = tokenMachine.generateAuthorizationCode();
 	
-		    		CryptoEngine.nextRandomBytes(baRandomBytes);
-		    		String generated_authorization_code = Utils.byteArrayToHexString(baRandomBytes);
-	
-		    		// for now store in HistoryManager
-		    		HashMap<String, String> authorization_code = new HashMap<String, String>();
-		    		authorization_code.put("aselect_credentials", extractedAselect_credentials);
+		        	// RH, 201191210, so
+		        	// For now store in HistoryManager
+//		    		HashMap<String, String> authorization_code = new HashMap<String, String>();
+//		    		authorization_code.put("aselect_credentials", extractedAselect_credentials);
+		        	// RH, 201191210, eo
 					// Store it in the history for later retrieval by token request
-		    		// Unfortunately access_token should not contain "*", see rfc6750, par. 2.1 Bearer token
-		    		// our extractedAselect_credentials may contain one or more "*"
-		    		// We must fix that, so we do
-		    		BASE64Encoder b64enc = new BASE64Encoder();
 		    		String access_token = null;
 		    		try {
-						access_token = b64enc.encode(extractedAselect_credentials.getBytes("UTF-8"));
+//			    		access_token = tokenMachine.createAccessToken(extractedAselect_credentials);
+			    		access_token = tokenMachine.createAccessToken(extractedAselect_credentials, hmExtractedAttributes, ASelectConfigManager.getHandle().getDefaultPrivateKey());
 					}
 					catch (UnsupportedEncodingException e) {
 //						_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Could not URLEncode to UTF-8, this should not happen!");	// RH, 20181126, o
@@ -838,8 +966,25 @@ public class OPEndpointHandler extends ProtoRequestHandler
 							_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not redirect user to: " + return_url);	// RH, 20181126, n
 							throw new ASelectCommunicationException(Errors.ERROR_ASELECT_IO);
 						}
+					} catch (JoseException e) {
+						_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Unable to serialize json, this should not happen!");	// RH, 20181126, n
+						try {
+				        	String error = "server_error_" + "Unsupported_charset_UTF-8" ;
+				        	return_url.append(sep).append("error=" + error);
+				        	sep = "&";
+				        	if (saved_state != null) {
+				        		return_url.append(sep).append("state=" + saved_state);
+				        	}
+	//						servletResponse.sendRedirect(return_url.toString());	// RH, 20190905, o
+							transferToClient(servletRequest, servletResponse, saved_redirect_uri, return_url.toString(), saved_response_mode);
+						} catch (IOException e1) {
+							_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not redirect user to: " + return_url);	// RH, 20181126, n
+							throw new ASelectCommunicationException(Errors.ERROR_ASELECT_IO);
+						}	// RH, 20190905, n
+						// RH, 20181126, en
+						return null;
 					}
-		    		
+		    		// store in HistoryManager	// RH, 201191210, n
 					SamlHistoryManager history = SamlHistoryManager.getHandle();
 					history.put(AUTH_CODE_PREFIX+ generated_authorization_code, access_token);
 					// if scope contains openid, also generate the id_token
@@ -849,7 +994,7 @@ public class OPEndpointHandler extends ProtoRequestHandler
 						//	generate the id_token using extractedAttributes
 						try {
 //							id_token = createIDToken(hmExtractedAttributes, (String)(hmExtractedAttributes.get("uid")), _sMyServerID, saved_client_id, saved_nonce, appidacr );	// RH, 20181114, o
-							id_token = createIDToken(hmExtractedAttributes, (String)(hmExtractedAttributes.get("uid")), _sMyServerID, 
+							id_token = tokenMachine.createIDToken(hmExtractedAttributes, (String)(hmExtractedAttributes.get("uid")), _sMyServerID, 
 									saved_client_id, saved_nonce, appidacr, ASelectConfigManager.getHandle().getDefaultPrivateKey(), 
 //									saved_resp_types.contains("id_token") ? generated_authorization_code : null );	// RH, 20181114, n	// RH, 20181129, o
 									saved_resp_types.contains("code") ? generated_authorization_code : null );	// RH, 20181114, n	// RH, 20181129, n
@@ -926,6 +1071,87 @@ public class OPEndpointHandler extends ProtoRequestHandler
 		return null;
 	}
 
+	protected String extractAccessToken(String access_token) {
+		// for standard oauth we do nothing here
+		return access_token;
+	}
+
+	/**
+	 * @param sMethod
+	 * @param code
+	 * @param return_parameters
+	 * @param history
+	 * @param access_token
+	 * @param tgt
+	 * @return HTTP return code
+	 * @throws ASelectStorageException
+	 */
+//	protected int supplyReturnParameters(String code, HashMap<String, String> return_parameters,
+	protected int supplyReturnParameters(String code, ITokenMachine tokenMachine,
+			SamlHistoryManager history, String access_token, HashMap tgt, String appidacr) throws ASelectStorageException {
+		
+		String sMethod = "supplyReturnParameters";
+		int return_status;
+
+		// Also retrieve the id_token if there is one (Must have been requested with scope parameter in earlier Auth request
+		String saved_scope = (String)tgt.get("oauthsessionscope");
+
+		if (saved_scope != null && saved_scope.contains("openid")) {
+			String id_token = (String)history.get(ID_TOKEN_PREFIX + code);
+			if (id_token != null) {
+				// we should generate new id_token with proper appidacr
+				//	return_parameters.put("id_token", id_token );
+				tokenMachine.setParameter("id_token", id_token );
+				try {
+					history.remove(ID_TOKEN_PREFIX + code);	// we'll have to handle if there would be a problem with remove
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Removed id token from local storage using auth code: " + Auxiliary.obfuscate(code));
+				} catch (ASelectStorageException ase2) {
+					_systemLogger.log(Level.WARNING, MODULE, sMethod, "Ignoring problem removing id token from temp storage: " + ase2.getMessage());
+				}
+			}
+		}
+		
+//		return_parameters.put("access_token", access_token );
+//		return_parameters.put("token_type", "bearer" );
+//		return_parameters.put("expires_in", DEFAULT_EXPIRES_IN );
+		tokenMachine.setParameter("access_token", access_token );
+		tokenMachine.setParameter("token_type", "bearer" );
+		tokenMachine.setParameter("expires_in", DEFAULT_EXPIRES_IN );
+//		return_status = 200; // all well
+		tokenMachine.setStatus(200); // all well
+		return tokenMachine.getStatus();
+	}
+
+	/**
+	 * @param extractedAselect_credentials
+	 * @return created access_token
+	 * @throws UnsupportedEncodingException
+	 */
+	/*
+	protected String createAccessToken(String extractedAselect_credentials) throws UnsupportedEncodingException {
+		// Unfortunately access_token should not contain "*", see rfc6750, par. 2.1 Bearer token
+		// our extractedAselect_credentials may contain one or more "*"
+		// We must fix that, so we do
+
+		String access_token;
+		BASE64Encoder b64enc = new BASE64Encoder();
+		access_token = b64enc.encode(extractedAselect_credentials.getBytes("UTF-8"));
+		return access_token;
+	}
+*/
+	/**
+	 * @return generated authorization_code
+	 */
+	/*
+	protected String generateAuthorizationCode() {
+		// generate authorization_code
+		byte[] baRandomBytes = new byte[32];
+
+		CryptoEngine.nextRandomBytes(baRandomBytes);
+		String generated_authorization_code = Utils.byteArrayToHexString(baRandomBytes);
+		return generated_authorization_code;
+	}
+*/
 	private boolean verify_auth_header(String auth_header, String user, String pwhash, String alg)
 	{
 		String sMethod = "verify_auth_header";
@@ -1039,8 +1265,11 @@ public class OPEndpointHandler extends ProtoRequestHandler
 	{
 		String sMethod = "verify_credentials";
 		// This could be done by getting request parametermap
-		String queryData = request.getQueryString();
-		String extractedRid = queryData.replaceFirst(".*rid=([^&]*).*$", "$1");
+		// RH 20191209, so
+//		String queryData = request.getQueryString();
+//		String extractedRid = queryData.replaceFirst(".*rid=([^&]*).*$", "$1");
+		// RH, 201911209, eo
+		String extractedRid = request.getParameter("rid");	// RH, 20191209, n
 		String finalReqURL = aselectServerURL;
 //		String finalReqSharedSecret = sharedSecret;
 		String finalReqAselectServer = _sMyServerID;
@@ -1190,74 +1419,115 @@ public class OPEndpointHandler extends ProtoRequestHandler
 	}
 
 
-//	public String createIDToken(HashMap attributes, String subject, String issuer, String audience, String nonce, String appidacr) throws UnsupportedEncodingException, JoseException {	// RH, 20181114, o
+	public synchronized boolean isPrompt_supported() {
+		return prompt_supported;
+	}
+
+	public synchronized void setPrompt_supported(boolean prompt_supported) {
+		this.prompt_supported = prompt_supported;
+	}
+
+	public synchronized String getConsentTemplate() {
+		return sConsentTemplate;
+	}
+
+	public synchronized void setConsentTemplate(String sConsentTemplate) {
+		this.sConsentTemplate = sConsentTemplate;
+	}
+	
+	protected ITokenMachine createTokenMachine() {
+		return  new TokenMachine();
+	}
+
+/*
+	//	public String createIDToken(HashMap attributes, String subject, String issuer, String audience, String nonce, String appidacr) throws UnsupportedEncodingException, JoseException {	// RH, 20181114, o
 		public String createIDToken(HashMap attributes, String subject, String issuer, String audience, String nonce, String appidacr, 
-				PrivateKey pk, String code) throws UnsupportedEncodingException, JoseException {	// RH, 20181114, n
+					PrivateKey pk, String code) throws UnsupportedEncodingException, JoseException {	// RH, 20181114, n
+			
+			// JSON Web Tokens (JWTs) and public key cryptography, RSA 256
+	        JwtClaims claims = new JwtClaims();
+	//        claims.setExpirationTimeMinutesInTheFuture(1);
+	        claims.setSubject(subject);
+	        claims.setIssuer(issuer);
+	        claims.setAudience(audience);
+	        claims.setExpirationTimeMinutesInTheFuture(900 / 60);
+	        claims.setIssuedAtToNow();
+	        claims.setNotBeforeMinutesInThePast(0);
+	        claims.setStringClaim("nonce", nonce);
+	        claims.setStringClaim("ver", "1.0");
+	        claims.setStringClaim("appidacr", appidacr);
+	        String c_hash = null;
+	        if (code != null) {
+	 //       	calculate the c_hash over the code, 3.3.2.11. ID Token
+	        	// AlgorithmIdentifiers.RSA_USING_SHA256 so SHA-256
+	        	String algorithm = "SHA-256";
+	        	String charset = "US-ASCII";
+				MessageDigest md;
+				try {
+					md = MessageDigest.getInstance(algorithm);
+			        md.update(code.getBytes(charset));
+	//		        byte[] b64data = Base64.encodeBase64URLSafe(byteData);	// if we want to use apache
+			        // take left-most ( first 128 bits for SHA-256 )
+			        byte byteData[] = Arrays.copyOf(md.digest(), 16);
+			        c_hash = Base64.getUrlEncoder()
+		            .withoutPadding()
+		            .encodeToString(byteData);
+				}
+				catch (NoSuchAlgorithmException e) {
+					c_hash = null;
+				}
+				catch (UnsupportedEncodingException e) {
+					c_hash = null;
+				}
+	        }
+	        if (c_hash != null) {
+	            claims.setStringClaim("c_hash", c_hash);        	
+	        }
+	        
+	        Set<String> attrNames = (Set<String>)(attributes.keySet());
+	        for (String attrName : attrNames) {
+	        	Object attrValue = attributes.get(attrName);
+	        	if (attrValue instanceof Vector) {	// depricated but we still use the Vector type
+	        		claims.setStringListClaim(attrName, (Vector)attrValue);
+	        	} else {	// should be string
+	        		claims.setStringClaim(attrName, (String)attrValue);
+	        	}
+	        }
+	        
+	//        Key key = new HmacKey(secret.getBytes("UTF-8"));
+	
+	        JsonWebSignature jws = new JsonWebSignature();
+	        jws.setPayload(claims.toJson());
+	//        jws.setAlgorithmHeaderValue(AlgorithmIdentifiers.HMAC_SHA256);
+	        jws.setAlgorithmHeaderValue(AlgorithmIdentifiers.RSA_USING_SHA256);
+	//        jws.setKey(key);
+	        // Sign using the private key
+	//        jws.setKey(ASelectConfigManager.getHandle().getDefaultPrivateKey());	// RH, 20181114, o
+	        jws.setKey(pk);	// RH, 20181114, n
+	
+	        return jws.getCompactSerialization();
+	    }
+*/
+	
+	// RH, 20191206, sn
+	public void requestConsent(HttpServletRequest servletRequest, HttpServletResponse servletResponse, String action_url, HashMap<String, String> parms) throws ASelectException {
+
+		String sMethod = "requestConsent";
+		String sTemplate = getConsentTemplate();
+		if (sTemplate != null) {
+			String sInputLines = ""; 
+			for (String s : parms.keySet()) {
+				sInputLines += buildHtmlInput(Tools.htmlEncode(s), Tools.htmlEncode(parms.get(s)));
+			}
+			handlePostForm(sTemplate, action_url, sInputLines,
+					servletRequest, servletResponse);
+		}
+		return;
+	}
 		
-		// JSON Web Tokens (JWTs) and public key cryptography, RSA 256
-        JwtClaims claims = new JwtClaims();
-//        claims.setExpirationTimeMinutesInTheFuture(1);
-        claims.setSubject(subject);
-        claims.setIssuer(issuer);
-        claims.setAudience(audience);
-        claims.setExpirationTimeMinutesInTheFuture(900 / 60);
-        claims.setIssuedAtToNow();
-        claims.setNotBeforeMinutesInThePast(0);
-        claims.setStringClaim("nonce", nonce);
-        claims.setStringClaim("ver", "1.0");
-        claims.setStringClaim("appidacr", appidacr);
-        String c_hash = null;
-        if (code != null) {
- //       	calculate the c_hash over the code, 3.3.2.11. ID Token
-        	// AlgorithmIdentifiers.RSA_USING_SHA256 so SHA-256
-        	String algorithm = "SHA-256";
-        	String charset = "US-ASCII";
-			MessageDigest md;
-			try {
-				md = MessageDigest.getInstance(algorithm);
-		        md.update(code.getBytes(charset));
-//		        byte[] b64data = Base64.encodeBase64URLSafe(byteData);	// if we want to use apache
-		        // take left-most ( first 128 bits for SHA-256 )
-		        byte byteData[] = Arrays.copyOf(md.digest(), 16);
-		        c_hash = Base64.getUrlEncoder()
-	            .withoutPadding()
-	            .encodeToString(byteData);
-			}
-			catch (NoSuchAlgorithmException e) {
-				c_hash = null;
-			}
-			catch (UnsupportedEncodingException e) {
-				c_hash = null;
-			}
-        }
-        if (c_hash != null) {
-            claims.setStringClaim("c_hash", c_hash);        	
-        }
-        
-        Set<String> attrNames = (Set<String>)(attributes.keySet());
-        for (String attrName : attrNames) {
-        	Object attrValue = attributes.get(attrName);
-        	if (attrValue instanceof Vector) {	// depricated but we still use the Vector type
-        		claims.setStringListClaim(attrName, (Vector)attrValue);
-        	} else {	// should be string
-        		claims.setStringClaim(attrName, (String)attrValue);
-        	}
-        }
-        
-//        Key key = new HmacKey(secret.getBytes("UTF-8"));
+	// RH, 20191206, sn
 
-        JsonWebSignature jws = new JsonWebSignature();
-        jws.setPayload(claims.toJson());
-//        jws.setAlgorithmHeaderValue(AlgorithmIdentifiers.HMAC_SHA256);
-        jws.setAlgorithmHeaderValue(AlgorithmIdentifiers.RSA_USING_SHA256);
-//        jws.setKey(key);
-        // Sign using the private key
-//        jws.setKey(ASelectConfigManager.getHandle().getDefaultPrivateKey());	// RH, 20181114, o
-        jws.setKey(pk);	// RH, 20181114, n
-
-        return jws.getCompactSerialization();
-    }
-
+		
 	// RH, 20190905, sn
 	/**
 	 * 
