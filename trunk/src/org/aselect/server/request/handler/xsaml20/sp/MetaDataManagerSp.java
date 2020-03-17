@@ -17,6 +17,8 @@ import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.Map;
 import java.util.logging.Level;
+import java.util.regex.Pattern;
+import java.util.regex.PatternSyntaxException;
 
 import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.server.request.handler.xsaml20.AbstractMetaDataManager;
@@ -178,9 +180,28 @@ public class MetaDataManagerSp extends AbstractMetaDataManager
 
 			// RH, 20200121, sn
 			String sAssertionIssierPattern = Utils.getSimpleParam(_configManager, _systemLogger, idpSection, "assertionissuerpattern", false);
-			if (sAssertionIssierPattern != null)
-				idpData.setAssertionIssuerPattern(sAssertionIssierPattern);
+			if (sAssertionIssierPattern != null) {
+				try {
+					Pattern specificIssuer = Pattern.compile(sAssertionIssierPattern);
+					idpData.setAssertionIssuerPattern(specificIssuer);
+				} catch (PatternSyntaxException pex) {
+					throw new ASelectException(Errors.ERROR_ASELECT_CONFIG_ERROR, pex);
+				}
+
+			}
 			// RH, 20200121, en
+			
+			// RH, 20200213, sn
+			String sNameIDIssierPattern = Utils.getSimpleParam(_configManager, _systemLogger, idpSection, "nameidissuerpattern", false);
+			if (sNameIDIssierPattern != null) {
+				try {
+					Pattern specificIssuer = Pattern.compile(sNameIDIssierPattern);
+					idpData.setNameIDIssuerPattern(specificIssuer);
+				} catch (PatternSyntaxException pex) {
+					throw new ASelectException(Errors.ERROR_ASELECT_CONFIG_ERROR, pex);
+				}
+			}
+			// RH, 20200213, en
 
 			// RH, 20181005, sn
 			String idpentryproviderid = Utils.getParamFromSection(_configManager, _systemLogger, idpSection, "authnrequest_scoping", "authnrequest_providerid", false);

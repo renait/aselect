@@ -547,6 +547,7 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 					// RH, 20190225, sn
 					// Try Encrypted Assertion first
 					Assertion samlAssertion = null;
+					Assertion samlNameIDAssertion = null;	// RH, 20200213, n
 /*			
 */
 /*					
@@ -576,15 +577,19 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 						throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 					}
 					PartnerData fedPartnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(_sResourceGroup, sFederationUrl);	// RH, 20190325, o	// RH, 20200120, n
+
+					// RH, 20200121, sn
 					Pattern specificIssuer = null;
 					if (fedPartnerData.getAssertionIssuerPattern() != null) {
-						try {
-							specificIssuer = Pattern.compile(fedPartnerData.getAssertionIssuerPattern());	// maybe we should do this once in initialisation
-						} catch (PatternSyntaxException pex) {
-							throw new ASelectException(Errors.ERROR_ASELECT_CONFIG_ERROR, pex);
-						}
-
+						specificIssuer = fedPartnerData.getAssertionIssuerPattern();
 					}
+					// RH, 20200213, sn
+					Pattern nameIDIssuer = null;
+					if (fedPartnerData.getNameIDIssuerPattern() != null) {
+						nameIDIssuer = fedPartnerData.getNameIDIssuerPattern();					}
+					// RH, 20200213, sn
+
+					// RH, 20200213, sn
 					
 					for (Assertion a : asses) {
 						// for testing show all Issuers
@@ -593,6 +598,12 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 							_systemLogger.log(Level.INFO, MODULE, sMethod, "Found Assertion Issuer match for pattern:" + specificIssuer);
 							samlAssertion = a;
 						}
+						// RH, 20200213, sn
+						if (nameIDIssuer != null && nameIDIssuer.matcher(a.getIssuer().getValue()).matches()) {
+							_systemLogger.log(Level.INFO, MODULE, sMethod, "Found NameID Assertion Issuer match for pattern:" + specificIssuer);
+							samlNameIDAssertion = a;
+						}
+						// RH, 20200213, sn
 					}
 
 					if (samlAssertion == null) samlAssertion = asses.get(0);	// For now/test get first like we used to
@@ -631,6 +642,26 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 							throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 						}
 						_systemLogger.log(Level.INFO, MODULE, sMethod, "Assertion was signed OK");
+						
+						// RH, 20200213, sn
+						if (samlNameIDAssertion != null) {
+							_systemLogger.log(Level.FINE, MODULE, sMethod, "NameID Assertion ID=" +samlNameIDAssertion.getID());
+							String sNameIDAssertIssuer = samlNameIDAssertion.getIssuer().getValue();
+							_systemLogger.log(Level.INFO, MODULE, sMethod, "Verify nameid assertion signature, issuer="+sNameIDAssertIssuer);
+							if (!Utils.hasValue(sNameIDAssertIssuer)) {
+								_systemLogger.log(Level.SEVERE, MODULE, sMethod, "No Issuer present in NameID Assertion");
+								throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
+							}
+							
+							if (!SamlTools.checkSignature(samlNameIDAssertion, pkeys)) {	// RH, 20181119, n
+								_systemLogger.log(Level.SEVERE, MODULE, sMethod, "NameID Assertion was NOT signed OK");
+								throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
+							}
+							_systemLogger.log(Level.INFO, MODULE, sMethod, "NameID Assertion was signed OK");
+						} else {
+							_systemLogger.log(Level.FINEST, MODULE, sMethod, "No NameID Assertion found, continuing");
+						}
+						// RH, 20200213, sn
 					}
 					// 20120308
 					
@@ -638,7 +669,15 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 					// Might be an encrypted NameID 
 					String sNameID = null;
 					String sNameIDQualifier = null;
-					Subject subject = samlAssertion.getSubject();
+					// RH, 20200213, sn
+					Subject subject = null;
+					if (samlNameIDAssertion != null) {
+						subject = samlNameIDAssertion.getSubject();
+					} else {
+						subject = samlAssertion.getSubject();	// like we used to
+					}
+					// RH, 20200213, sn
+//					Subject subject = samlAssertion.getSubject();	// RH, 20200213, o
 
 					NameID nameid = null;
 
@@ -737,6 +776,7 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 						throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 					}
 					// check subjectlocalityaddress
+					// we check subjectlocalityaddress of samlAssertion not of samlNameIDAssertion	// RH, 20200213, n
 					if (isLocalityAddressRequired()
 							&& !SamlTools.checkLocalityAddress(samlAssertion.getAuthnStatements().get(0), servletRequest.getRemoteAddr())) {
 						_systemLogger.log(Level.SEVERE, MODULE, sMethod, "AuthnStatement subjectlocalityaddress was NOT valid");
