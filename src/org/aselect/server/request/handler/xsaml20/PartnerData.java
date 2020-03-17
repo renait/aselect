@@ -24,6 +24,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.Vector;
 import java.util.logging.Level;
+import java.util.regex.Pattern;
 
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.lang.builder.StandardToStringStyle;
@@ -77,7 +78,8 @@ public class PartnerData
 	private String p_point = null;
 	// RH, 20181102, en
 
-	private String assertionIssuerPattern = null;	// RH, 20200121, n
+	private Pattern assertionIssuerPattern = null;	// RH, 20200121, n
+	private Pattern nameIDIssuerPattern = null;	// RH, 20200213, n
 
 	public PartnerData(String sId)
 	{
@@ -264,13 +266,27 @@ public class PartnerData
 		this.idpentryproviderid = idpentryproviderid;
 	}
 
-	public synchronized String getAssertionIssuerPattern() {
+	public synchronized Pattern getAssertionIssuerPattern() {
 		return assertionIssuerPattern;
 	}
 
 
-	public synchronized void setAssertionIssuerPattern(String assertionIssuerPattern) {
+	public synchronized void setAssertionIssuerPattern(Pattern assertionIssuerPattern) {
 		this.assertionIssuerPattern = assertionIssuerPattern;
+	}
+
+	/**
+	 * @return the nameIDIssuerPattern
+	 */
+	public synchronized Pattern getNameIDIssuerPattern() {
+		return nameIDIssuerPattern;
+	}
+
+	/**
+	 * @param nameIDIssuerPattern the nameIDIssuerPattern to set
+	 */
+	public synchronized void setNameIDIssuerPattern(Pattern nameIDIssuerPattern) {
+		this.nameIDIssuerPattern = nameIDIssuerPattern;
 	}
 
 	// Simple wrapper for crypto info
