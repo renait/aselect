@@ -12,7 +12,11 @@
 package org.aselect.server.request.handler.xsaml20;
 
 import java.io.File;
+import java.io.IOException;
 import java.security.PrivateKey;
+import java.util.Arrays;
+import java.util.Collection;
+import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
 
@@ -35,13 +39,22 @@ import org.opensaml.common.SAMLObjectBuilder;
 import org.opensaml.common.SignableSAMLObject;
 import org.opensaml.common.binding.BasicSAMLMessageContext;
 import org.opensaml.common.binding.SAMLMessageContext;
+import org.opensaml.common.binding.artifact.BasicSAMLArtifactMap;
+import org.opensaml.common.binding.artifact.SAMLArtifactMap;
+import org.opensaml.common.binding.artifact.SAMLArtifactMap.SAMLArtifactMapEntry;
 import org.opensaml.common.impl.SAMLObjectContentReference;
+import org.opensaml.saml2.binding.artifact.AbstractSAML2Artifact;
+import org.opensaml.saml2.binding.artifact.SAML2ArtifactBuilder;
+import org.opensaml.saml2.binding.artifact.SAML2ArtifactType0004;
+import org.opensaml.saml2.binding.encoding.HTTPArtifactEncoder;
 import org.opensaml.saml2.binding.encoding.HTTPPostEncoder;
 import org.opensaml.saml2.binding.encoding.HTTPPostSimpleSignEncoder;
 import org.opensaml.saml2.binding.encoding.HTTPRedirectDeflateEncoder;
 import org.opensaml.saml2.core.LogoutRequest;
 import org.opensaml.saml2.metadata.AssertionConsumerService;
 import org.opensaml.saml2.metadata.Endpoint;
+import org.opensaml.util.storage.MapBasedStorageService;
+import org.opensaml.util.storage.StorageService;
 import org.opensaml.ws.message.encoder.MessageEncodingException;
 import org.opensaml.ws.transport.http.HttpServletResponseAdapter;
 import org.opensaml.xml.XMLObjectBuilder;
@@ -50,6 +63,7 @@ import org.opensaml.xml.encryption.EncryptionConstants;
 import org.opensaml.xml.io.Marshaller;
 import org.opensaml.xml.io.MarshallerFactory;
 import org.opensaml.xml.io.MarshallingException;
+import org.opensaml.xml.parse.BasicParserPool;
 import org.opensaml.xml.security.BasicSecurityConfiguration;
 import org.opensaml.xml.security.SecurityConfiguration;
 import org.opensaml.xml.security.SecurityHelper;
@@ -236,20 +250,21 @@ public class LogoutRequestSender
 			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Send using: " + "HTTP-POST");
 
 			VelocityEngine velocityEngine = new VelocityEngine();
+//			velocityEngine.setProperty(RuntimeConstants.RESOURCE_LOADER, "file,class");
+			velocityEngine.setProperty(RuntimeConstants.RESOURCE_LOADER, "class");
+//			velocityEngine.setProperty("file.resource.loader.class", "org.apache.velocity.runtime.resource.loader.FileResourceLoader" );
+//			velocityEngine.setProperty("file.resource.loader.cache", "false" );
+//			velocityEngine.setProperty("file.resource.loader.path", _configManager.getWorkingdir() + File.separator + "conf" + File.separator + "vmtemplates" + File.separator);
+//			
+//			velocityEngine.setProperty("file.resource.loader.modificationCheckInterval", "0" );
+			velocityEngine.setProperty("class.resource.loader.class", "org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader" );
 			
 //			velocityEngine.setProperty("runtime.log.logsystem.class", NullLogChute.class.getName());
-			velocityEngine.setProperty(RuntimeConstants.RESOURCE_LOADER, "file,class");
-			velocityEngine.setProperty("file.resource.loader.class", "org.apache.velocity.runtime.resource.loader.FileResourceLoader" );
-			velocityEngine.setProperty("file.resource.loader.cache", "false" );
-			velocityEngine.setProperty("file.resource.loader.path", _configManager.getWorkingdir() + File.separator + "conf" + File.separator + "vmtemplates" + File.separator);
-			
-			velocityEngine.setProperty("file.resource.loader.modificationCheckInterval", "0" );
-			velocityEngine.setProperty("class.resource.loader.class", "org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader" );
-
-			velocityEngine.setProperty(RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS,
-		            "org.apache.velocity.runtime.log.Log4JLogChute");
-			velocityEngine.setProperty("runtime.log.logsystem.log4j.logger",
-		               LOGGER_NAME);
+			velocityEngine.setProperty(RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS, NullLogChute.class.getName());
+//			velocityEngine.setProperty(RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS,
+//		            "org.apache.velocity.runtime.log.Log4JLogChute");
+//			velocityEngine.setProperty("runtime.log.logsystem.log4j.logger",
+//		               LOGGER_NAME);
 			velocityEngine.init();
 
 			// Dirty trick
@@ -312,7 +327,8 @@ public class LogoutRequestSender
 			    }
 			};
 			
-			HTTPPostEncoder encoder = new myHTTPPostEncoder(velocityEngine, "saml2-post-binding.vm");
+//			HTTPPostEncoder encoder = new myHTTPPostEncoder(velocityEngine, "saml2-post-binding.vm");
+			HTTPPostEncoder encoder = new myHTTPPostEncoder(velocityEngine, "/templates/saml2-post-binding.vm");
 			
 			try {
 				encoder.encode(messageContext);
@@ -324,19 +340,22 @@ public class LogoutRequestSender
 			}
 		} else if ("HTTP-POST-SimpleSign".equalsIgnoreCase(getBinding())) {
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Send using: " + "HTTP-POST-SimpleSign");
+
 				VelocityEngine velocityEngine = new VelocityEngine();
-				velocityEngine.setProperty(RuntimeConstants.RESOURCE_LOADER, "file,class");
-				velocityEngine.setProperty("file.resource.loader.class", "org.apache.velocity.runtime.resource.loader.FileResourceLoader" );
-				velocityEngine.setProperty("file.resource.loader.cache", "false" );
-				velocityEngine.setProperty("file.resource.loader.path", _configManager.getWorkingdir() + File.separator + "conf" + File.separator + "vmtemplates" + File.separator);
-				velocityEngine.setProperty("file.resource.loader.modificationCheckInterval", "0" );
+//				velocityEngine.setProperty(RuntimeConstants.RESOURCE_LOADER, "file,class");
+				velocityEngine.setProperty(RuntimeConstants.RESOURCE_LOADER, "class");
+//				velocityEngine.setProperty("file.resource.loader.class", "org.apache.velocity.runtime.resource.loader.FileResourceLoader" );
+//				velocityEngine.setProperty("file.resource.loader.cache", "false" );
+//				velocityEngine.setProperty("file.resource.loader.path", _configManager.getWorkingdir() + File.separator + "conf" + File.separator + "vmtemplates" + File.separator);
+//				velocityEngine.setProperty("file.resource.loader.modificationCheckInterval", "0" );
 				velocityEngine.setProperty("class.resource.loader.class", "org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader" );
 
 //				velocityEngine.setProperty("runtime.log.logsystem.class", NullLogChute.class.getName());
-				velocityEngine.setProperty(RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS,
-			            "org.apache.velocity.runtime.log.Log4JLogChute");
-				velocityEngine.setProperty("runtime.log.logsystem.log4j.logger",
-			               LOGGER_NAME);
+				velocityEngine.setProperty(RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS, NullLogChute.class.getName());
+//				velocityEngine.setProperty(RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS,
+//			            "org.apache.velocity.runtime.log.Log4JLogChute");
+//				velocityEngine.setProperty("runtime.log.logsystem.log4j.logger",
+//			               LOGGER_NAME);
 				velocityEngine.init();
 
 				// Dirty trick
@@ -365,7 +384,8 @@ public class LogoutRequestSender
 						
 				};
 
-				HTTPPostSimpleSignEncoder encoder = new myHTTPPostSimpleSignEncoder(velocityEngine,  "saml2-post-simplesign-binding.vm", false);
+//				HTTPPostSimpleSignEncoder encoder = new myHTTPPostSimpleSignEncoder(velocityEngine,  "saml2-post-simplesign-binding.vm", false);
+				HTTPPostSimpleSignEncoder encoder = new myHTTPPostSimpleSignEncoder(velocityEngine,  "/templates/saml2-post-simplesign-binding.vm", false);
 
 				try {
 					encoder.encode(messageContext);
@@ -375,7 +395,135 @@ public class LogoutRequestSender
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, "Exception encoding (and sending) SAML message");
 					throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR, e);
 				}
-		} else {	// like we did before
+		} else if ("HTTP-Artifact".equalsIgnoreCase(getBinding())) { 	// RH, 20200217, sn
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Send using: " + "HTTP-Artifact");
+			
+//			VelocityEngine velocityEngine = new VelocityEngine();
+//
+//			velocityEngine.setProperty(RuntimeConstants.RESOURCE_LOADER, "class");
+////			velocityEngine.setProperty("file.resource.loader.class", "org.apache.velocity.runtime.resource.loader.FileResourceLoader" );
+////			velocityEngine.setProperty("file.resource.loader.cache", "false" );
+////			velocityEngine.setProperty("file.resource.loader.path", _configManager.getWorkingdir() + File.separator + "conf" + File.separator + "vmtemplates" + File.separator);
+////			velocityEngine.setProperty("file.resource.loader.modificationCheckInterval", "0" );
+//			velocityEngine.setProperty("class.resource.loader.class", "org.apache.velocity.runtime.resource.loader.ClasspathResourceLoader" );
+//
+//			velocityEngine.setProperty(RuntimeConstants.RUNTIME_LOG_LOGSYSTEM_CLASS,
+//		            "org.apache.velocity.runtime.log.Log4JLogChute");
+//			velocityEngine.setProperty("runtime.log.logsystem.log4j.logger",
+//		               LOGGER_NAME);
+//			velocityEngine.init();
+//
+//			final class myHTTPArtifactEncoder extends HTTPArtifactEncoder {
+//				myHTTPArtifactEncoder(VelocityEngine velocityEngine, String template, SAMLArtifactMap artifactMap) {
+//					super(velocityEngine, template, artifactMap);
+//				}
+//				private AbstractSAML2Artifact artifact;
+//				
+//				 protected AbstractSAML2Artifact buildArtifact(SAMLMessageContext artifactContext) throws MessageEncodingException {
+//
+//					 /*
+//				        SAML2ArtifactBuilder artifactBuilder;
+//				        if (artifactContext.getOutboundMessageArtifactType() != null) {
+//				            artifactBuilder = Configuration.getSAML2ArtifactBuilderFactory().getArtifactBuilder(
+//				                    artifactContext.getOutboundMessageArtifactType());
+//				        } else {
+//				            artifactBuilder = Configuration.getSAML2ArtifactBuilderFactory().getArtifactBuilder(SAML2ArtifactType0004.TYPE_CODE);
+//				            artifactContext.setOutboundMessageArtifactType(SAML2ArtifactType0004.TYPE_CODE);
+//				        }
+//				       */
+//					 
+//						Saml20_ArtifactManager artifactManager;
+//						try {
+//							artifactManager = Saml20_ArtifactManager.getTheArtifactManager();
+//						} catch (ASelectException e) {
+//							_systemLogger.log(Level.WARNING, MODULE, sMethod, "Exception retrieving Saml20_ArtifactManager: " + e.getMessage());
+//							throw new MessageEncodingException("Exception retrieving Saml20_ArtifactManager", e);
+//						}
+////						AbstractSAML2Artifact artifact = artifactManager.buildRawArtifact(logoutRequest, logoutRequest.getIssuer().getValue(), logoutRequest.getID().substring(1));
+////						AbstractSAML2Artifact artifact = artifactManager.buildRawArtifact(artifactContext.getOutboundSAMLMessage(), ((LogoutRequest)artifactContext.getOutboundSAMLMessage()).getIssuer().getValue(), ((LogoutRequest)artifactContext.getOutboundSAMLMessage()).getID().substring(1));
+//						artifact = artifactManager.buildRawArtifact(artifactContext.getOutboundSAMLMessage(), ((LogoutRequest)artifactContext.getOutboundSAMLMessage()).getIssuer().getValue(), ((LogoutRequest)artifactContext.getOutboundSAMLMessage()).getID().substring(1));
+//
+//						/*
+//						 * We still might to have to fix some things here
+//				        SAML2ArtifactType0004.parseArtifact(artifact)
+//				        AbstractSAML2Artifact artifact = artifactBuilder.buildArtifact(artifactContext);
+//				        String encodedArtifact = artifact.base64Encode();
+//				        try {
+//				            artifactMap.put(encodedArtifact, artifactContext.getInboundMessageIssuer(), artifactContext
+//				                    .getOutboundMessageIssuer(), artifactContext.getOutboundSAMLMessage());
+//				        } catch (MarshallingException e) {
+//				            log.error("Unable to marshall assertion to be represented as an artifact", e);
+//				            throw new MessageEncodingException("Unable to marshall assertion to be represented as an artifact", e);
+//				        }
+//						*/
+//				        return artifact;
+//				    }
+//					/**
+//					 * @return the artifact
+//					 */
+//					public synchronized AbstractSAML2Artifact getArtifact() {
+//						return artifact;
+//					}
+//
+//					/**
+//					 * @param artifact the artifact to set
+//					 */
+//					public synchronized void setArtifact(AbstractSAML2Artifact artifact) {
+//						this.artifact = artifact;
+//					}
+//
+//			};
+			
+			/*
+			StorageService<String, SAMLArtifactMapEntry> storage = new MapBasedStorageService<String, SAMLArtifactMapEntry>();
+			BasicParserPool parserPool = new BasicParserPool();
+			parserPool.setNamespaceAware(true);
+			SAMLArtifactMap artMap = new BasicSAMLArtifactMap(storage, null, Long.MAX_VALUE);	// Default storagePartition "artifact"
+
+//			HTTPArtifactEncoder encoder = new myHTTPArtifactEncoder(velocityEngine,  "/templates/saml2-post-artifact-binding.vm", artMap);
+			myHTTPArtifactEncoder encoder = new myHTTPArtifactEncoder(velocityEngine,  "/templates/saml2-post-artifact-binding.vm", artMap);
+			try {
+				encoder.setPostEncoding(false);	// for test, we should get this from configuration // post encoding still to test
+				encoder.encode(messageContext);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "the artifact has been sent");
+				
+				Saml20_ArtifactManager artifactManager = Saml20_ArtifactManager.getTheArtifactManager();
+//				SAMLArtifactMapEntry artEntry = (SAMLArtifactMapEntry) Arrays.asList(artMap).get(0);	// casting exception
+				// Unfortunately SAMLArtifactMap is not really a Map in the java sense.
+				// It does not implement the Map interface so we cannot iterate over or retrieve an element if we do not know the key.
+				// The encoder also does not fill the storage with the artifact and SAMLArtifactMapEntry
+				Iterator<String> artifacts = storage.getKeys("artifact");
+				if (artifacts != null && artifacts.hasNext()) {	// it should have
+					String artifact = artifacts.next();
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "retrieved artifact from temp storage: " + artifact);
+					artifactManager.put(artifact, storage.get("artifact", artifact));
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Put in storagemanager: " + storage.get("artifact", artifact));
+				} else {
+					_systemLogger.log(Level.WARNING, MODULE, sMethod, "Tempstorage did not contain the sent artifact");
+				}
+//				return;
+			}
+			catch (MessageEncodingException e) {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Exception encoding (and sending) SAML message");
+				throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR, e);
+			}
+			*/
+
+			// alternative without encoder
+			Saml20_ArtifactManager artifactManager = Saml20_ArtifactManager.getTheArtifactManager();
+			String sArtifact = artifactManager.buildArtifact(logoutRequest, logoutRequest.getIssuer().getValue(), logoutRequest.getID()
+					.substring(1));
+
+			try {
+				artifactManager.sendArtifact(sArtifact, logoutRequest, sServiceProviderUrl,
+							request, response, null /* sLogoutReturnUrl */ /* sRelayState */, null);
+			} catch (IOException e) {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Exception sending artifact: " + e.getMessage());
+				throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR, e);
+			}
+
+		} 	// RH, 20200217, en
+		else {	// like we did before
 		//	RH, 20200110, en
 		
 			Saml20_RedirectEncoder encoder = new Saml20_RedirectEncoder();	// RH, 20190426, n
@@ -397,4 +545,5 @@ public class LogoutRequestSender
 	public synchronized void setBinding(String binding) {
 		this.binding = binding;
 	}
+
 }
