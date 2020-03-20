@@ -1179,7 +1179,8 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 				}
 			}
 			else {  // SLO
-				_systemLogger.log(Level.WARNING, "Unexpected SAMLObject type: " + samlResponseObject.getClass());
+//				_systemLogger.log(Level.WARNING, "Unexpected SAMLObject type: " + samlResponseObject.getClass());
+				_systemLogger.log(Level.WARNING, "Unexpected SAMLObject type: " + (samlResponseObject == null ? "null" : samlResponseObject.getClass()));
 				throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR);
 			}
 			// all has been handled. We'll just flush data and let the container handle the close. Exceptions will close the stream themselves
