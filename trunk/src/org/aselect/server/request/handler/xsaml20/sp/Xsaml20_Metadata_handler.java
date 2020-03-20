@@ -38,6 +38,7 @@ import org.aselect.system.exception.ASelectException;
 import org.joda.time.DateTime;
 import org.opensaml.common.SAMLObjectBuilder;
 import org.opensaml.common.xml.SAMLConstants;
+import org.opensaml.saml2.metadata.ArtifactResolutionService;
 import org.opensaml.saml2.metadata.AssertionConsumerService;
 import org.opensaml.saml2.metadata.AttributeConsumingService;
 import org.opensaml.saml2.metadata.ContactPerson;
@@ -116,6 +117,9 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 		setSpSloSoapLocation(null);
 		setSpSloHttpResponse(null);
 		setSpSloSoapResponse(null);
+
+		setSpArtifactResolverTarget(null);
+
 		// RH, 20190319, en
 		try {
 			Object oRequest = _configManager.getSection(null, "requests");
@@ -162,6 +166,9 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 							else if (sId.contains("saml20_sp_slo_soap_response")) {
 								setSpSloSoapResponse(sTarget);
 							}
+							else if (sId.contains("saml20_sp_artifactresolver")) {
+								setSpArtifactResolverTarget(sTarget);
+							}
 						}						
 					} else {	// what we used to do
 					// RH, 2090319, en
@@ -184,6 +191,9 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 						}
 						else if (sId.equals("saml20_sp_slo_soap_response")) {
 							setSpSloSoapResponse(sTarget);
+						}
+						else if (sId.contains("saml20_sp_artifactresolver")) {
+							setSpArtifactResolverTarget(sTarget);
 						}
 					}	// RH, 20190319, n
 				}
@@ -269,6 +279,7 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 			usesha256 = specialsettings != null && specialsettings.toLowerCase().contains("sha256");
 			
 		}
+		
 		
 		// Create the EntityDescriptor
 		SAMLObjectBuilder<EntityDescriptor> entityDescriptorBuilder = (SAMLObjectBuilder<EntityDescriptor>) _oBuilderFactory
@@ -491,6 +502,45 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 						ssoDescriptor.getSingleLogoutServices().add(sloHttpService);
 					}
 				}
+				// RH, 20200220, sn
+				///////////////////////////////////////////////////
+				if (ArtifactResolutionService.DEFAULT_ELEMENT_LOCAL_NAME.equalsIgnoreCase(hHandler.getType()) ) {
+					String sBInding = null;
+					String forcedLocation = hHandler.getLocation();	// returns null if not set
+
+					_systemLogger.log(Level.INFO, MODULE, sMethod, getSpArtifactResolverTarget());
+					if ( (getSpArtifactResolverTarget() != null) || (forcedLocation != null) ) {
+						SAMLObjectBuilder<ArtifactResolutionService> artResolutionSeviceBuilder = (SAMLObjectBuilder<ArtifactResolutionService>) _oBuilderFactory
+								.getBuilder(ArtifactResolutionService.DEFAULT_ELEMENT_NAME);
+						ArtifactResolutionService artResolutionService = artResolutionSeviceBuilder.buildObject();
+
+						_systemLogger.log(Level.INFO, MODULE, sMethod, hHandler.getBinding());
+						// Create the ArtifactResolutionServic SOAP
+						if (SAMLConstants.SAML2_SOAP11_BINDING_URI.equals(hHandler.getBinding())) {
+							sBInding = hHandler.getBinding();
+						}	else {
+							_systemLogger.log(Level.WARNING, MODULE, sMethod, "Binding set to the only allowed binding: " + SAMLConstants.SAML2_SOAP11_BINDING_URI);
+							sBInding = SAMLConstants.SAML2_SOAP11_BINDING_URI;
+						}
+						artResolutionService.setBinding(sBInding);
+					
+						if (forcedLocation != null) {	// RH, 20121228, sn
+							artResolutionService.setLocation(forcedLocation);
+						} else {
+							artResolutionService.setLocation(getRedirectURL() + getSpArtifactResolverTarget());
+						}
+						if (hHandler.getIsdefault() != null) {
+							artResolutionService.setIsDefault( hHandler.getIsdefault().booleanValue() );
+						}
+						if (hHandler.getIndex() != null) {
+							artResolutionService.setIndex(hHandler.getIndex().intValue());
+						}
+						ssoDescriptor.getArtifactResolutionServices().add(artResolutionService);
+					}
+				}
+				//////////////////////////////////////////////
+				// RH, 20200220, en
+
 				// RH, 20160429, sn
 				if (AttributeConsumingService.DEFAULT_ELEMENT_LOCAL_NAME.equalsIgnoreCase(hHandler.getType()) ) {
 					if (hHandler.getIndex() == null) {	// should not happen, must be caught by initialization
@@ -574,6 +624,22 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 
 			ssoDescriptor.getSingleLogoutServices().add(sloSoapService);
 		}
+		
+		// RH, 20200220, sn
+		// Create the SP ArtifactResolutionService SOAP
+		_systemLogger.log(Level.INFO, MODULE, sMethod, getSpArtifactResolverTarget());
+		if(getSpArtifactResolverTarget() != null) {
+			SAMLObjectBuilder<ArtifactResolutionService> artResolutionSeviceBuilder = (SAMLObjectBuilder<ArtifactResolutionService>) _oBuilderFactory
+					.getBuilder(ArtifactResolutionService.DEFAULT_ELEMENT_NAME);
+			ArtifactResolutionService artResolutionService = artResolutionSeviceBuilder.buildObject();
+			artResolutionService.setBinding(artifactResolutionServiceBindingConstantSOAP);
+			artResolutionService.setLocation(getRedirectURL() + getSpArtifactResolverTarget());
+			artResolutionService.setIsDefault(true);
+			artResolutionService.setIndex(0);
+			ssoDescriptor.getArtifactResolutionServices().add(artResolutionService);
+		}
+		// RH, 20200220, en
+		
 	}		// end publish all handlers in config 
 		
 		// Publish Organization info

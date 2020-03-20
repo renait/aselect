@@ -69,6 +69,8 @@ public class Saml20_Metadata extends ProtoRequestHandler
 	// SP
 	private String assertionConsumerTarget = "";
 
+	private String spArtifactResolverTarget = "";
+
 	private String spSloHttpLocation = null;
 	private String spSloHttpResponse = null;
 	private String spSloSoapLocation = null;
@@ -591,6 +593,21 @@ public class Saml20_Metadata extends ProtoRequestHandler
 	{
 		_systemLogger.log(Level.INFO, MODULE, "setAssertionConsumerTarget", "Set " + assertionConsumerLocation);
 		this.assertionConsumerTarget = assertionConsumerLocation;
+	}
+
+	/**
+	 * @return the spArtifactResolustionTarget
+	 */
+	public synchronized String getSpArtifactResolverTarget() {
+		return spArtifactResolverTarget;
+	}
+
+	/**
+	 * @param spArtifactResolverTarget the spArtifactResolustionTarget to set
+	 */
+	public synchronized void setSpArtifactResolverTarget(String spArtifactResolverTarget) {
+		_systemLogger.log(Level.INFO, MODULE, "setSpArtifactResolverTarget", "Set " + spArtifactResolverTarget);
+		this.spArtifactResolverTarget = spArtifactResolverTarget;
 	}
 
 	/**
