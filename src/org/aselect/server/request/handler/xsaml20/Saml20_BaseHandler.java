@@ -351,7 +351,6 @@ public abstract class Saml20_BaseHandler extends ProtoRequestHandler
 			String binding = null;
 			if (url != null) {	// for now Redirect is preferred, this should be based on isDefault and index 
 				binding = "HTTP-Redirect";
-				
 			} else {
 				url = metadataManager.getLocation(sFederationGroup, sFederationUrl, SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME,	// RH, 20190322, n
 						SAMLConstants.SAML2_POST_BINDING_URI);
@@ -362,7 +361,13 @@ public abstract class Saml20_BaseHandler extends ProtoRequestHandler
 							SAMLConstants.SAML2_POST_SIMPLE_SIGN_BINDING_URI);
 					if (url != null) {
 						binding = "HTTP-POST-SimpleSign";
-					}
+					} else {	// RH, 20200217, sn
+						url = metadataManager.getLocation(sFederationGroup, sFederationUrl, SingleLogoutService.DEFAULT_ELEMENT_LOCAL_NAME,
+								SAMLConstants.SAML2_ARTIFACT_BINDING_URI);
+						if (url != null) {
+							binding = "HTTP-Artifact";
+						}
+					}	// RH, 20200217, en
 				}
 			}
 			// RH, 20200110, en
@@ -379,6 +384,7 @@ public abstract class Saml20_BaseHandler extends ProtoRequestHandler
 				// RH, 20180918, en
 
 				// Get list of sessions to kill if present in tgt
+
 				Vector<String> sessionindexes = (Vector<String>) htTGTContext.get("remote_sessionlist");	// can be null
 				// RH, 20190129, sn
 				// DigiD wants same issuer for login and logout

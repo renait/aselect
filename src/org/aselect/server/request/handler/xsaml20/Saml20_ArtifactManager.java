@@ -300,6 +300,25 @@ public class Saml20_ArtifactManager extends StorageManager
 	}
 
 	/**
+	 * Build Artifact. <br>
+	 * 
+	 * @param samlObject
+	 *            SAMLObject.
+	 * @param sIDPServerURL
+	 *            String.
+	 * @param sRid
+	 *            String.
+	 * @return String
+	 */
+	public SAML2ArtifactType0004 buildRawArtifact(SAMLObject samlObject, String sIDPServerURL, String sRid)
+	{
+		SAML2ArtifactType0004 artifact = new SAML2ArtifactType0004(new byte[] {
+			0, 0
+		}, createSHA1HashHandle(sIDPServerURL), createSHA1HashHandle(sRid));
+		return artifact;
+	}
+
+	/**
 	 * Creates the sh a1 hash handle.
 	 * 
 	 * @param rid
