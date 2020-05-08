@@ -1106,8 +1106,13 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 							Utils.copyHashmapValue("sp_rid", _htTGTContext, _htSessionContext);
 							// 20110526, Bauke, copy sp_reqbinding too, it must survive SSO
 							Utils.copyHashmapValue("sp_reqbinding", _htTGTContext, _htSessionContext);
-							Utils.copyHashmapValue("RelayState", _htTGTContext, _htSessionContext);
-
+							// RH, 20191128, sn
+							// Utils.copyHashmapValue does not remove RelayState if not found in _htSessionContext
+							if (_htSessionContext.get("RelayState") == null) {
+								_htTGTContext.remove("RelayState");
+							} else {	// RH, 20191128, en
+								Utils.copyHashmapValue("RelayState", _htTGTContext, _htSessionContext);
+							}	// RH, 20191128, n
 							// Add the SP to SSO administration - xsaml20
 							String sAppId = (String) _htSessionContext.get("app_id");
 							String sTgtAppId = (String) _htTGTContext.get("app_id");
@@ -1148,7 +1153,11 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 							Utils.copyHashmapValue("oauthsessionnonce", _htTGTContext, _htSessionContext);
 							// 20180830, RH, en
 							Utils.copyHashmapValue("oauthsessionresponse_mode", _htTGTContext, _htSessionContext);	// RH, 20190905, n
-														
+							// RH, 20191206, sn
+							Utils.copyHashmapValue("oauthsessionaud", _htTGTContext, _htSessionContext);
+							Utils.copyHashmapValue("oauthsessionprompts", _htTGTContext, _htSessionContext);
+							// RH, 20191206, en
+							
 							_tgtManager.updateTGT(sTgt, _htTGTContext);
 							
 							// 20100210, Bauke: Present the Organization selection to the user
@@ -1448,7 +1457,14 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 							Utils.copyHashmapValue("sp_rid", _htTGTContext, _htSessionContext);
 							// 20110526, Bauke, copy sp_reqbinding too, it must survive SSO
 							Utils.copyHashmapValue("sp_reqbinding", _htTGTContext, _htSessionContext);
-							Utils.copyHashmapValue("RelayState", _htTGTContext, _htSessionContext);
+							// RH, 20191128, sn
+							// Utils.copyHashmapValue does not remove RelayState if not found in _htSessionContext
+							if (_htSessionContext.get("RelayState") == null) {
+								_htTGTContext.remove("RelayState");
+							} else {	// RH, 20191128, en
+								Utils.copyHashmapValue("RelayState", _htTGTContext, _htSessionContext);
+							}	// RH, 20191128, n
+
 
 							// Add the SP to SSO administration - xsaml20
 							String sAppId = (String) _htSessionContext.get("app_id");
@@ -1489,7 +1505,10 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 							Utils.copyHashmapValue("oauthsessionnonce", _htTGTContext, _htSessionContext);
 							// 20180830, RH, en
 							Utils.copyHashmapValue("oauthsessionresponse_mode", _htTGTContext, _htSessionContext);	// RH, 20190905, n
-
+							// RH, 20191206, sn
+							Utils.copyHashmapValue("oauthsessionaud", _htTGTContext, _htSessionContext);
+							Utils.copyHashmapValue("oauthsessionprompts", _htTGTContext, _htSessionContext);
+							// RH, 20191206, en
 
 							_tgtManager.updateTGT(sTgt, _htTGTContext);
 							_systemLogger.log(Level.INFO, _sModule, sMethod, "REDIR " + sRedirectUrl);
