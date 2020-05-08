@@ -26,19 +26,22 @@
  */
 package org.aselect.server.attributes.requestors.api;
 
+import java.io.IOException;
+import java.security.GeneralSecurityException;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.LinkedList;
-import java.util.Map;
 import java.util.Vector;
 import java.util.logging.Level;
+
+import javax.net.ssl.SSLSocketFactory;
 
 import org.aselect.server.attributes.requestors.GenericAttributeRequestor;
 import org.aselect.server.attributes.requestors.IAttributeRequestor;
 import org.aselect.server.config.ASelectConfigManager;
-import org.aselect.server.request.handler.xsaml20.SecurityLevel;
+import org.aselect.server.request.HandlerTools;
 import org.aselect.server.utils.AttributeSetter;
-import org.aselect.system.communication.client.IClientCommunicator;
+import org.aselect.system.communication.client.ISecureClientCommunicator;
 import org.aselect.system.communication.client.raw.RawCommunicator;
 import org.aselect.system.communication.client.soap11.SOAP11Communicator;
 import org.aselect.system.communication.client.soap12.SOAP12Communicator;
@@ -74,7 +77,8 @@ public class APIAttributeRequestor extends GenericAttributeRequestor implements 
 	protected String _sAttributesName;
 
 	/** The communicator */
-	protected IClientCommunicator _communicator;
+//	protected IClientCommunicator _communicator;	// RH, 20200326, o
+	protected ISecureClientCommunicator _communicator;	// RH, 20200326, n
 
 	/** All parameters that should be send */
 	protected Vector _vTGTParameters;
@@ -98,6 +102,8 @@ public class APIAttributeRequestor extends GenericAttributeRequestor implements 
 	
 	
 	protected LinkedList<AttributeSetter> attributeSetters = new LinkedList<AttributeSetter>();
+	
+	protected SSLSocketFactory _sslSocketFactory = null;
 
 	/**
 	 * Create a new <code>APIAttributeRequestor</code>. <br>
@@ -150,6 +156,43 @@ public class APIAttributeRequestor extends GenericAttributeRequestor implements 
 				throw new ASelectAttributesException(Errors.ERROR_ASELECT_INIT_ERROR, eAC);
 			}
 
+			// RH, 20200320, sn
+			String sUseClientCertificate = ASelectConfigManager.getSimpleParam(oConfig, "use_clientcertificate", false);
+			if ("true".equalsIgnoreCase(sUseClientCertificate)) {
+				_systemLogger.log(Level.INFO, MODULE, sMethod, "use_clientcertificate, loading clientcertificate");
+
+				String sKeystore = ASelectConfigManager.getParamFromSection(oConfig, "use_clientcertificate", "keystore", true);
+				String sKeystorePw = ASelectConfigManager.getParamFromSection(oConfig, "use_clientcertificate", "keystorepw", false);
+				try {
+					_sslSocketFactory = HandlerTools.createSSLSocketFactory(sKeystore, sKeystorePw);
+					if (_sslSocketFactory == null) {
+						StringBuffer sbBuffer = new StringBuffer("Unable to setup SSLSocketFactory, maybe keystore or keystore password invalid: \"");
+						sbBuffer.append("keystore:" + sKeystore);
+						sbBuffer.append("\" errorcode: ");
+						sbBuffer.append(Errors.ERROR_ASELECT_CONFIG_ERROR);
+						_systemLogger.log(Level.SEVERE, MODULE, sMethod, sbBuffer.toString());
+						throw new ASelectCommunicationException(Errors.ERROR_ASELECT_CONFIG_ERROR);
+					}
+				}
+				catch (IOException iox) {
+					StringBuffer sbBuffer = new StringBuffer("Unable to setup SSLSocketFactory, maybe keystore invalid: \"");
+					sbBuffer.append("keystore:" + sKeystore);
+					sbBuffer.append("\" errorcode: ");
+					sbBuffer.append(Errors.ERROR_ASELECT_CONFIG_ERROR);
+					_systemLogger.log(Level.SEVERE, MODULE, sMethod, sbBuffer.toString(), iox);
+					throw new ASelectCommunicationException(Errors.ERROR_ASELECT_CONFIG_ERROR, iox);
+				}
+				catch (GeneralSecurityException e) {
+					StringBuffer sbBuffer = new StringBuffer("Unable to setup SSLSocketFactory, maybe keystore or keystore password invalid: \"");
+					sbBuffer.append("keystore:" + sKeystore);
+					sbBuffer.append("\" errorcode: ");
+					sbBuffer.append(Errors.ERROR_ASELECT_CONFIG_ERROR);
+					_systemLogger.log(Level.SEVERE, MODULE, sMethod, sbBuffer.toString(), e);
+					throw new ASelectCommunicationException(Errors.ERROR_ASELECT_CONFIG_ERROR, e);
+				}
+			}
+			// RH, 20200320, en
+
 			// Get communicator
 			String sProtocol = null;
 			try {
@@ -175,6 +218,11 @@ public class APIAttributeRequestor extends GenericAttributeRequestor implements 
 			else {
 				// raw communication is specified or something unreadable
 				_communicator = new RawCommunicator(_systemLogger);
+				if (get_sslSocketFactory() != null) {
+					ISecureClientCommunicator securecommunicator = (ISecureClientCommunicator) _communicator;
+					securecommunicator.set_sslSocketFactory(get_sslSocketFactory());
+					_communicator = securecommunicator;
+				}
 			}
 
 			// get target from SAM
@@ -304,6 +352,7 @@ public class APIAttributeRequestor extends GenericAttributeRequestor implements 
 					oAttribute = _configManager.getNextSection(oAttribute);
 				}
 			}
+			
 
 			AttributeSetter.initAttributesConfig(_configManager, oConfig, attributeSetters, _systemLogger);
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "size="+attributeSetters.size());
@@ -546,5 +595,12 @@ public class APIAttributeRequestor extends GenericAttributeRequestor implements 
 	public synchronized String get_bearerToken_attribute()
 	{
 		return _bearerToken_attribute;
+	}
+
+	/**
+	 * @return the _sslSocketFactory
+	 */
+	public synchronized SSLSocketFactory get_sslSocketFactory() {
+		return _sslSocketFactory;
 	}
 }

@@ -107,8 +107,11 @@ import java.util.StringTokenizer;
 import java.util.Vector;
 import java.util.logging.Level;
 
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLSocketFactory;
+
 import org.aselect.system.communication.DataCommunicator;
-import org.aselect.system.communication.client.IClientCommunicator;
+import org.aselect.system.communication.client.ISecureClientCommunicator;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectCommunicationException;
 import org.aselect.system.logging.SystemLogger;
@@ -122,7 +125,8 @@ import org.aselect.system.utils.crypto.Auxiliary;
  * 
  * @author Alfa & Ariss
  */
-public class RawCommunicator implements IClientCommunicator
+//public class RawCommunicator implements IClientCommunicator	// RH, 20200323, o
+public class RawCommunicator implements ISecureClientCommunicator	// RH, 20200323, o
 {
 	private final String MODULE = "RawCommunicator";
 
@@ -137,6 +141,8 @@ public class RawCommunicator implements IClientCommunicator
 	private String pw = null;
 
 	private String bearerToken;	// not implemented yet for RawCommunicator
+
+	private SSLSocketFactory socketFactory = null;
 
 
 	/**
@@ -209,7 +215,8 @@ public class RawCommunicator implements IClientCommunicator
 
 		try {  // Send the message
 			if ( getUser() != null ) _systemLogger.log(Level.WARNING, MODULE, sMethod, "Authentication not implemented for DataCommunicator (yet)");
-			sResponse = DataCommunicator.dataComSend(_systemLogger, sMessage, sTarget);
+//			sResponse = DataCommunicator.dataComSend(_systemLogger, sMessage, sTarget);	// RH, 20200323, o
+			sResponse = DataCommunicator.dataComSend(_systemLogger, sMessage, sTarget, null, null, get_sslSocketFactory());	// RH, 20200323, n
 		}
 		catch (java.net.MalformedURLException eMU) {
 			StringBuffer sbBuffer = new StringBuffer("Invalid URL: ");
@@ -286,7 +293,16 @@ public class RawCommunicator implements IClientCommunicator
 			// RH, 20151001, en
 
 			urlSomeServer = new URL(sbBuffer.toString());
-			brInput = new BufferedReader(new InputStreamReader(urlSomeServer.openStream()), 16000);
+			// RH, 20200326, sn
+			if (get_sslSocketFactory() != null) {
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Setting sslFactory =" + get_sslSocketFactory());
+				HttpsURLConnection sslconnection = (HttpsURLConnection) urlSomeServer.openConnection();
+					sslconnection.setSSLSocketFactory(get_sslSocketFactory());
+					brInput = new BufferedReader(new InputStreamReader(sslconnection.getInputStream()), 16000);
+			} else {	// like we used to
+			// RH, 20200326, sn
+				brInput = new BufferedReader(new InputStreamReader(urlSomeServer.openStream()), 16000);
+			}// RH, 20200326, n
 			String s = null;
 			while ( (s = brInput.readLine()) != null) {
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Input from the other server=" +Auxiliary.obfuscate(s));
@@ -518,5 +534,17 @@ public class RawCommunicator implements IClientCommunicator
 	{
 		// not implemented yet
 	}
+	
+	@Override
+	public void set_sslSocketFactory(SSLSocketFactory sslfact) {
+		this.socketFactory = sslfact;
+		
+	}
+
+	@Override
+	public SSLSocketFactory get_sslSocketFactory() {
+		return socketFactory;
+	}
+
 
 }
