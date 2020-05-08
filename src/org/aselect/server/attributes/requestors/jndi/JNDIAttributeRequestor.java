@@ -142,6 +142,8 @@ public class JNDIAttributeRequestor extends GenericAttributeRequestor
 	private String _sQueryPreFrase = null;
 	private String _sQueryPostFrase = null;
 	private String _sLdapEscapes = null;
+
+	private boolean _bBindFromTgt = false;
 	
 	// Store <sub_attributes> data
 	protected HashMap<String,String> _hmAttributes = new HashMap<String,String>();
@@ -243,6 +245,18 @@ public class JNDIAttributeRequestor extends GenericAttributeRequestor
 				_sAltUserDN = "";
 			}
 
+			// RH, 20200406, sn
+			String sBindFromTgt;
+			try {
+				sBindFromTgt = Utils.getSimpleParam(_configManager, _systemLogger, oMain, "bindfromtgt", false);
+				_bBindFromTgt = Boolean.parseBoolean(sBindFromTgt);
+			}
+			catch (ASelectConfigException e) {
+				_systemLogger.log(Level.CONFIG, MODULE, sMethod,
+						"No 'bindfromtgt' config item in 'main' section found, using 'false'");
+			}
+			// RH, 20200406, en
+			
 			//	20150102, RH, sn
 			try {
 				_sQueryPreFrase = _configManager.getParam(oMain, "query_prefrase");
@@ -329,7 +343,8 @@ public class JNDIAttributeRequestor extends GenericAttributeRequestor
 //			getConnection();	// RH, 20161223, o
 			// RH, 20161223, sn
 			try {
-				getConnection();
+//				getConnection();	// RH, 20200406, o
+				getConnection(null);	// RH, 20200406, n
 			} catch (ASelectSAMException se) {
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not initialize the Ldap attributes requestor, continuing: " + se.getMessage());
 			} catch (ASelectUDBException ue) {
@@ -580,7 +595,8 @@ public class JNDIAttributeRequestor extends GenericAttributeRequestor
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "Search BaseDN=" + _sBaseDN +
 					", sbQuery=" + Auxiliary.obfuscate(sbQuery.toString()) + ", oScope=" + oScope.getSearchScope());
 
-			oDirContext = getConnection();
+//			oDirContext = getConnection();	// RH, 20200406, o
+			oDirContext = getConnection(htTGTContext);	// RH, 20200406, n
 			try {
 				oSearchResults = oDirContext.search(_sBaseDN, sbQuery.toString(), oScope);
 			}
@@ -892,7 +908,9 @@ public class JNDIAttributeRequestor extends GenericAttributeRequestor
 	 * @throws ASelectSAMException
 	 *             if no valid resource could be found
 	 */
-	private DirContext getConnection()
+//	private DirContext getConnection()	// RH, 20200406, o
+	private DirContext getConnection(HashMap htTGTContext)	// RH, 20200406, n
+	
 	throws ASelectUDBException, ASelectSAMException
 	{
 		String sMethod = "getConnection";
@@ -927,22 +945,36 @@ public class JNDIAttributeRequestor extends GenericAttributeRequestor
 			throw new ASelectUDBException(Errors.ERROR_ASELECT_CONFIG_ERROR, e);
 		}
 
-		try {
-			sPrincipal = _configManager.getParam(oResourceConfig, "security_principal_dn");
+		// RH, 20200406, sn
+		if (isBindFromTgt() && htTGTContext != null) {
+			sPrincipal = (String) htTGTContext.get("security_principal_dn");
 		}
-		catch (ASelectConfigException e) {
-			_systemLogger.log(Level.WARNING, MODULE, sMethod,
-					"No valid config item 'security_principal_dn' found in connector resource configuration", e);
-			throw new ASelectUDBException(Errors.ERROR_ASELECT_CONFIG_ERROR, e);
-		}
+		if (sPrincipal == null) {
+		// RH, 20200406, en
+			try {
+					sPrincipal = _configManager.getParam(oResourceConfig, "security_principal_dn");
+			}
+			catch (ASelectConfigException e) {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod,
+						"No valid config item 'security_principal_dn' found in connector resource configuration", e);
+				throw new ASelectUDBException(Errors.ERROR_ASELECT_CONFIG_ERROR, e);
+			}
+		}	// RH, 20200406, n
 
-		try {
-			sPassword = _configManager.getParam(oResourceConfig, "security_principal_password");
+		// RH, 20200406, sn
+		if (isBindFromTgt() && htTGTContext != null) {
+			sPassword = (String) htTGTContext.get("security_principal_password");
 		}
-		catch (ASelectConfigException e) {
-			_systemLogger.log(Level.CONFIG, MODULE, sMethod,
-					"Invalid or empty config item 'security_principal_password' found in connector resource configuration, using empty password.", e);
-		}
+		if (sPassword == null) {
+		// RH, 20200406, en
+			try {
+				sPassword = _configManager.getParam(oResourceConfig, "security_principal_password");
+			}
+			catch (ASelectConfigException e) {
+				_systemLogger.log(Level.CONFIG, MODULE, sMethod,
+						"Invalid or empty config item 'security_principal_password' found in connector resource configuration, using empty password.", e);
+			}
+		}	// RH, 20200406, n
 
 		try {
 			sUseSSL = _configManager.getParam(oResourceConfig, "ssl");
@@ -1016,5 +1048,19 @@ public class JNDIAttributeRequestor extends GenericAttributeRequestor
 		}
 		htEnvironment.put(Context.PROVIDER_URL, sUrl);
 		return htEnvironment;
+	}
+
+	/**
+	 * @return the _bBindFromTgt
+	 */
+	public synchronized boolean isBindFromTgt() {
+		return _bBindFromTgt;
+	}
+
+	/**
+	 * @param _bBindFromTgt the _bBindFromTgt to set
+	 */
+	public synchronized void setBindFromTgt(boolean _bBindFromTgt) {
+		this._bBindFromTgt = _bBindFromTgt;
 	}
 }
