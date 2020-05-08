@@ -9,8 +9,6 @@ import java.util.logging.Level;
 import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.system.communication.client.json.JSONCommunicator;
 import org.aselect.system.communication.client.raw.RawCommunicator;
-import org.aselect.system.communication.client.soap11.SOAP11Communicator;
-import org.aselect.system.communication.client.soap12.SOAP12Communicator;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectAttributesException;
 import org.aselect.system.exception.ASelectCommunicationException;
@@ -73,7 +71,12 @@ public class JSONAPIAttributeRequestor extends APIAttributeRequestor {
 				_communicator = new RawCommunicator(_systemLogger);
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "communicator= 'raw' loaded");
 			}
-
+			// RH, 20200326, sn
+			if (get_sslSocketFactory() != null) {
+				_communicator.set_sslSocketFactory(get_sslSocketFactory());
+			}
+			// RH, 20200326, en
+			
 			try {
 //				jsonkey = ASelectConfigManager.getParamFromSection(oConfig, "attribute_mapping", "id", true);
 				jsonkey = ASelectConfigManager.getParamFromSection(oConfig, "attribute_mapping", "id", false);

@@ -23,6 +23,9 @@ import java.util.Map;
 import java.util.Set;
 import java.util.logging.Level;
 
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLSocketFactory;
+
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectCommunicationException;
 import org.aselect.system.logging.SystemLogger;
@@ -52,7 +55,8 @@ public class DataCommunicator
 
 	RelayState=aWRwPWh0dHBzOi8vc2lhbVjdHNlcnZZXJ2ZXI%3D&SAMLRequest=data&language=nl
 */
-	
+	// RH, 20200323, so
+	/*
 	public static String dataComSend(SystemLogger systemLogger, String sMessage, String sUrl)
 	throws MalformedURLException, ASelectCommunicationException
 	{
@@ -66,6 +70,8 @@ public class DataCommunicator
 		return dataComSend(systemLogger, sMessage, sUrl, requestProprties, null);
 	}
 	// RH, 20190618, sn
+	*/
+	// RH, 20200323, eo
 	
 	/**
 	 * Send data using a HTTP POST connection
@@ -87,13 +93,16 @@ public class DataCommunicator
 //	public static String dataComSend(SystemLogger systemLogger, String sMessage, String sUrl)
 //	throws MalformedURLException, ASelectCommunicationException
 //	public static String dataComSend(SystemLogger systemLogger, String sMessage, String sUrl, Map<String, String> requestProprties)	// RH, 20190618, o
-	public static String dataComSend(SystemLogger systemLogger, String sMessage, String sUrl, Map<String, String> requestProprties, String reqMethod)	// RH, 20190618, o
+//	public static String dataComSend(SystemLogger systemLogger, String sMessage, String sUrl, Map<String, String> requestProprties, String reqMethod)	// RH, 20190618, o	// RH, 20200323, o
+	public static String dataComSend(SystemLogger systemLogger, String sMessage, String sUrl, Map<String, String> requestProprties, String reqMethod, SSLSocketFactory sslSocketFactory)	// RH, 20190618, o 	// RH, 20200323, n
 	throws MalformedURLException, ASelectCommunicationException
 	{
 		String sMethod = "dataComSend";
 		StringBuffer sbBuf = new StringBuffer();
 		StringBuffer sbBuffer;
 		HttpURLConnection connection = null;
+		HttpsURLConnection  sslconnection = null;	// RH, 20200323, n
+
 		PrintStream osOutput = null;
 		URL url = new URL(sUrl);
 
@@ -104,6 +113,17 @@ public class DataCommunicator
 		try {
 			// open HTTP connection to URL
 			connection = (HttpURLConnection) url.openConnection();
+			
+			// open HTTP connection to URL
+//			connection = (HttpURLConnection) url.openConnection();
+			if ( sslSocketFactory != null ) {
+				sslconnection = (HttpsURLConnection) url.openConnection();
+				sslconnection.setSSLSocketFactory(sslSocketFactory);
+				connection = sslconnection;
+			} else {
+				connection = (HttpURLConnection) url.openConnection();
+			}
+			
 			// enable sending to connection
 			connection.setDoOutput(true);
 			// RH, 20190618, sn
@@ -182,7 +202,8 @@ public class DataCommunicator
 	}
 	
 	// Temporary workaround by okutane
-    private static void allowMethods(String... methods) {
+//    private static void allowMethods(String... methods) {	// RH, 20200323, o
+    private synchronized static void allowMethods(String... methods) {	// RH, 20200323, n
         try {
             Field methodsField = HttpURLConnection.class.getDeclaredField("methods");
 

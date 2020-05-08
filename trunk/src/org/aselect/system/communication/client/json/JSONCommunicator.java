@@ -24,16 +24,19 @@ import java.util.Iterator;
 import java.util.Map;
 import java.util.logging.Level;
 
-import net.sf.json.JSONArray;
-import net.sf.json.JSONObject;
-import net.sf.json.JSONSerializer;
+import javax.net.ssl.HttpsURLConnection;
+import javax.net.ssl.SSLSocketFactory;
 
 import org.aselect.system.communication.DataCommunicator;
-import org.aselect.system.communication.client.IClientCommunicator;
+import org.aselect.system.communication.client.ISecureClientCommunicator;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectCommunicationException;
 import org.aselect.system.logging.SystemLogger;
 import org.aselect.system.utils.crypto.Auxiliary;
+
+import net.sf.json.JSONArray;
+import net.sf.json.JSONObject;
+import net.sf.json.JSONSerializer;
 
 /**
  * Client communicator which uses CGI messages in json. <br>
@@ -42,7 +45,9 @@ import org.aselect.system.utils.crypto.Auxiliary;
  * The JSON communicator used by the A-Select agent to create, retrieve, and send URL encoded CGI messages. <br>
  * 
  */
-public class JSONCommunicator implements IClientCommunicator
+//public class JSONCommunicator implements IClientCommunicator	// RH, 20200323, o
+public class JSONCommunicator implements ISecureClientCommunicator	// RH, 20200323, n
+
 {
 	private final String MODULE = "JSONCommunicator";
 
@@ -58,7 +63,7 @@ public class JSONCommunicator implements IClientCommunicator
 	
 	private Map<String,String> communicatorRequestProperties = null;
 
-
+	private SSLSocketFactory socketFactory = null;
 
 	/**
 	 * Creates a new <code>JSONCommunicator</code>. <br>
@@ -157,8 +162,6 @@ public class JSONCommunicator implements IClientCommunicator
 				JSONObject jsonObject = (JSONObject) JSONSerializer.toJSON( sResponse );  
 				_systemLogger.log( Level.FINEST, MODULE, sMethod, "received message parsed to JSONObject:" + Auxiliary.obfuscate(jsonObject.toString()) );
 				htReturn = new HashMap((Map<String, Object>) JSONObject.toBean(jsonObject, Map.class));
-				
-				
 			}
 			_systemLogger.log( Level.FINEST, MODULE, sMethod, "created HashMap:" + Auxiliary.obfuscate(htReturn) );
 		} else {
@@ -193,7 +196,8 @@ public class JSONCommunicator implements IClientCommunicator
 				}
 			}
 			// RH, 20170731, en
-			sResponse = DataCommunicator.dataComSend(_systemLogger, sMessage, sTarget, reqProps);
+//			sResponse = DataCommunicator.dataComSend(_systemLogger, sMessage, sTarget, reqProps);	// RH, 20200323, o
+			sResponse = DataCommunicator.dataComSend(_systemLogger, sMessage, sTarget, reqProps, null, get_sslSocketFactory());	// RH, 20200323, n
 		}
 		catch (java.net.MalformedURLException eMU) {
 			StringBuffer sbBuffer = new StringBuffer("Invalid URL: ");
@@ -244,7 +248,8 @@ public class JSONCommunicator implements IClientCommunicator
 			}
 			JSONObject jsonObj = JSONObject.fromObject(parameters);
 			String sMessage =  jsonObj.toString();
-			sResponse = DataCommunicator.dataComSend(_systemLogger, sMessage, sTarget, reqProps, method);
+//			sResponse = DataCommunicator.dataComSend(_systemLogger, sMessage, sTarget, reqProps, method);	// RH, 20200323, o
+			sResponse = DataCommunicator.dataComSend(_systemLogger, sMessage, sTarget, reqProps, method, get_sslSocketFactory());	// RH, 20200323, n
 		}
 		catch (java.net.MalformedURLException eMU) {
 			StringBuffer sbBuffer = new StringBuffer("Invalid URL: ");
@@ -344,15 +349,30 @@ public class JSONCommunicator implements IClientCommunicator
 					connectionurl.setRequestProperty("Authorization", "Bearer " + bearerToken);
 				}
 //				connectionurl.setRequestProperty("Accept", "application/json");	// RH, 20170731, o // Not always needed, Moved to RESTAPIAttributeRequestor
-				
-				brInput = new BufferedReader(new InputStreamReader(connectionurl.getInputStream()), 16000);
+				// RH, 20200326, sn
+				if (get_sslSocketFactory() != null) {
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Setting sslFactory =" + get_sslSocketFactory());
+					HttpsURLConnection sslconnection = (HttpsURLConnection) connectionurl;
+						sslconnection.setSSLSocketFactory(get_sslSocketFactory());
+						brInput = new BufferedReader(new InputStreamReader(sslconnection.getInputStream()), 16000);
+				} else {	// like we used to
+				// RH, 20200326, en
+					brInput = new BufferedReader(new InputStreamReader(connectionurl.getInputStream()), 16000);
+				}// RH, 20200326, n
 			} else {	// backwards compatibility
 				// RH, 20170221, en
 				urlSomeServer = new URL(sbBuffer.toString());
-				brInput = new BufferedReader(new InputStreamReader(urlSomeServer.openStream()), 16000);
+				// RH, 20200326, sn
+				if (get_sslSocketFactory() != null) {
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Setting sslFactory =" + get_sslSocketFactory());
+					HttpsURLConnection sslconnection = (HttpsURLConnection) urlSomeServer.openConnection();
+						sslconnection.setSSLSocketFactory(get_sslSocketFactory());
+						brInput = new BufferedReader(new InputStreamReader(sslconnection.getInputStream()), 16000);
+				} else {	// like we used to
+				// RH, 20200326, sn
+					brInput = new BufferedReader(new InputStreamReader(urlSomeServer.openStream()), 16000);
+				}// RH, 20200326, n
 			}				// RH, 20170221, n
-
-			
 			String s = null;
 			while ( (s = brInput.readLine()) != null) {
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Input from the other server=" +Auxiliary.obfuscate(s));
@@ -430,6 +450,17 @@ public class JSONCommunicator implements IClientCommunicator
 	public void setCommunicatorRequestProperties(Map<String, String> communicatorRequestProperties)
 	{
 		this.communicatorRequestProperties = communicatorRequestProperties;
+	}
+
+	@Override
+	public void set_sslSocketFactory(SSLSocketFactory sslfact) {
+		this.socketFactory = sslfact;
+		
+	}
+
+	@Override
+	public SSLSocketFactory get_sslSocketFactory() {
+		return socketFactory;
 	}
 
 	

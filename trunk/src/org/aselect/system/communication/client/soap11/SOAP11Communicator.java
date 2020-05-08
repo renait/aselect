@@ -82,15 +82,18 @@ package org.aselect.system.communication.client.soap11;
 import java.io.PrintStream;
 import java.io.StringReader;
 import java.net.HttpURLConnection;
+import java.net.MalformedURLException;
 import java.net.URL;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
 import java.util.logging.Level;
 
+import javax.net.ssl.SSLSocketFactory;
+
 import org.apache.xerces.dom.DocumentImpl;
 import org.apache.xerces.parsers.DOMParser;
-import org.aselect.system.communication.client.IClientCommunicator;
+import org.aselect.system.communication.client.ISecureClientCommunicator;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectCommunicationException;
 import org.aselect.system.logging.SystemLogger;
@@ -112,7 +115,9 @@ import org.xml.sax.helpers.DefaultHandler;
  * @author Alfa & Ariss 14-11-2007 - Changes: - sendStringMessage() method added
  * @author Bauke Hiemstra - www.anoigo.nl Copyright Gemeente Den Haag (http://www.denhaag.nl)
  */
-public class SOAP11Communicator implements IClientCommunicator
+//	public class SOAP11Communicator implements IClientCommunicator	// RH, 20200326, o
+public class SOAP11Communicator implements ISecureClientCommunicator	// RH, 20200326, n
+
 {
 	/** The MIME content type for SOAP 1.1. */
 	private static final String CONTENT_TYPE = "text/xml; charset=utf-8";
@@ -771,6 +776,20 @@ public class SOAP11Communicator implements IClientCommunicator
 	public void setCommunicatorRequestProperties(Map<String, String> communicatorRequestProperties)
 	{
 		// not implemented yet
+	}
+
+	@Override
+	public void set_sslSocketFactory(SSLSocketFactory sslfact) {
+		String sMethod = "set_sslSocketFactory";
+		_systemLogger.log(Level.WARNING, MODULE, sMethod, "Unimplemented method");
+		
+	}
+
+	@Override
+	public SSLSocketFactory get_sslSocketFactory() {
+		String sMethod = "get_sslSocketFactory";
+		_systemLogger.log(Level.WARNING, MODULE, sMethod, "Unimplemented method");
+		return null;
 	}
 
 }

@@ -4,26 +4,16 @@ import java.util.ArrayList;
 import java.util.Enumeration;
 import java.util.HashMap;
 import java.util.Iterator;
-import java.util.List;
 import java.util.Map;
 import java.util.Set;
 import java.util.Vector;
 import java.util.logging.Level;
 
-import net.sf.ezmorph.Morpher;
-import net.sf.ezmorph.MorpherRegistry;
-import net.sf.ezmorph.bean.BeanMorpher;
-import net.sf.json.util.JSONUtils;
-
 import org.apache.commons.beanutils.DynaBean;
 import org.apache.commons.beanutils.DynaClass;
 import org.apache.commons.beanutils.DynaProperty;
-import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.server.utils.AttributeSetter;
 import org.aselect.system.communication.client.json.JSONCommunicator;
-import org.aselect.system.communication.client.raw.RawCommunicator;
-import org.aselect.system.communication.client.soap11.SOAP11Communicator;
-import org.aselect.system.communication.client.soap12.SOAP12Communicator;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectAttributesException;
 import org.aselect.system.exception.ASelectCommunicationException;
@@ -84,6 +74,12 @@ public class RESTAPIAttributeRequestor extends APIAttributeRequestor {
 					_communicator = new JSONCommunicator(_systemLogger);
 				}
 				// RH, 20190614, en
+				// RH, 20200326, sn
+				if (get_sslSocketFactory() != null) {
+					_communicator.set_sslSocketFactory(get_sslSocketFactory());
+				}
+				// RH, 20200326, en
+				
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "communicator= 'json' loaded");
 
 			} else {
