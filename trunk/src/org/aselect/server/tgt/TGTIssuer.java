@@ -272,7 +272,14 @@ public class TGTIssuer
 			Utils.copyHashmapValue("authsp_type", htTGTContext, htSessionContext);
 
 			// Bauke 20081110 copy RelayState to the TgT
-			Utils.copyHashmapValue("RelayState", htTGTContext, htSessionContext);
+			// RH, 20191128, sn
+			// Utils.copyHashmapValue does not remove RelayState if not found in _htSessionContext
+			if (htSessionContext.get("RelayState") == null) {
+				htTGTContext.remove("RelayState");
+			} else {	// RH, 20191128, en
+				Utils.copyHashmapValue("RelayState", htTGTContext, htSessionContext);
+			}	// RH, 20191128, n
+
 			Utils.copyHashmapValue("user_agent", htTGTContext, htSessionContext);
 			// Bauke 20091029, for multiple saml IdPs
 			Utils.copyHashmapValue("federation_url", htTGTContext, htSessionContext);
@@ -296,9 +303,12 @@ public class TGTIssuer
 			Utils.copyHashmapValue("oauthsessionnonce", htTGTContext, htSessionContext);
 			// 20180830, RH, en
 			Utils.copyHashmapValue("oauthsessionresponse_mode", htTGTContext, htSessionContext);	// RH, 20190905, n
-
-
-			// RH, 20160627, sn
+			// RH, 20191206, sn
+			// RH, 20191206, sn
+			Utils.copyHashmapValue("oauthsessionaud", htTGTContext, htSessionContext);
+			Utils.copyHashmapValue("oauthsessionprompts", htTGTContext, htSessionContext);
+			// RH, 20160627, en
+			
 			// copy parameters2forward to tgt, 	// htTGTContext != null
 			if (_configManager.getParameters2forward() != null && !_configManager.getParameters2forward().isEmpty()) {	// avoid unnecessary work
 				Iterator<String> iter = htSessionContext.keySet().iterator();	
@@ -656,7 +666,14 @@ public class TGTIssuer
 			Utils.copyHashmapValue("client_ip", htTGTContext, htSessionContext);
 
 			// Bauke 20081110 copy RelayState to the TgT
-			Utils.copyHashmapValue("RelayState", htTGTContext, htSessionContext);
+			// RH, 20191128, sn
+			// Utils.copyHashmapValue does not remove RelayState if not found in _htSessionContext
+			if (htSessionContext.get("RelayState") == null) {
+				htTGTContext.remove("RelayState");
+			} else {	// RH, 20191128, en
+				Utils.copyHashmapValue("RelayState", htTGTContext, htSessionContext);
+			}	// RH, 20191128, n
+
 			Utils.copyHashmapValue("user_agent", htTGTContext, htSessionContext);
 			// Bauke 20091029, for multiple saml IdPs
 			Utils.copyHashmapValue("federation_url", htTGTContext, htSessionContext);
@@ -680,7 +697,10 @@ public class TGTIssuer
 			Utils.copyHashmapValue("oauthsessionnonce", htTGTContext, htSessionContext);
 			// 20180830, RH, en
 			Utils.copyHashmapValue("oauthsessionresponse_mode", htTGTContext, htSessionContext);	// RH, 20190905, n
-
+			// RH, 20191206, sn
+			Utils.copyHashmapValue("oauthsessionaud", htTGTContext, htSessionContext);
+			Utils.copyHashmapValue("oauthsessionprompts", htTGTContext, htSessionContext);
+			// RH, 20191206, en
 			
 			// RH, 20160627, sn
 			// copy parameters2forward to tgt, 	// htTGTContext != null
