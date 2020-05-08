@@ -112,6 +112,12 @@ public class OpenIDConnect implements OAuthStrategyBase {
 		///////////////////	RH, 20190114, sn
 		String resp_type = "code+id_token";	// default for OpenID Connect
 		String custom_response_type = customproperties.get("reponse_type");
+		// fix for reponse instead of response, keep the old in for backward compatibility
+		// RH, 20200402, sn
+		if (custom_response_type == null) {
+			custom_response_type = customproperties.get("response_type");
+		}
+		// RH, 20200402, en
 		if (custom_response_type != null && custom_response_type.length() > 0) {
 			resp_type = custom_response_type;
 		}
