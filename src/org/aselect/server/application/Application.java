@@ -143,6 +143,10 @@ public class Application
 	private String _sOauth2_client_credentials_pwhash_alg = null;
 	private HashMap<URI,String> _htOauth_redirect_uri = null;	// URI , description
 	// RH, 20180904, en
+	// RH, 20200430, sn
+	private HashMap<Pattern, String> _htOauth2AllowedScopePatterns = null;
+	private HashMap<String, String> _htOauth2_default_scopes = null;
+	// RH, 20200430, en
 	
 	/**
 	 * Constructor which contains the default parameters for an Application <br>
@@ -873,6 +877,34 @@ public class Application
 		this._sOauth2_client_credentials_pwhash_alg = _sOauth2_client_credentials_pwhash_alg;
 	}
 	
+	/**
+	 * @return the _htAllowedScopesPatterns
+	 */
+	public synchronized HashMap<Pattern, String> getOauth2AllowedScopesPatterns() {
+		return _htOauth2AllowedScopePatterns;
+	}
+
+	/**
+	 * @param _htAllowedScopesPatterns the _htAllowedScopesPatterns to set
+	 */
+	public synchronized void setOauth2AllowedScopesPatterns(HashMap<Pattern, String> _htAllowedScopesPatterns) {
+		this._htOauth2AllowedScopePatterns = _htAllowedScopesPatterns;
+	}
+
+	/**
+	 * @return the _htOauth2_default_scopes
+	 */
+	public synchronized HashMap<String, String> getOauth2DefaultScopes() {
+		return _htOauth2_default_scopes;
+	}
+
+	/**
+	 * @param _htOauth2_default_scopes the _htOauth2_default_scopes to set
+	 */
+	public synchronized void setOauth2DefaultScopes(HashMap<String, String> _htOauth2_default_scopes) {
+		this._htOauth2_default_scopes = _htOauth2_default_scopes;
+	}
+
 	/**
 	 * @return the _htAdditionalRegex
 	 */

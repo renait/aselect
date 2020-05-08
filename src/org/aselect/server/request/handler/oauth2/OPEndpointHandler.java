@@ -23,10 +23,7 @@ import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
-import java.security.PrivateKey;
 import java.util.ArrayList;
-import java.util.Arrays;
-import java.util.Base64;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.StringTokenizer;
@@ -38,29 +35,25 @@ import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.aselect.server.application.ApplicationManager;
+import org.aselect.server.attributes.AttributeGatherer;
+import org.aselect.server.attributes.requestors.IAttributeRequestor;
 import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.server.crypto.CryptoEngine;
 import org.aselect.server.request.RequestState;
-import org.aselect.server.request.handler.ProtoRequestHandler;
 import org.aselect.server.request.handler.xsaml20.SamlHistoryManager;
+import org.aselect.server.session.PersistentStorageManager;
 import org.aselect.server.tgt.TGTManager;
 import org.aselect.system.error.Errors;
+import org.aselect.system.exception.ASelectAttributesException;
 import org.aselect.system.exception.ASelectCommunicationException;
 import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.exception.ASelectStorageException;
 import org.aselect.system.utils.BASE64Decoder;
-import org.aselect.system.utils.BASE64Encoder;
 import org.aselect.system.utils.Tools;
 import org.aselect.system.utils.Utils;
 import org.aselect.system.utils.crypto.Auxiliary;
-import org.jose4j.jws.AlgorithmIdentifiers;
-import org.jose4j.jws.JsonWebSignature;
-import org.jose4j.jwt.JwtClaims;
 import org.jose4j.lang.JoseException;
-
-import net.sf.json.JSONObject;
-import net.sf.json.JSONSerializer;
 
 /**
  * OAUTH2 Authorization RequestHandler. <br>
@@ -74,7 +67,9 @@ import net.sf.json.JSONSerializer;
  * 
  * @author RH
  */
-public class OPEndpointHandler extends ProtoRequestHandler
+//	public class OPEndpointHandler extends ProtoRequestHandler	// RH, 20200210, o
+public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
+
 {
 	private static final String RESPONSE_MODE_FRAGMENT = "fragment";
 	private static final String RESPONSE_MODE_QUERY = "query";
@@ -82,18 +77,23 @@ public class OPEndpointHandler extends ProtoRequestHandler
 	private final static String MODULE = "OPEndpointHandler";
 	protected final static String AUTH_CODE_PREFIX = "AUTH_CODE";
 	protected final static String ID_TOKEN_PREFIX = "ID_TOKEN";
+	protected final static String REFRESH_TOKEN_PREFIX = "REFRESH_TOKEN";
+	
 	
 	protected static final String DEFAULT_EXPIRES_IN = "900";	// defaults to 15 minutes
 //	private static final String DEFAULT_PW_HASH_METHOD = "SHA-256";
 	protected static final boolean DEFAULT_PROMPT_SUPPORTED = false;	// RH, 20191206, n
+	protected static final boolean DEFAULT_ALLOW_REFRESH_TOKEN = false;
+	protected static final boolean DEFAULT_ALLOW_PASSWORD_CREDENTIALS = false;
 	
-	private static HashMap<String, String> _client_ids = null;
+//	private static HashMap<String, String> _client_ids = null;
+	private HashMap<String, String> _client_ids = null;
 	
 	private String oauthEndpointUrl =  null;
 
-	private String _sMyServerID = null;
+//	private String _sMyServerID = null;
 	private String defaultUID = null;
-	private String aselectServerURL = null;
+//	private String aselectServerURL = null;
 	private boolean verifyRedirectURI = true;
 	private boolean verifyClientID = true;
 
@@ -103,11 +103,18 @@ public class OPEndpointHandler extends ProtoRequestHandler
 	private String secretKey = null;
 	private	String loginrequest = null;
 
-	private static HashMap<String, String> _forced_app_ids = null;	// RH 20181129, n
+//	private static HashMap<String, String> _forced_app_ids = null;	// RH 20181129, n
+	private HashMap<String, String> _forced_app_ids = null;	// RH 20181129, n
 	private	String _forced_app_parameter = null;
 
 	private	boolean prompt_supported = DEFAULT_PROMPT_SUPPORTED;
 	private String sConsentTemplate = null;
+	private	boolean allow_refresh_token = DEFAULT_ALLOW_REFRESH_TOKEN;
+	private String sRefresh_token_storage_manager = null;
+
+	private	boolean allow_password_credentials = DEFAULT_ALLOW_PASSWORD_CREDENTIALS;
+	private String sPassword_credentials_verify_requestorid = null;
+	private String sPassword_credentials_client_id = null;
 	
 
 	/* @param oServletConfig
@@ -126,33 +133,7 @@ public class OPEndpointHandler extends ProtoRequestHandler
 
 		try {
 			super.init(oServletConfig, oConfig);
-			Object oASelect = null;
-			try {
-				oASelect = _configManager.getSection(null, "aselect");
-			}
-			catch (ASelectConfigException e) {
-				_systemLogger.log(Level.WARNING, MODULE, sMethod,
-						"Could not find 'aselect' config section in config file", e);
-				throw e;
-			}
-
-			try {
-				_sMyServerID = _configManager.getParam(oASelect, "server_id");
-			}
-			catch (ASelectConfigException e) {
-				_systemLogger.log(Level.WARNING, MODULE, sMethod,
-						"Could not retrieve 'server_id' config parameter in 'aselect' config section", e);
-				throw e;
-			}
-			try {
-				aselectServerURL = _configManager.getParam(oASelect, "redirect_url");
-			}
-			catch (ASelectConfigException e) {
-				_systemLogger.log(Level.WARNING, MODULE, sMethod,
-						"Could not retrieve 'server_id' config parameter in 'redirect_url' config section", e);
-				throw e;
-			}
-
+			
 			try {
 				oauthEndpointUrl = _configManager.getParam(oConfig, "oauthendpointurl");
 			}
@@ -261,6 +242,52 @@ public class OPEndpointHandler extends ProtoRequestHandler
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config item 'consent_template' found, disabled");
 			}
 			// RH, 20191206, en
+			try {
+				String sAllow_refresh_token = _configManager.getParam(oConfig, "allow_refresh_token");
+				setAllow_refresh_token(Boolean.parseBoolean(sAllow_refresh_token));
+
+			}
+			catch (ASelectConfigException e) {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config item 'allow_refresh_token' found, defaults to:" + DEFAULT_ALLOW_REFRESH_TOKEN);
+			}
+			if (isAllow_refresh_token()) {
+				try {
+					setRefresh_token_storage_manager(_configManager.getParam(oConfig, "refresh_token_storage_manager"));
+				}
+				catch (ASelectConfigException e) {
+					_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config item 'refresh_token_storage_manager' found");
+					throw new ASelectException(Errors.ERROR_ASELECT_INIT_ERROR, e);
+				}
+				try {
+					persistentStorage = new PersistentStorageManager(getRefresh_token_storage_manager());
+					persistentStorage.init();
+				} catch (ASelectConfigException e) {
+					_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not initialize refresh_token storagemanager");
+					throw new ASelectException(Errors.ERROR_ASELECT_INIT_ERROR, e);
+				}
+			}
+			
+			try {
+				String sAllow_password_credentials = _configManager.getParam(oConfig, "allow_password_credentials");
+				setAllow_password_credentials(Boolean.parseBoolean(sAllow_password_credentials));
+			}
+			catch (ASelectConfigException e) {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config item 'allow_password_credentials' found, defaults to:" + DEFAULT_ALLOW_PASSWORD_CREDENTIALS);
+			}
+			if (isAllow_password_credentials()) {
+				try {
+				setPassword_credentials_verify_requestorid(_configManager.getParam(oConfig, "password_credentials_verify_requestorid"));
+				} catch (Exception e) {
+					_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config item 'password_credentials_verify_requestorid'");
+					throw new ASelectException(Errors.ERROR_ASELECT_INIT_ERROR, e);
+				}
+				try {
+				setPassword_credentials_client_id(_configManager.getParam(oConfig, "password_credentials_client_id"));
+				} catch (Exception e) {
+					_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config item 'password_credentials_client_id'");
+					throw new ASelectException(Errors.ERROR_ASELECT_INIT_ERROR, e);
+				}
+			}
 		}
 		catch (ASelectException e) {
 			throw e;
@@ -293,24 +320,31 @@ public class OPEndpointHandler extends ProtoRequestHandler
 		
 		// verify this is a authorization request here. e.g. url end with _authorize and/or if it is's a GET
 		// rfc6749 says authorization endpoint must support GET, may support POST
-		//	token endpoint must use POST
+		// token endpoint must use POST
 
 		String client_id =  servletRequest.getParameter("client_id");	// maybe use this as app_id as well, need some security though
    		String redirect_uri =  servletRequest.getParameter("redirect_uri");
 
 		String grant_type =  servletRequest.getParameter("grant_type");
    		String code =  servletRequest.getParameter("code");
+   		String refresh_token =  servletRequest.getParameter("refresh_token");
+   		// Used for Resource Owner Password Credentials Grant
+   		String username =  servletRequest.getParameter("username");
+   		String password =  servletRequest.getParameter("password");
+   		//
    		String nonce =  servletRequest.getParameter("nonce");	// if present, should be passed back in the id_token
 		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Received client_id/redirect_uri/grant_type/code: " + 
 				client_id + "/" + redirect_uri + "/" + grant_type + "/" + Auxiliary.obfuscate(code));
 		// we should verify the redirect_uri against the saved_redirect_uri here, if there is a saved_redirect_uri
 
 		String appidacr = "0"; // We have not authenticated the client yet 
-		if (grant_type != null && code != null) {	// Token request
+//		if (grant_type != null && code != null) {	// Token request
+//		if (grant_type != null && (code != null || refresh_token != null)) {	// (Refresh) Token request
+		if (grant_type != null && (code != null || refresh_token != null || (username != null && password!= null))) {	// (Refresh) Token request
 			
 			// Token request, should be POST
 			if ( "POST".equalsIgnoreCase(servletRequest.getMethod()) ) {
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Handling access token POST request");
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Handling access_token/refresh_token POST request");
 				// grant_type only "authorization_code" supported, code, redirect_uri, client_id
 				
 				String auth_header = servletRequest.getHeader("Authorization");
@@ -323,18 +357,18 @@ public class OPEndpointHandler extends ProtoRequestHandler
 					Utils.setDisableCachingHttpHeaders(servletRequest , servletResponse);	// RH, 20190606
 //		   			int  return_status = 400; // default, already set by TokenMachine contructor
 	
-//					HashMap<String, String> return_parameters = new HashMap<String, String>();
 					boolean client_may_pass = false;
-					////
-				   	if (code.length() > 0) {	// retrieve access_token
-	
+				   	if ("authorization_code".equals(grant_type) && code != null && code.length() > 0) {	// retrieve access_token
 			   			// retrieve code from HistoryManager and delete from history
 						SamlHistoryManager history = SamlHistoryManager.getHandle();
 						try {
-							String access_token = (String)history.get(AUTH_CODE_PREFIX + code);
-							_systemLogger.log(Level.FINEST, MODULE, sMethod, "Retrieved access token: " + Auxiliary.obfuscate(access_token));
+//							String access_token = (String)history.get(AUTH_CODE_PREFIX + code);
+							String encoded_access_token = (String)history.get(AUTH_CODE_PREFIX + code);
+//							_systemLogger.log(Level.FINEST, MODULE, sMethod, "Retrieved access token: " + Auxiliary.obfuscate(access_token));
+							_systemLogger.log(Level.FINEST, MODULE, sMethod, "Retrieved access token: " + Auxiliary.obfuscate(encoded_access_token));
 	
-							access_token = extractAccessToken(access_token);
+//							String access_token = extractAccessToken(access_token);
+							String access_token = extractAccessToken(encoded_access_token);
 				   		
 						BASE64Decoder b64dec = new BASE64Decoder();
 						byte[] bytes_access_token = b64dec.decodeBuffer(access_token);
@@ -386,13 +420,28 @@ public class OPEndpointHandler extends ProtoRequestHandler
 						}
 	
 				   		if (client_may_pass) {	// All well
-		
+							String saved_scope = (String)tgt.get("oauthsessionscope");
+							String saved_client_id = (String)tgt.get("oauthsessionclient_id");
+
+							// RH, 20200428, so
+//				   			tokenMachine.setParameter("scope", tgt.get(saved_scope));
+//				   			tokenMachine.setParameter("client_id", tgt.get(saved_client_id));
+							// RH, 20200428, eo
+							// RH, 20200428, sn
+				   			tokenMachine.setParameter("scope", saved_scope);
+				   			tokenMachine.setParameter("client_id", saved_client_id);
+							// RH, 20200428, en
+
+				   			tokenMachine.setParameter("issuer", getIssuer());
+				   			tokenMachine.setParameter("appidacr", appidacr);
+				   			
 //							return_status = supplyReturnParameters(code, return_parameters, history, access_token, tgt, appidacr);
-							int status = supplyReturnParameters(code, tokenMachine, history, access_token, tgt, appidacr);
+//							int status = supplyReturnParameters(code, tokenMachine, history, access_token, tgt, appidacr);
+							int status = supplyReturnParameters(code, tokenMachine, history, encoded_access_token, tgt, appidacr);
 							tokenMachine.setStatus(status);
 				   			try {
 				   				history.remove(AUTH_CODE_PREFIX + code);	// we'll have to handle if there would be a problem with remove
-								_systemLogger.log(Level.FINEST, MODULE, sMethod, "Removed access token from local storage using auth code: " + Auxiliary.obfuscate(code));
+								_systemLogger.log(Level.FINEST, MODULE, sMethod, "Removed auth code from local storage using auth code: " + Auxiliary.obfuscate(code));
 				   			} catch (ASelectStorageException ase2) {
 								_systemLogger.log(Level.WARNING, MODULE, sMethod, "Ignoring problem removing authentication code from temp storage: " + ase2.getMessage());
 				   			}
@@ -403,19 +452,468 @@ public class OPEndpointHandler extends ProtoRequestHandler
 				   			//	return_status = 401;
 				   			tokenMachine.setStatus(401);
 							//	servletResponse.setHeader("WWW-Authenticate", "Bearer realm=\"" + _sMyServerID + "\"" + " , " + "error=" + "\"" + return_parameters.get("error") + "\"");
-							servletResponse.setHeader("WWW-Authenticate", "Bearer realm=\"" + _sMyServerID + "\"" + " , " + "error=" + "\"" + tokenMachine.getParameter("error") + "\"");
+//							servletResponse.setHeader("WWW-Authenticate", "Bearer realm=\"" + _sMyServerID + "\"" + " , " + "error=" + "\"" + tokenMachine.getParameter("error") + "\"");
+							servletResponse.setHeader("WWW-Authenticate", "Bearer realm=\"" + getMyServerID() + "\"" + " , " + "error=" + "\"" + tokenMachine.getParameter("error") + "\"");
 				   			
 				   		}
-					} catch (ASelectStorageException ase){
-						_systemLogger.log(Level.FINE, MODULE, sMethod, "Could not retrieve authentication code from temp storage: " + ase.getMessage());
-			   			//	return_parameters.put("error", "invalid_request" );
-			   			tokenMachine.setParameter("error", "invalid_request" );
-			   			//	return_status = 400; // default
-			   			tokenMachine.setStatus(400);
-					}
-			   		} else {	// handle empty code
+						} catch (ASelectStorageException ase){
+							_systemLogger.log(Level.FINE, MODULE, sMethod, "Could not retrieve authentication code from temp storage: " + ase.getMessage());
+				   			//	return_parameters.put("error", "invalid_request" );
+				   			tokenMachine.setParameter("error", "invalid_request" );
+				   			//	return_status = 400; // default
+				   			tokenMachine.setStatus(400);
+						}
+				   	} else if ("refresh_token".equals(grant_type) &&  refresh_token != null && refresh_token.length() > 0) {
+				   		// supply refresh_token
+				   		if (isAllow_refresh_token()) { // && refresh_token ok
+				   			refresh_token = extractAccessToken(refresh_token);	// should be extract refresh_token but we can use the same
+							BASE64Decoder b64dec = new BASE64Decoder();
+							byte[] bytes_refresh_token = b64dec.decodeBuffer(refresh_token);
+							String string_refresh_token = new String(bytes_refresh_token, "UTF-8");
+							String sTGT = org.aselect.server.utils.Utils.decodeCredentials(string_refresh_token,
+									_systemLogger);
+							
+
+				   			HashMap previous_token = (HashMap)persistentStorage.get(REFRESH_TOKEN_PREFIX + sTGT);	// returns previous tgt
+				   			if (previous_token != null) {
+				   				// we should compare original scope to new scope
+				   				// if original scope contained offline_access and new scope doesn't we might opt for not deleting
+				   				// the refresh_token and not issuing a new refresh_token so refresh_token stays valid
+				   				// for now we delete refresh_toekn and issue a new one based on the original scope
+								_systemLogger.log(Level.FINEST, MODULE, sMethod, "Removing previous token from persistent storage: " + REFRESH_TOKEN_PREFIX + sTGT);
+				   				persistentStorage.remove(REFRESH_TOKEN_PREFIX + sTGT);
+
+				   				// we should get requested scope from request and verify against saved_scope
+				   				// scope requested might be less than saved_scope
+								String saved_scope = (String)previous_token.get("oauthsessionscope");
+								String saved_client_id = (String)previous_token.get("oauthsessionclient_id");
+//								ArrayList<String> saved_resp_types = (ArrayList<String>)previous_token.get("oauthsessionresp_types");	// not sure if we support this
+
+					        	// maybe generate fake rid or reuse the old one for verify credentials
+					        	String extractedRid = (String)previous_token.get("rid");
+					        	
+					        	String app_id = (String)previous_token.get("app_id");
+					        	client_may_pass = false;
+								// get app_id and client_may_pass = verify_auth_header(....) here
+								if (ApplicationManager.getHandle().getApplication(app_id).getOauth_client_credentials_user() != null 
+										&& ApplicationManager.getHandle().getApplication(app_id).getOauth_client_credentials_pwhash() != null) { // verify auth_header
+									client_may_pass = verify_auth_header(auth_header, ApplicationManager.getHandle().getApplication(app_id).getOauth_client_credentials_user(),
+											ApplicationManager.getHandle().getApplication(app_id).getOauth_client_credentials_pwhash(),
+											ApplicationManager.getHandle().getApplication(app_id).getOauth2_client_credentials_pwhash_alg());
+			
+									appidacr = "1"; 	// client secret was used for authentication
+								}
+								else { // don't verify auth_header
+				
+									if (auth_header == null) { // we must verify client_id
+										if (client_id_valid(client_id)) {
+											client_may_pass = true;
+											_systemLogger.log(Level.FINEST, MODULE, sMethod, "No client auth header but client_id valid");
+										}
+										else {
+											_systemLogger.log(Level.WARNING, MODULE, sMethod,
+													"No auth header and client_id not valid");
+											//	return_parameters.put("error", "invalid_client");
+											tokenMachine.setParameter("error", "invalid_client");
+											//	return_status = 400; // default
+											tokenMachine.setStatus(400);
+										}
+									}
+									else {
+										client_may_pass = true;
+										_systemLogger.log(Level.WARNING, MODULE, sMethod, "Client auth header present but not validated");
+									}
+								}
+					        	
+						   		if (client_may_pass) {	// All well
+					   				///// create refreshed tgt
+					   				String newsTgt = createRefreshTgt(previous_token);	// create new tgt from old refresh_token and updates (tgt) context
+									_systemLogger.log(Level.FINEST, MODULE, sMethod, "newsTgt: " + newsTgt);
+					   				// create new refresh_token
+					   				String new_extractedAselect_credentials = (newsTgt == null) ? "" : CryptoEngine.getHandle().encryptTGT(Utils.hexStringToByteArray(newsTgt));
+									_systemLogger.log(Level.FINEST, MODULE, sMethod, "new_extractedAselect_credentials: " + new_extractedAselect_credentials);
+						        	
+									String verify_result = verify_credentials(null, new_extractedAselect_credentials, app_id, extractedRid);
+						    		String extractedAttributes = verify_result.replaceFirst(".*attributes=([^&]*).*$", "$1");
+									try {
+										extractedAttributes = URLDecoder.decode(extractedAttributes, "UTF-8");
+									} catch (UnsupportedEncodingException e1) {
+										// should not happen
+										_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not URLDecode attributes: " + e1.getMessage());
+										extractedAttributes = "";
+									}	
+						    		HashMap hmExtractedAttributes = Utils.deserializeAttributes(extractedAttributes);
+									_systemLogger.log(Level.FINEST, MODULE, sMethod, "hmExtractedAttributes after verify_credentials: " + Auxiliary.obfuscate(hmExtractedAttributes));
+									
+						    		String extractedResultCode = verify_result.replaceFirst(".*result_code=([^&]*).*$", "$1");
+									_systemLogger.log(Level.FINEST, MODULE, sMethod, "extractedResultCode after verify_credentials: " + extractedResultCode);
+						      
+							        Boolean authenticatedAndApproved = false;
+							        try {
+							        	authenticatedAndApproved = Boolean.valueOf(Integer.parseInt(extractedResultCode) == 0);
+							        } catch (NumberFormatException nfe ) {
+										_systemLogger.log(Level.WARNING, MODULE, sMethod, "Resultcode from aselectserver was non-numeric: " + extractedResultCode);
+							   			tokenMachine.setParameter("error", "Internal error: " + nfe.getMessage() );
+							   			//	return_status = 400; // default
+							   			tokenMachine.setStatus(400);
+							        }
+					   				
+							        if (authenticatedAndApproved) {
+							    		String access_token = null;
+							    		try {
+							    			tokenMachine.setParameter("scope", saved_scope);
+							    			tokenMachine.setParameter("issuer", getIssuer());
+							    			tokenMachine.setParameter("client_id", saved_client_id);
+								   			tokenMachine.setParameter("appidacr", appidacr);
+	
+								    		access_token = tokenMachine.createAccessToken(new_extractedAselect_credentials, hmExtractedAttributes, ASelectConfigManager.getHandle().getDefaultPrivateKey());
+							    		}
+										catch (UnsupportedEncodingException e) {
+											_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Unsupported charset UTF-8, this should not happen!");	// RH, 20181126, n
+								   			tokenMachine.setParameter("error", "Internal error: " + e.getMessage() );
+								   			//	return_status = 400; // default
+								   			tokenMachine.setStatus(400);
+										} catch (JoseException e) {
+											_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Unable to serialize json, this should not happen!");	// RH, 20181126, n
+								   			tokenMachine.setParameter("error", "Inreadable token error: " + e.getMessage() );
+								   			//	return_status = 400; // default
+								   			tokenMachine.setStatus(400);
+										}
+										SamlHistoryManager history = SamlHistoryManager.getHandle();
+							        	String temp_authorization_code = tokenMachine.generateAuthorizationCode();
+	
+										if (saved_scope != null && saved_scope.contains("openid")) {
+											//	generate the id_token using extractedAttributes
+											String saved_nonce = (String)previous_token.get("oauthsessionnonce");
+	
+											try {
+												String id_token = tokenMachine.createIDToken(hmExtractedAttributes, (String)(hmExtractedAttributes.get("uid")), getIssuer(), 
+																							saved_client_id, saved_nonce, appidacr, ASelectConfigManager.getHandle().getDefaultPrivateKey(), 
+														null );	// no code for refresh_token
+	
+												history.put(ID_TOKEN_PREFIX+ temp_authorization_code, id_token);	// maybe make this more efficient
+											} catch (UnsupportedEncodingException e) {
+												_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Unsupported charset UTF-8, this should not happen!");	// RH, 20181126, n
+									   			tokenMachine.setParameter("error", "Internal error: " + e.getMessage() );
+									   			tokenMachine.setStatus(400);
+											} catch (JoseException e) {
+												_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Unable to serialize json, this should not happen!");	// RH, 20181126, n
+									   			tokenMachine.setParameter("error", "Inreadable token error: " + e.getMessage() );
+									   			tokenMachine.setStatus(400);
+											}
+										}
+										_systemLogger.log(Level.FINEST, MODULE, sMethod, "access_token: " + access_token);
+										int status = supplyReturnParameters(temp_authorization_code, tokenMachine, history, access_token, previous_token, appidacr);
+										tokenMachine.setStatus(status);
+	
+							        } else {
+										_systemLogger.log(Level.WARNING, MODULE, sMethod, "Verify credentials returned error code");
+							   			//	return_parameters.put("error", "invalid_grant" );
+							   			tokenMachine.setParameter("error", "Token not or no longer valid" );
+							   			//	return_status = 400; // default
+							   			tokenMachine.setStatus(400);
+							        }
+						   		} else {
+						   			//	return_parameters.put("error", "client_authentication_failed" );
+//						   			tokenMachine.setParameter("error", "client_authentication_failed" );
+									_systemLogger.log(Level.WARNING, MODULE, sMethod, "Client auth header not validated");
+
+						   			tokenMachine.setParameter("error", "invalid_client" );
+						   			//	return_status = 401;
+						   			tokenMachine.setStatus(401);
+									//	servletResponse.setHeader("WWW-Authenticate", "Bearer realm=\"" + _sMyServerID + "\"" + " , " + "error=" + "\"" + return_parameters.get("error") + "\"");
+	//								servletResponse.setHeader("WWW-Authenticate", "Bearer realm=\"" + _sMyServerID + "\"" + " , " + "error=" + "\"" + tokenMachine.getParameter("error") + "\"");
+									servletResponse.setHeader("WWW-Authenticate", "Bearer realm=\"" + getMyServerID() + "\"" + " , " + "error=" + "\"" + tokenMachine.getParameter("error") + "\"");
+						   			
+						   		}
+
+				   			} else {
+								_systemLogger.log(Level.WARNING, MODULE, sMethod, "Previus token not found in peristent storage");
+					   			//	return_parameters.put("error", "invalid_grant" );
+					   			tokenMachine.setParameter("error", "invalid_request" );
+					   			//	return_status = 400; // default
+					   			tokenMachine.setStatus(400);
+				   				
+				   			}
+				   		} else {
+							_systemLogger.log(Level.WARNING, MODULE, sMethod, "Refresh Token requested but not allowed");
+				   			//	return_parameters.put("error", "invalid_grant" );
+				   			tokenMachine.setParameter("error", "invalid_request" );
+				   			//	return_status = 400; // default
+				   			tokenMachine.setStatus(400);
+				   		}
+//			   		} else if ("client_credentials".equals(grant_type)) {	// Client Credentials Grant, not implemented yet
+//			   			
+			   		} else if ("password".equals(grant_type)) { //	Resource Owner Password Credentials Grant
+				   		if (isAllow_password_credentials()) {
+
+			        	client_may_pass = false;
+						// get app_id and client_may_pass = verify_auth_header(....) here
+			       		String forced_app_id_hint = findForcedAppidHint(servletRequest);
+			       		// scope might be in the request
+
+						if (client_id == null) {
+							client_id = getPassword_credentials_client_id();
+							_systemLogger.log(Level.INFO, MODULE, sMethod, "Using client_id from config:" + client_id);
+						}
+						String app_id = findAppid(client_id , forced_app_id_hint);
+		        		// Handle unconfigured app_id
+		    	   		if (app_id == null) {	//	unconfigured app_id
+		    				_systemLogger.log(Level.WARNING, MODULE, sMethod, "No app_id for client_id: " + client_id);
+		    				throw new ASelectException(Errors.ERROR_ASELECT_SERVER_UNKNOWN_APP);
+		    	   		}
+			       		String requestedScope = servletRequest.getParameter("scope");
+			       		Set<String> requestedScopes = deserializeScopes(requestedScope);	// may return null
+			       		Set<String> purifiedScopes = purifyScopes(requestedScopes, app_id);	// this handles default scopes as well
+			       		String scope = serializeScopes(purifiedScopes);
+//						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Received client_id/redirect_uri/scope/state: " + 
+//								client_id + "/" + redirect_uri + "/" + scope + "/" + state);
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Using _forced_app_parameter/client_id/redirect_uri/scope/forced_app_id_hint" +
+								(_forced_app_parameter != null ? ("/" + _forced_app_parameter) : "") + ": " + 
+								client_id + "/" + redirect_uri + "/" + scope + (forced_app_id_hint != null ? ("/" + forced_app_id_hint) : ""));
+
+						if (ApplicationManager.getHandle().getApplication(app_id).getOauth_client_credentials_user() != null 
+								&& ApplicationManager.getHandle().getApplication(app_id).getOauth_client_credentials_pwhash() != null) { // verify auth_header
+							client_may_pass = verify_auth_header(auth_header, ApplicationManager.getHandle().getApplication(app_id).getOauth_client_credentials_user(),
+									ApplicationManager.getHandle().getApplication(app_id).getOauth_client_credentials_pwhash(),
+									ApplicationManager.getHandle().getApplication(app_id).getOauth2_client_credentials_pwhash_alg());
+	
+							appidacr = "1"; 	// client secret was used for authentication
+						}
+						else { // don't verify auth_header, ONLY FOR TESTING
+		
+							if (auth_header == null) { // we must verify client_id
+								if (client_id_valid(client_id)) {
+									client_may_pass = true;
+									_systemLogger.log(Level.WARNING, MODULE, sMethod, "No client auth header but client_id valid, ONLY FOR TESTING");
+								}
+								else {
+									_systemLogger.log(Level.WARNING, MODULE, sMethod,
+											"No auth header and client_id not valid");
+									//	return_parameters.put("error", "invalid_client");
+									tokenMachine.setParameter("error", "invalid_client");
+									//	return_status = 400; // default
+									tokenMachine.setStatus(400);
+								}
+							}
+							else {
+								client_may_pass = true;
+								_systemLogger.log(Level.WARNING, MODULE, sMethod, "Client auth header present but not validated, ONLY FOR TESTING");
+							}
+						}
+				   		if (client_may_pass) {	// All well
+				   		// call to requester
+							HashMap password_verify_result = null;
+							IAttributeRequestor passwordVerifyAttrRequestor = null;
+							boolean response_client_may_pass = false;
+							if (getPassword_credentials_verify_requestorid() != null) {
+								// if the requestor is present it should have been initialized by the startup process by now.
+								passwordVerifyAttrRequestor = (IAttributeRequestor)AttributeGatherer.getHandle().get_htRequestors().get(getPassword_credentials_verify_requestorid());
+								Object attrSection = _configManager.getSection(null, "requestor", "id=" + getPassword_credentials_verify_requestorid());
+								try {
+									passwordVerifyAttrRequestor.init(attrSection);
+									HashMap pwverifyContext = new HashMap();
+									pwverifyContext.put("security_principal_dn", username);
+									pwverifyContext.put("security_principal_password", password);
+									Vector pwverifyAttr = new Vector();
+									password_verify_result = passwordVerifyAttrRequestor.getAttributes(pwverifyContext, pwverifyAttr, pwverifyContext);
+								} catch (ASelectAttributesException e) {
+									_systemLogger.log(Level.INFO, MODULE, sMethod, "Could not authenticate user/service: " + e.getMessage());
+								} catch (Exception e) {
+									_systemLogger.log(Level.WARNING, MODULE, sMethod, "Configuration error in requestor init: " + e.getMessage());
+								}
+//								response_patient_id = (String) webservice_result.get("identifier");	// should be parameter
+//								response_client_may_pass = (password_verify_result != null && !password_verify_result.isEmpty());	// should be parameter
+								response_client_may_pass = (password_verify_result != null && password_verify_result.get("full_dn") != null && ((String)(password_verify_result.get("full_dn"))).length()>0);	// should be parameter
+							} else {
+								_systemLogger.log(Level.WARNING, MODULE, sMethod, "Configuration error, no 'password_credentials_verify_requestorid' defined");
+							}
+							if (response_client_may_pass) {
+					    		String ridReqURL = getAselectServerURL();
+					    		String ridAselectServer = getMyServerID();
+					    		String ridrequest= "authenticate";
+					    		String ridAppURL =  getIdpfEndpointUrl();
+								String ridResponse = "";
+								// get a rid
+					    		BufferedReader in = null;
+					    		String extractedRid = null;
+					    		try { 
+						    		//Construct request data 
+					        		String ridURL = assembleRidUrl(ridReqURL, ridAselectServer, ridrequest, ridAppURL,
+											forced_app_id_hint, app_id);
+					
+					    			URL url = new URL(ridURL); 
+					    			
+					    			in = new BufferedReader(new InputStreamReader(url.openStream()));
+					
+					    			ridResponse = extractResponse(ridAselectServer, ridResponse, in);
+						    		extractedRid = extractRid(ridResponse);
+						    		
+									_htSessionContext = _oSessionManager.getSessionContext(extractedRid);
+									if (_htSessionContext != null) {
+										// fill minimum set of tgt values
+										_htSessionContext.put("oauthsessionscope", scope);
+										_htSessionContext.put("oauthsessionclient_id", client_id);
+										_htSessionContext.put("oauthsessionnonce", nonce);
+										_htSessionContext.put("uid", password_verify_result.get("full_dn"));	// should be parameter
+										_htSessionContext.put("authsp", getPassword_credentials_verify_requestorid());
+										String level = "" + ApplicationManager.getHandle().getApplication(app_id).getMinLevel();	// make string
+										_htSessionContext.put("app_level", level);
+										_htSessionContext.put("sel_level", level);
+
+										// create tgt
+						   				String newsTgt = createRefreshTgt(_htSessionContext);	// create new tgt from _htSessionContext and updates (tgt) context
+										_systemLogger.log(Level.FINEST, MODULE, sMethod, "newsTgt: " + newsTgt);
+						   				// create new refresh_token
+						   				String new_extractedAselect_credentials = (newsTgt == null) ? "" : CryptoEngine.getHandle().encryptTGT(Utils.hexStringToByteArray(newsTgt));
+										_systemLogger.log(Level.FINEST, MODULE, sMethod, "new_extractedAselect_credentials: " + new_extractedAselect_credentials);
+
+										// do verify credentials
+										String verify_result = verify_credentials(null, new_extractedAselect_credentials, app_id, extractedRid);
+							    		String extractedAttributes = verify_result.replaceFirst(".*attributes=([^&]*).*$", "$1");
+										try {
+											extractedAttributes = URLDecoder.decode(extractedAttributes, "UTF-8");
+										} catch (UnsupportedEncodingException e1) {
+											// should not happen
+											_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not URLDecode attributes: " + e1.getMessage());
+											extractedAttributes = "";
+										}	
+							    		HashMap hmExtractedAttributes = Utils.deserializeAttributes(extractedAttributes);
+										_systemLogger.log(Level.FINEST, MODULE, sMethod, "hmExtractedAttributes after verify_credentials: " + Auxiliary.obfuscate(hmExtractedAttributes));
+										
+							    		String extractedResultCode = verify_result.replaceFirst(".*result_code=([^&]*).*$", "$1");
+										_systemLogger.log(Level.FINEST, MODULE, sMethod, "extractedResultCode after verify_credentials: " + extractedResultCode);
+							      
+								        Boolean authenticatedAndApproved = false;
+								        try {
+								        	authenticatedAndApproved = Boolean.valueOf(Integer.parseInt(extractedResultCode) == 0);
+								        } catch (NumberFormatException nfe ) {
+											_systemLogger.log(Level.WARNING, MODULE, sMethod, "Resultcode from aselectserver was non-numeric: " + extractedResultCode);
+								   			tokenMachine.setParameter("error", "Internal error: " + nfe.getMessage() );
+								   			//	return_status = 400; // default
+								   			tokenMachine.setStatus(400);
+								        }
+
+										// create token(s)
+								        if (authenticatedAndApproved) {
+								    		String access_token = null;
+								    		try {
+								    			if (scope != null) {
+									    			tokenMachine.setParameter("scope", scope);
+								    			}
+								    			tokenMachine.setParameter("issuer", getIssuer());
+								    			tokenMachine.setParameter("client_id", client_id);
+									   			tokenMachine.setParameter("appidacr", appidacr);
+		
+		//							    		access_token = tokenMachine.createAccessToken(extractedAselect_credentials);
+		//							    		access_token = tokenMachine.createAccessToken(extractedAselect_credentials, hmExtractedAttributes, ASelectConfigManager.getHandle().getDefaultPrivateKey());
+									    		access_token = tokenMachine.createAccessToken(new_extractedAselect_credentials, hmExtractedAttributes, ASelectConfigManager.getHandle().getDefaultPrivateKey());
+								    		}
+											catch (UnsupportedEncodingException e) {
+												_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Unsupported charset UTF-8, this should not happen!");	// RH, 20181126, n
+									   			tokenMachine.setParameter("error", "Internal error: " + e.getMessage() );
+									   			//	return_status = 400; // default
+									   			tokenMachine.setStatus(400);
+											} catch (JoseException e) {
+												_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Unable to serialize json, this should not happen!");	// RH, 20181126, n
+									   			tokenMachine.setParameter("error", "Inreadable token error: " + e.getMessage() );
+									   			//	return_status = 400; // default
+									   			tokenMachine.setStatus(400);
+											}
+		
+											SamlHistoryManager history = SamlHistoryManager.getHandle();
+								        	String temp_authorization_code = tokenMachine.generateAuthorizationCode();
+
+											if (scope != null && scope.contains("openid")) {
+												try {
+													String id_token = tokenMachine.createIDToken(hmExtractedAttributes, (String)(hmExtractedAttributes.get("uid")), getIssuer(), 
+																								client_id, nonce, appidacr, ASelectConfigManager.getHandle().getDefaultPrivateKey(), 
+															null );	// no code for refresh_token
+													history.put(ID_TOKEN_PREFIX+ temp_authorization_code, id_token);	// maybe make this more efficient
+		
+												} catch (UnsupportedEncodingException e) {
+													_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Unsupported charset UTF-8, this should not happen!");	// RH, 20181126, n
+										   			tokenMachine.setParameter("error", "Internal error: " + e.getMessage() );
+										   			tokenMachine.setStatus(400);
+												} catch (JoseException e) {
+													_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Unable to serialize json, this should not happen!");	// RH, 20181126, n
+										   			tokenMachine.setParameter("error", "Inreadable token error: " + e.getMessage() );
+										   			tokenMachine.setStatus(400);
+												}
+											}
+											_systemLogger.log(Level.FINEST, MODULE, sMethod, "access_token: " + access_token);
+											int status = supplyReturnParameters(temp_authorization_code, tokenMachine, history, access_token, _htSessionContext, appidacr);
+											tokenMachine.setStatus(status);
+		
+								        } else {
+											_systemLogger.log(Level.WARNING, MODULE, sMethod, "Verify credentials returned error code");
+								   			//	return_parameters.put("error", "invalid_grant" );
+								   			tokenMachine.setParameter("error", "invalid_grant" );
+								   			//	return_status = 400; // default
+								   			tokenMachine.setStatus(400);
+								        }
+										
+									} else {
+										_systemLogger.log(Level.WARNING, MODULE, sMethod, "No session found for RID: " + extractedRid);
+							   			tokenMachine.setParameter("error", "Internal error: " + "No session found for RID: " + extractedRid );
+							   			//	return_status = 400; // default
+							   			tokenMachine.setStatus(400);
+										
+									}
+					    		}
+					    		catch (Exception e) { 	
+									_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not retrieve rid from aselectserver: " + ridAselectServer);
+						   			tokenMachine.setParameter("error", "Internal error: " + e.getMessage() );
+						   			//	return_status = 400; // default
+						   			tokenMachine.setStatus(400);
+
+					    		} finally {
+					    			_oSessionManager.deleteSession(extractedRid, _htSessionContext);
+					    			if (in != null)
+										try {
+											in.close();
+										}
+										catch (IOException ioe) {
+											_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not close stream to aselectserver : " + ridAselectServer);
+										}
+					    		}
+								
+							} else {
+								_systemLogger.log(Level.WARNING, MODULE, sMethod, "Password Credentials Grant invalid credentials supplied");
+					   			//	return_parameters.put("error", "invalid_grant" );
+					   			tokenMachine.setParameter("error", "invalid_grant" );
+					   			//	return_status = 400; // default
+					   			tokenMachine.setStatus(400);
+							}
+				   			
+				   		} else {
+				   			//	return_parameters.put("error", "client_authentication_failed" );
+							_systemLogger.log(Level.WARNING, MODULE, sMethod, "Client auth header not validated");
+
+				   			tokenMachine.setParameter("error", "invalid_client" );
+				   			//	return_status = 401;
+				   			tokenMachine.setStatus(401);
+							//	servletResponse.setHeader("WWW-Authenticate", "Bearer realm=\"" + _sMyServerID + "\"" + " , " + "error=" + "\"" + return_parameters.get("error") + "\"");
+//								servletResponse.setHeader("WWW-Authenticate", "Bearer realm=\"" + _sMyServerID + "\"" + " , " + "error=" + "\"" + tokenMachine.getParameter("error") + "\"");
+							servletResponse.setHeader("WWW-Authenticate", "Bearer realm=\"" + getMyServerID() + "\"" + " , " + "error=" + "\"" + tokenMachine.getParameter("error") + "\"");
+				   			
+				   		}
+				   			
+				   		} else {
+							_systemLogger.log(Level.WARNING, MODULE, sMethod, "Password Credentials Grant requested but not allowed");
+				   			//	return_parameters.put("error", "invalid_grant" );
+				   			tokenMachine.setParameter("error", "invalid_request" );
+				   			//	return_status = 400; // default
+				   			tokenMachine.setStatus(400);
+				   		}
+
+			   		}
+				   	
+				   	else {	// handle empty code
 		   				// return error 
-						_systemLogger.log(Level.FINE, MODULE, sMethod, "Empty code parameter received");
+//						_systemLogger.log(Level.FINE, MODULE, sMethod, "Empty code parameter received");
+//						_systemLogger.log(Level.FINE, MODULE, sMethod, "Empty code and refresh_token parameter received");
+						_systemLogger.log(Level.FINE, MODULE, sMethod, "Empty code or invalid grant_type received");
 			   			//	return_parameters.put("error", "invalid_grant" );
 			   			tokenMachine.setParameter("error", "invalid_grant" );
 			   			//	return_status = 400; // default
@@ -481,15 +979,18 @@ public class OPEndpointHandler extends ProtoRequestHandler
 
 	    	if (extractedAselect_credentials == null) {		// For now we don't care about previous authentication, let aselect handle that
 		    	// authenticate to the aselect server
-	    		String ridReqURL = aselectServerURL;
-	    		String ridAselectServer = _sMyServerID;
+	    		String ridReqURL = getAselectServerURL();
+	    		String ridAselectServer = getMyServerID();
 	    		String ridrequest= "authenticate";
 	    		String ridAppURL =  getIdpfEndpointUrl();
 	    		
 	    		String ridResponse = "";
 	    		// First get request parameters
 	    		String response_type = servletRequest.getParameter("response_type");
-	       		String scope	 =  servletRequest.getParameter("scope");
+	       		String scopesRequested =  servletRequest.getParameter("scope");
+    	   		// deserialize scope to Set
+	       		Set<String> scopes	 =  deserializeScopes(scopesRequested);
+	       		
 	       		String state	 =  servletRequest.getParameter("state");
 	       		String aud	 =  servletRequest.getParameter("aud");	// RH, 20191205, n	// additional audience(s) in claim
 	       		
@@ -503,34 +1004,26 @@ public class OPEndpointHandler extends ProtoRequestHandler
 	       		// RH, 20190905, en
 				ArrayList<String> resp_types = new ArrayList<String>();
 
-	       		String forced_app_id = null;
-	       		if (_forced_app_parameter != null && _forced_app_parameter.length() > 0) {
-	       			forced_app_id	 =  servletRequest.getParameter(_forced_app_parameter);	// can contain sort of login_hint
-	       		}
+	       		String forced_app_id = findForcedAppidHint(servletRequest);
 
 //				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Received client_id/redirect_uri/scope/state: " + 
 //						client_id + "/" + redirect_uri + "/" + scope + "/" + state);
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Received client_id/redirect_uri/scope/state" +
 						(_forced_app_parameter != null ? ("/" + _forced_app_parameter) : "") + ": " + 
-						client_id + "/" + redirect_uri + "/" + scope + "/" + state + (forced_app_id != null ? ("/" + forced_app_id) : ""));
-				//////////////////////////
-    	   		String sAppId = getClientIds().get(client_id);
-//    	   		String sForcedAppId = null;
-				if (forced_app_id != null) {
-					// RH, 20190523, sn
-					if (get_forced_app_ids() != null && get_forced_app_ids().size() > 0 ) {
-						sAppId = get_forced_app_ids().get(forced_app_id);
-					} else {
-						// no forced_app_ids configured, use appid from client_id table
-					}
-					// RH, 20190523, en
-				}
-				////////////////////////////
-        		// Handle unconfigured app_id here
+						client_id + "/" + redirect_uri + "/" + scopesRequested + "/" + state + (forced_app_id != null ? ("/" + forced_app_id) : ""));
+
+				String sAppId = findAppid(client_id, forced_app_id);
+        		// Handle unconfigured app_id
     	   		if (sAppId == null) {	//	unconfigured app_id
     				_systemLogger.log(Level.WARNING, MODULE, sMethod, "No app_id for client_id: " + client_id);
     				throw new ASelectException(Errors.ERROR_ASELECT_SERVER_UNKNOWN_APP);
     	   		}
+    	   		
+    	   		// RH, 20200430, sn
+	       		// handle scopes
+    	   		Set<String> purifiedScopes = purifyScopes(scopes, sAppId);
+    	   		// RH, 20200430, en
+    	   		
     	   		HashMap<URI, String> validURIs = ApplicationManager.getHandle().getApplication(sAppId).getOauth_redirect_uri();
     	   		boolean validateClientID = ApplicationManager.getHandle().getApplication(sAppId).isOauth_verify_client_id();
     	   		boolean validateRedirectURI = ApplicationManager.getHandle().getApplication(sAppId).isOauth_verify_redirect_uri();
@@ -555,9 +1048,9 @@ public class OPEndpointHandler extends ProtoRequestHandler
 					try {
 			        	String error = "login_required";
 						error_redirect = redirectURI.toString() + (redirectURI.toString().contains("?") ? "&" : "?") + "error=" + error 
-								+ ( ( state != null ) ? ("&state=" + state) : "");
+//								+ ( ( state != null ) ? ("&state=" + state) : "");
+								+ ( ( state != null ) ? ("&state=" + URLEncoder.encode(state, "UTF-8")) : "");
 						servletResponse.sendRedirect(error_redirect);
-						///////////////////////////////////////////
 						return null;
 					} catch (IOException iox){
 						_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not redirect user to: " + error_redirect);
@@ -579,9 +1072,9 @@ public class OPEndpointHandler extends ProtoRequestHandler
 						try {
 				        	String error = "unsupported_response_type";
 							error_redirect = redirectURI.toString() + (redirectURI.toString().contains("?") ? "&" : "?") + "error=" + error 
-									+ ( ( state != null ) ? ("&state=" + state) : "");
+//									+ ( ( state != null ) ? ("&state=" + state) : "");
+									+ ( ( state != null ) ? ("&state=" + URLEncoder.encode(state, "UTF-8")) : "");
 							servletResponse.sendRedirect(error_redirect);
-							///////////////////////////////////////////
 							return null;
 						} catch (IOException iox){
 							_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not redirect user to: " + error_redirect);
@@ -604,63 +1097,14 @@ public class OPEndpointHandler extends ProtoRequestHandler
 	    		BufferedReader in = null;
 	    		try { 
 		    		//Construct request data 
-	    	   		
-	        		String ridSharedSecret = ApplicationManager.getHandle().getApplication(sAppId).getSharedSecret();;
-	        		if (ridSharedSecret == null) {	// this is a configuration error, there should be a sharedsecret
-	    				_systemLogger.log(Level.WARNING, MODULE, sMethod, "No sharedsecret for app_id: " + sAppId);
-	    				throw new ASelectException(Errors.ERROR_ASELECT_CONFIG_ERROR);
-	        		}
-	        		// RH, 20181001, sn
-	        		uid = ApplicationManager.getHandle().getApplication(sAppId).getForcedUid();
-	        		if (uid == null) {
-	        			uid = defaultUID;
-	        		}
-	        		// RH, 20181001, sn
-	        		
-	        		// RH, 20190514, sn
-	        		// Add to appurl for later retrieval by parameters2forward
-	        		if (_forced_app_parameter != null && forced_app_id != null) {
-	        			if (ridAppURL.contains("?")) {
-	        				ridAppURL += "&";
-	        			} else {
-	        				if (!ridAppURL.endsWith("/")) {
-	        					ridAppURL += "/";
-	        				}
-	        				ridAppURL += "?";
-	        			}
-//	        			ridAppURL += _forced_app_parameter + "=" + forced_app_id;	// RH, 20190604, o
-	        			ridAppURL += _forced_app_parameter + "=" + URLEncoder.encode(forced_app_id, "UTF-8") ;	// RH, 20190604, n	// we need to double urlencode
-	        		}
-	        		// RH, 20190514, en
-	        		
-	        		// Still to add signature to RID request
-		    		String ridURL = ridReqURL + "?" + "shared_secret=" + URLEncoder.encode(ridSharedSecret, "UTF-8") +
-		    				"&a-select-server=" + URLEncoder.encode(ridAselectServer, "UTF-8") +
-		    				"&request=" + URLEncoder.encode(ridrequest, "UTF-8") +
-		    				"&uid=" + URLEncoder.encode(uid, "UTF-8") +
-		    				 // RM_30_01
-		    				"&app_url=" + URLEncoder.encode(ridAppURL, "UTF-8") +		    				
-	//			    				"&check-signature=" + URLEncoder.encode(ridCheckSignature, "UTF-8") +
-		    				"&app_id=" + URLEncoder.encode(sAppId, "UTF-8");
-					_systemLogger.log(Level.FINER, MODULE, sMethod, "Requesting rid from: " + ridReqURL + " , with app_url: " + ridAppURL + " , and app_id: " + sAppId);
-//					_systemLogger.log(Level.FINEST, MODULE, sMethod, "ridURL: " + Auxiliary.obfuscate(ridURL));
+	        		String ridURL = assembleRidUrl(ridReqURL, ridAselectServer, ridrequest, ridAppURL,
+							forced_app_id, sAppId);
 	
 	    			URL url = new URL(ridURL); 
 	    			
 	    			in = new BufferedReader(new InputStreamReader(url.openStream()));
 	
-	    			String inputLine = null;
-	    			while ((inputLine = in.readLine()) != null) {
-	    				ridResponse += inputLine;
-	    			}
-					_systemLogger.log(Level.FINER, MODULE, sMethod, "Requesting rid response: " + ridResponse);
-	    			if (in != null)
-						try {
-							in.close();
-						}
-						catch (IOException ioe) {
-							_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not close stream to aselectserver : " + ridAselectServer);
-						}
+	    			ridResponse = extractResponse(ridAselectServer, ridResponse, in);
 	    		}
 	    		catch (Exception e) { 	
 					_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Could not retrieve rid from aselectserver: " + ridAselectServer);
@@ -668,9 +1112,9 @@ public class OPEndpointHandler extends ProtoRequestHandler
 					try {
 					        	String error = "server_error";
 			        			error_redirect = redirectURI.toString() + (redirectURI.toString().contains("?") ? "&" : "?") + "error=" + error 
-						+ ( ( state != null ) ? ("&state=" + state) : "");
+//						+ ( ( state != null ) ? ("&state=" + state) : "");
+							+ ( ( state != null ) ? ("&state=" + URLEncoder.encode(state, "UTF-8")) : "");
 						servletResponse.sendRedirect(error_redirect);
-						//////////////////////////////////////////
 		    			if (in != null)
 							try {
 								in.close();
@@ -686,8 +1130,7 @@ public class OPEndpointHandler extends ProtoRequestHandler
 	
 	    		}
 	
-	    		String extractedRid = ridResponse.replaceFirst(".*rid=([^&]*).*$", "$1");
-				_systemLogger.log(Level.FINER, MODULE, sMethod, "rid retrieved: " + extractedRid);
+	    		String extractedRid = extractRid(ridResponse);
 	
 				_htSessionContext = _oSessionManager.getSessionContext(extractedRid);
 				if (_htSessionContext == null) {
@@ -696,9 +1139,9 @@ public class OPEndpointHandler extends ProtoRequestHandler
 					try {
 					        	String error = "server_error";
 			        			error_redirect = redirectURI.toString() + (redirectURI.toString().contains("?") ? "&" : "?") + "error=" + error 
-						+ ( ( state != null ) ? ("&state=" + state) : "");
+//						+ ( ( state != null ) ? ("&state=" + state) : "");
+							+ ( ( state != null ) ? ("&state=" + URLEncoder.encode(state, "UTF-8")) : "");
 						servletResponse.sendRedirect(error_redirect);
-						////////////////////////////////////////////
 						return null;
 					} catch (IOException iox){
 						_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not redirect user to: " + error_redirect);
@@ -712,8 +1155,8 @@ public class OPEndpointHandler extends ProtoRequestHandler
 	
 				_htSessionContext.put("oauthsessionid", javaxSessionid);
 				_htSessionContext.put("oauthsessionresp_types", resp_types);
-				if (scope != null) {
-					_htSessionContext.put("oauthsessionscope", scope);
+				if (purifiedScopes != null) {
+					_htSessionContext.put("oauthsessionscope", serializeScopes(purifiedScopes));
 				}
 			
 				if (state != null) {
@@ -809,7 +1252,7 @@ public class OPEndpointHandler extends ProtoRequestHandler
 				}
 				
 				// RH, 20191206, sn
-				/////////////////////// Request user consent
+				// Request user consent
 				String oauthsessionconsent = (String)htTGTContext.get("oauthsessionconsent");
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "oauthsessionconsent: " + oauthsessionconsent);
 //				if (oauthsessionconsent == null) {	// maybe check for which claims here	// RH, 20200207, o
@@ -830,7 +1273,8 @@ public class OPEndpointHandler extends ProtoRequestHandler
 						htTGTContext.put("oauthsessionform_token", formToken);
 						_tgtManager.updateTGT(sTgt, htTGTContext);
 						parms.put("form_token", formToken);
-						parms.put("a-select-server", _sMyServerID);
+//						parms.put("a-select-server", _sMyServerID);
+						parms.put("a-select-server", getMyServerID());
 						parms.put("consent", "OK");	// maybe put requested claims in consent
 						String rid = (String)htTGTContext.get("rid");
 						parms.put("rid", rid);
@@ -862,14 +1306,15 @@ public class OPEndpointHandler extends ProtoRequestHandler
 		    			}
 		    		}
 				}
-				//////////////////////////////////
 				// RH, 20191206, sn
 				
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "Handle the aselectserver response");
 				String sAppId = (String)htTGTContext.get("app_id");
-				String finalResult  = verify_credentials(servletRequest, extractedAselect_credentials, sAppId);
-				_systemLogger.log(Level.FINEST, MODULE, sMethod, "finalResult after verify_credentials: " + finalResult);
-				
+				String extractedRid = servletRequest.getParameter("rid");	// RH, 20200306, n
+
+//				String finalResult  = verify_credentials(servletRequest, extractedAselect_credentials, sAppId);	// RH, 20200306, o
+				String finalResult  = verify_credentials(servletRequest, extractedAselect_credentials, sAppId, extractedRid);	// RH, 20200306, n
+//				_systemLogger.log(Level.FINEST, MODULE, sMethod, "finalResult after verify_credentials: " + finalResult);
 				
 	    		String extractedAttributes = finalResult.replaceFirst(".*attributes=([^&]*).*$", "$1");
 	    		// RH, 20181108, sn
@@ -882,7 +1327,8 @@ public class OPEndpointHandler extends ProtoRequestHandler
 				}	
 	    		// RH, 20181108, en
 	    		HashMap hmExtractedAttributes = Utils.deserializeAttributes(extractedAttributes);
-				
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "hmExtractedAttributes after verify_credentials: " + Auxiliary.obfuscate(hmExtractedAttributes));
+	    		
 	    		String extractedResultCode = finalResult.replaceFirst(".*result_code=([^&]*).*$", "$1");
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "extractedResultCode after verify_credentials: " + extractedResultCode);
 	
@@ -936,6 +1382,11 @@ public class OPEndpointHandler extends ProtoRequestHandler
 					// Store it in the history for later retrieval by token request
 		    		String access_token = null;
 		    		try {
+		    			tokenMachine.setParameter("scope", saved_scope);
+		    			tokenMachine.setParameter("issuer", getIssuer());
+		    			tokenMachine.setParameter("client_id", saved_client_id);
+		    			tokenMachine.setParameter("appidacr", appidacr);
+
 //			    		access_token = tokenMachine.createAccessToken(extractedAselect_credentials);
 			    		access_token = tokenMachine.createAccessToken(extractedAselect_credentials, hmExtractedAttributes, ASelectConfigManager.getHandle().getDefaultPrivateKey());
 					}
@@ -955,7 +1406,8 @@ public class OPEndpointHandler extends ProtoRequestHandler
 				        	return_url.append(sep).append("error=" + error);
 				        	sep = "&";
 				        	if (saved_state != null) {
-				        		return_url.append(sep).append("state=" + saved_state);
+//				        		return_url.append(sep).append("state=" + saved_state);
+				        		return_url.append(sep).append("state=" + URLEncoder.encode(saved_state, "UTF-8"));
 				        	}
 //							servletResponse.sendRedirect(return_url.toString());	// RH, 20190905, o
 							transferToClient(servletRequest, servletResponse, saved_redirect_uri, return_url.toString(), saved_response_mode);	// RH, 20190905, n
@@ -973,7 +1425,8 @@ public class OPEndpointHandler extends ProtoRequestHandler
 				        	return_url.append(sep).append("error=" + error);
 				        	sep = "&";
 				        	if (saved_state != null) {
-				        		return_url.append(sep).append("state=" + saved_state);
+//				        		return_url.append(sep).append("state=" + saved_state);
+				        		return_url.append(sep).append("state=" + URLEncoder.encode(saved_state, "UTF-8"));
 				        	}
 	//						servletResponse.sendRedirect(return_url.toString());	// RH, 20190905, o
 							transferToClient(servletRequest, servletResponse, saved_redirect_uri, return_url.toString(), saved_response_mode);
@@ -994,8 +1447,9 @@ public class OPEndpointHandler extends ProtoRequestHandler
 						//	generate the id_token using extractedAttributes
 						try {
 //							id_token = createIDToken(hmExtractedAttributes, (String)(hmExtractedAttributes.get("uid")), _sMyServerID, saved_client_id, saved_nonce, appidacr );	// RH, 20181114, o
-							id_token = tokenMachine.createIDToken(hmExtractedAttributes, (String)(hmExtractedAttributes.get("uid")), _sMyServerID, 
-									saved_client_id, saved_nonce, appidacr, ASelectConfigManager.getHandle().getDefaultPrivateKey(), 
+		//					id_token = tokenMachine.createIDToken(hmExtractedAttributes, (String)(hmExtractedAttributes.get("uid")), _sMyServerID, 
+							id_token = tokenMachine.createIDToken(hmExtractedAttributes, (String)(hmExtractedAttributes.get("uid")), getIssuer(), 
+																		saved_client_id, saved_nonce, appidacr, ASelectConfigManager.getHandle().getDefaultPrivateKey(), 
 //									saved_resp_types.contains("id_token") ? generated_authorization_code : null );	// RH, 20181114, n	// RH, 20181129, o
 									saved_resp_types.contains("code") ? generated_authorization_code : null );	// RH, 20181114, n	// RH, 20181129, n
 //							history.put(ID_TOKEN_PREFIX+ generated_authorization_code, id_token);	// RH, 20181129, n
@@ -1036,7 +1490,14 @@ public class OPEndpointHandler extends ProtoRequestHandler
 						sep = "&";
 					}
 					if (saved_state != null) {
-						return_url.append(sep).append("state=" + saved_state);
+//						return_url.append(sep).append("state=" + saved_state);
+						try {
+							return_url.append(sep).append("state=" + URLEncoder.encode(saved_state, "UTF-8"));
+						} catch (UnsupportedEncodingException e) {
+							// should not happen
+							_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not encode state, UnsupportedEncodinG");
+							throw new ASelectCommunicationException(Errors.ERROR_ASELECT_INTERNAL_ERROR, e);
+						}
 					}
 					// RH, 20181126, en
 		        } else {	// only happy flow implemented
@@ -1050,7 +1511,14 @@ public class OPEndpointHandler extends ProtoRequestHandler
 					return_url.append(sep).append("error=" + error );
 					sep = "&";
 					if (saved_state != null) {
-						return_url.append(sep).append("state=" + saved_state);
+//						return_url.append(sep).append("state=" + saved_state);
+						try {
+							return_url.append(sep).append("state=" + URLEncoder.encode(saved_state, "UTF-8"));
+						} catch (UnsupportedEncodingException e) {
+							// should not happen
+							_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not encode state, UnsupportedEncodinG");
+							throw new ASelectCommunicationException(Errors.ERROR_ASELECT_INTERNAL_ERROR, e);
+						}
 					}
 					// RH, 20181126, en
 		        }
@@ -1069,6 +1537,167 @@ public class OPEndpointHandler extends ProtoRequestHandler
 		    }
 		} // Not a token request
 		return null;
+	}
+
+	/**
+	 * @param sMethod
+	 * @param ridResponse
+	 * @return
+	 */
+	protected String extractRid(String ridResponse) {
+		
+		String sMethod = "extractRid";
+
+		String extractedRid = ridResponse.replaceFirst(".*rid=([^&]*).*$", "$1");
+		_systemLogger.log(Level.FINER, MODULE, sMethod, "rid retrieved: " + extractedRid);
+		return extractedRid;
+	}
+
+	/**
+	 * @param sMethod
+	 * @param ridAselectServer
+	 * @param ridResponse
+	 * @param in
+	 * @return
+	 * @throws IOException
+	 */
+	protected String extractResponse(String ridAselectServer, String ridResponse, BufferedReader in)
+			throws IOException {
+
+		String sMethod = "extractResponse";
+
+		String inputLine = null;
+		while ((inputLine = in.readLine()) != null) {
+			ridResponse += inputLine;
+		}
+		_systemLogger.log(Level.FINER, MODULE, sMethod, "Requested rid response: " + ridResponse);
+		if (in != null)
+			try {
+				in.close();
+			}
+			catch (IOException ioe) {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not close stream to aselectserver : " + ridAselectServer);
+			}
+		return ridResponse;
+	}
+
+	/**
+	 * @param sMethod
+	 * @param ridReqURL
+	 * @param ridAselectServer
+	 * @param ridrequest
+	 * @param ridAppURL
+	 * @param forced_app_id
+	 * @param sAppId
+	 * @return
+	 * @throws ASelectException
+	 * @throws UnsupportedEncodingException
+	 */
+	protected String assembleRidUrl(String ridReqURL, String ridAselectServer, String ridrequest,
+			String ridAppURL, String forced_app_id, String sAppId)
+			throws ASelectException, UnsupportedEncodingException {
+		
+		String sMethod = "assembleRidUrl";
+
+		String uid;
+		String ridSharedSecret = ApplicationManager.getHandle().getApplication(sAppId).getSharedSecret();;
+		if (ridSharedSecret == null) {	// this is a configuration error, there should be a sharedsecret
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "No sharedsecret for app_id: " + sAppId);
+			throw new ASelectException(Errors.ERROR_ASELECT_CONFIG_ERROR);
+		}
+		// RH, 20181001, sn
+		uid = ApplicationManager.getHandle().getApplication(sAppId).getForcedUid();
+		if (uid == null) {
+			uid = defaultUID;
+		}
+		// RH, 20181001, sn
+		
+		// RH, 20190514, sn
+		// Add to appurl for later retrieval by parameters2forward
+		if (_forced_app_parameter != null && forced_app_id != null) {
+			if (ridAppURL.contains("?")) {
+				ridAppURL += "&";
+			} else {
+				if (!ridAppURL.endsWith("/")) {
+					ridAppURL += "/";
+				}
+				ridAppURL += "?";
+			}
+//	        			ridAppURL += _forced_app_parameter + "=" + forced_app_id;	// RH, 20190604, o
+			ridAppURL += _forced_app_parameter + "=" + URLEncoder.encode(forced_app_id, "UTF-8") ;	// RH, 20190604, n	// we need to double urlencode
+		}
+		// RH, 20190514, en
+		
+		// Still to add signature to RID request
+		String ridURL = ridReqURL + "?" + "shared_secret=" + URLEncoder.encode(ridSharedSecret, "UTF-8") +
+				"&a-select-server=" + URLEncoder.encode(ridAselectServer, "UTF-8") +
+				"&request=" + URLEncoder.encode(ridrequest, "UTF-8") +
+				"&uid=" + URLEncoder.encode(uid, "UTF-8") +
+				 // RM_30_01
+				"&app_url=" + URLEncoder.encode(ridAppURL, "UTF-8") +		    				
+//			    				"&check-signature=" + URLEncoder.encode(ridCheckSignature, "UTF-8") +
+				"&app_id=" + URLEncoder.encode(sAppId, "UTF-8");
+		_systemLogger.log(Level.FINER, MODULE, sMethod, "Requesting rid from: " + ridReqURL + " , with app_url: " + ridAppURL + " , and app_id: " + sAppId);
+//					_systemLogger.log(Level.FINEST, MODULE, sMethod, "ridURL: " + Auxiliary.obfuscate(ridURL));
+		return ridURL;
+	}
+
+	/**
+	 * @param client_id
+	 * @param forced_app_id_hint
+	 * @return
+	 */
+	protected String findAppid(String client_id, String forced_app_id_hint) {
+		String sAppId = getClientIds().get(client_id);
+//    	   		String sForcedAppId = null;
+		if (forced_app_id_hint != null) {
+			// RH, 20190523, sn
+			if (get_forced_app_ids() != null && get_forced_app_ids().size() > 0 ) {
+				sAppId = get_forced_app_ids().get(forced_app_id_hint);
+			} else {
+				// no forced_app_ids configured, use appid from client_id table
+			}
+			// RH, 20190523, en
+		}
+		return sAppId;
+	}
+
+	/**
+	 * @param servletRequest
+	 * @return
+	 */
+	protected String findForcedAppidHint(HttpServletRequest servletRequest) {
+		String forced_app_id_hint = null;
+		if (_forced_app_parameter != null && _forced_app_parameter.length() > 0) {
+			forced_app_id_hint	 =  servletRequest.getParameter(_forced_app_parameter);	// can contain sort of login_hint
+		}
+		return forced_app_id_hint;
+	}
+
+	/**
+	 * @param servletRequest
+	 * @return
+	 */
+	protected String findScope(HttpServletRequest servletRequest, String defaultScope) {
+		String scope = servletRequest.getParameter("scope");
+		if (scope == null && defaultScope != null) {
+			scope =  defaultScope;
+		}
+		return scope;
+	}
+
+	protected String createRefreshTgt(HashMap htTGTContext) {
+		String sMethod = "createRefreshTgt";
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Creating new tgt");
+			// maybe set some new values in the context here
+			String tgt = null;
+			try {
+				tgt = TGTManager.getHandle().createTGT(htTGTContext);
+			} catch (ASelectException e) {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Problem creating tgt: " + e.getMessage());
+			}
+
+		return tgt;
 	}
 
 	protected String extractAccessToken(String access_token) {
@@ -1091,23 +1720,53 @@ public class OPEndpointHandler extends ProtoRequestHandler
 			SamlHistoryManager history, String access_token, HashMap tgt, String appidacr) throws ASelectStorageException {
 		
 		String sMethod = "supplyReturnParameters";
-		int return_status;
 
 		// Also retrieve the id_token if there is one (Must have been requested with scope parameter in earlier Auth request
 		String saved_scope = (String)tgt.get("oauthsessionscope");
 
 		if (saved_scope != null && saved_scope.contains("openid")) {
-			String id_token = (String)history.get(ID_TOKEN_PREFIX + code);
-			if (id_token != null) {
-				// we should generate new id_token with proper appidacr
-				//	return_parameters.put("id_token", id_token );
-				tokenMachine.setParameter("id_token", id_token );
-				try {
-					history.remove(ID_TOKEN_PREFIX + code);	// we'll have to handle if there would be a problem with remove
-					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Removed id token from local storage using auth code: " + Auxiliary.obfuscate(code));
-				} catch (ASelectStorageException ase2) {
-					_systemLogger.log(Level.WARNING, MODULE, sMethod, "Ignoring problem removing id token from temp storage: " + ase2.getMessage());
+			if (history != null) {	// get info from historymanager
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Creating new id_token from history");
+				String id_token = (String)history.get(ID_TOKEN_PREFIX + code);
+				if (id_token != null) {
+					// we should generate new id_token with proper appidacr
+					//	return_parameters.put("id_token", id_token );
+					tokenMachine.setParameter("id_token", id_token );
+					try {
+						history.remove(ID_TOKEN_PREFIX + code);	// we'll have to handle if there would be a problem with remove
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Removed id token from local storage using auth code: " + Auxiliary.obfuscate(code));
+					} catch (ASelectStorageException ase2) {
+						_systemLogger.log(Level.WARNING, MODULE, sMethod, "Ignoring problem removing id token from temp storage: " + ase2.getMessage());
+					}
 				}
+			} else {	// create new id_token, 	// we should check the currently requested scope, it might not contain "openid"
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Unable to retrieve id_token from history manager");
+			}
+		}
+		if (isAllow_refresh_token() && (saved_scope != null) && (saved_scope.contains("offline_access"))) {
+			try {
+				// generate random
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Creating new refresh_token");
+				byte[] baRandomBytes = new byte[120];	// just like a tgt
+		
+				CryptoEngine.nextRandomBytes(baRandomBytes);
+				String storeToken = Utils.byteArrayToHexString(baRandomBytes);	// mimic the sTgt
+				boolean createOK = persistentStorage.create(REFRESH_TOKEN_PREFIX + storeToken, tgt); // save original tgt
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "persistentStorage.create: " + createOK);
+				
+				if (createOK) {
+					String extractedrefresh_credentials = CryptoEngine.getHandle().encryptTGT(baRandomBytes);
+			 		String refresh_token = tokenMachine.createRefreshToken(extractedrefresh_credentials, tgt, ASelectConfigManager.getHandle().getDefaultPrivateKey());	// still to generate refresh token
+					//	return_parameters.put("refresh_token", refresh_token);
+					tokenMachine.setParameter("refresh_token", refresh_token);
+				} else {
+					_systemLogger.log(Level.WARNING, MODULE, sMethod, "Problem with persistent storage while storing refresh_token");
+					// not sure about setting status if problem only with refresh_token, specs not conclusive 
+				}
+			} catch (UnsupportedEncodingException | JoseException e) {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Problem creating refresh_token" + e.getMessage());
+			} catch (ASelectException e) {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Problem encrypting refresh_token" + e.getMessage());
 			}
 		}
 		
@@ -1122,36 +1781,6 @@ public class OPEndpointHandler extends ProtoRequestHandler
 		return tokenMachine.getStatus();
 	}
 
-	/**
-	 * @param extractedAselect_credentials
-	 * @return created access_token
-	 * @throws UnsupportedEncodingException
-	 */
-	/*
-	protected String createAccessToken(String extractedAselect_credentials) throws UnsupportedEncodingException {
-		// Unfortunately access_token should not contain "*", see rfc6750, par. 2.1 Bearer token
-		// our extractedAselect_credentials may contain one or more "*"
-		// We must fix that, so we do
-
-		String access_token;
-		BASE64Encoder b64enc = new BASE64Encoder();
-		access_token = b64enc.encode(extractedAselect_credentials.getBytes("UTF-8"));
-		return access_token;
-	}
-*/
-	/**
-	 * @return generated authorization_code
-	 */
-	/*
-	protected String generateAuthorizationCode() {
-		// generate authorization_code
-		byte[] baRandomBytes = new byte[32];
-
-		CryptoEngine.nextRandomBytes(baRandomBytes);
-		String generated_authorization_code = Utils.byteArrayToHexString(baRandomBytes);
-		return generated_authorization_code;
-	}
-*/
 	private boolean verify_auth_header(String auth_header, String user, String pwhash, String alg)
 	{
 		String sMethod = "verify_auth_header";
@@ -1260,19 +1889,13 @@ public class OPEndpointHandler extends ProtoRequestHandler
 	 * @return 
 	 * @throws ASelectCommunicationException
 	 */
-	private String verify_credentials(HttpServletRequest request, String extracted_credentials, String app_id)
+//	private String verify_credentials(HttpServletRequest request, String extracted_credentials, String app_id)
+	private String verify_credentials(HttpServletRequest request, String extracted_credentials, String app_id, String extractedRid)
 	throws ASelectCommunicationException
 	{
 		String sMethod = "verify_credentials";
-		// This could be done by getting request parametermap
-		// RH 20191209, so
-//		String queryData = request.getQueryString();
-//		String extractedRid = queryData.replaceFirst(".*rid=([^&]*).*$", "$1");
-		// RH, 201911209, eo
-		String extractedRid = request.getParameter("rid");	// RH, 20191209, n
-		String finalReqURL = aselectServerURL;
-//		String finalReqSharedSecret = sharedSecret;
-		String finalReqAselectServer = _sMyServerID;
+		String finalReqURL = getAselectServerURL();
+		String finalReqAselectServer = getMyServerID();
 		String finalReqrequest= "verify_credentials";
 		
 		//Construct request data
@@ -1394,11 +2017,11 @@ public class OPEndpointHandler extends ProtoRequestHandler
 		this.verifyClientID = verifyClientID;
 	}
 
-	public static HashMap<String, String> getClientIds() {
+	public synchronized HashMap<String, String> getClientIds() {
 		return _client_ids;
 	}
 
-	public static synchronized HashMap<String, String> get_forced_app_ids() {
+	public synchronized HashMap<String, String> get_forced_app_ids() {
 		return _forced_app_ids;
 	}
 
@@ -1410,12 +2033,12 @@ public class OPEndpointHandler extends ProtoRequestHandler
 		this._forced_app_parameter = _forced_app_parameter;
 	}
 
-	public static synchronized void set_forced_app_ids(HashMap<String, String> _forced_app_ids) {
-		OPEndpointHandler._forced_app_ids = _forced_app_ids;
+	public synchronized void set_forced_app_ids(HashMap<String, String> _forced_app_ids) {
+		this._forced_app_ids = _forced_app_ids;
 	}
 
-	public static void setClientIds(HashMap<String, String> _client_ids) {
-		OPEndpointHandler._client_ids = _client_ids;
+	public synchronized void setClientIds(HashMap<String, String> _client_ids) {
+		this._client_ids = _client_ids;
 	}
 
 
@@ -1435,79 +2058,80 @@ public class OPEndpointHandler extends ProtoRequestHandler
 		this.sConsentTemplate = sConsentTemplate;
 	}
 	
+	/**
+	 * @return the allow_refresh_token
+	 */
+	public synchronized boolean isAllow_refresh_token() {
+		return allow_refresh_token;
+	}
+
+	/**
+	 * @param allow_refresh_token the allow_refresh_token to set
+	 */
+	public synchronized void setAllow_refresh_token(boolean allow_refresh_token) {
+		this.allow_refresh_token = allow_refresh_token;
+	}
+
+	/**
+	 * @return the allow_password_credentials
+	 */
+	public synchronized boolean isAllow_password_credentials() {
+		return allow_password_credentials;
+	}
+
+	/**
+	 * @param allow_password_credentials the allow_password_credentials to set
+	 */
+	public synchronized void setAllow_password_credentials(boolean allow_password_credentials) {
+		this.allow_password_credentials = allow_password_credentials;
+	}
+
+	/**
+	 * @return the sRefresh_token_storage_manager
+	 */
+	public synchronized String getRefresh_token_storage_manager() {
+		return sRefresh_token_storage_manager;
+	}
+
+	/**
+	 * @param sRefresh_token_storage_manager the sRefresh_token_storage_manager to set
+	 */
+	public synchronized void setRefresh_token_storage_manager(String sRefresh_token_storage_manager) {
+		this.sRefresh_token_storage_manager = sRefresh_token_storage_manager;
+	}
+
+	/**
+	 * @return the sPassword_credentials_verify_requester
+	 */
+	public synchronized String getPassword_credentials_verify_requestorid() {
+		return sPassword_credentials_verify_requestorid;
+	}
+
+	/**
+	 * @param sPassword_credentials_verify_requester the sPassword_credentials_verify_requester to set
+	 */
+	public synchronized void setPassword_credentials_verify_requestorid(String sPassword_credentials_verify_requester) {
+		this.sPassword_credentials_verify_requestorid = sPassword_credentials_verify_requester;
+	}
+
+	/**
+	 * @return the sPassword_credentials_client_id
+	 */
+	public synchronized String getPassword_credentials_client_id() {
+		return sPassword_credentials_client_id;
+	}
+
+	/**
+	 * @param sPassword_credentials_client_id the sPassword_credentials_client_id to set
+	 */
+	public synchronized void setPassword_credentials_client_id(String sPassword_credentials_client_id) {
+		this.sPassword_credentials_client_id = sPassword_credentials_client_id;
+	}
+
 	protected ITokenMachine createTokenMachine() {
 		return  new TokenMachine();
 	}
 
-/*
-	//	public String createIDToken(HashMap attributes, String subject, String issuer, String audience, String nonce, String appidacr) throws UnsupportedEncodingException, JoseException {	// RH, 20181114, o
-		public String createIDToken(HashMap attributes, String subject, String issuer, String audience, String nonce, String appidacr, 
-					PrivateKey pk, String code) throws UnsupportedEncodingException, JoseException {	// RH, 20181114, n
-			
-			// JSON Web Tokens (JWTs) and public key cryptography, RSA 256
-	        JwtClaims claims = new JwtClaims();
-	//        claims.setExpirationTimeMinutesInTheFuture(1);
-	        claims.setSubject(subject);
-	        claims.setIssuer(issuer);
-	        claims.setAudience(audience);
-	        claims.setExpirationTimeMinutesInTheFuture(900 / 60);
-	        claims.setIssuedAtToNow();
-	        claims.setNotBeforeMinutesInThePast(0);
-	        claims.setStringClaim("nonce", nonce);
-	        claims.setStringClaim("ver", "1.0");
-	        claims.setStringClaim("appidacr", appidacr);
-	        String c_hash = null;
-	        if (code != null) {
-	 //       	calculate the c_hash over the code, 3.3.2.11. ID Token
-	        	// AlgorithmIdentifiers.RSA_USING_SHA256 so SHA-256
-	        	String algorithm = "SHA-256";
-	        	String charset = "US-ASCII";
-				MessageDigest md;
-				try {
-					md = MessageDigest.getInstance(algorithm);
-			        md.update(code.getBytes(charset));
-	//		        byte[] b64data = Base64.encodeBase64URLSafe(byteData);	// if we want to use apache
-			        // take left-most ( first 128 bits for SHA-256 )
-			        byte byteData[] = Arrays.copyOf(md.digest(), 16);
-			        c_hash = Base64.getUrlEncoder()
-		            .withoutPadding()
-		            .encodeToString(byteData);
-				}
-				catch (NoSuchAlgorithmException e) {
-					c_hash = null;
-				}
-				catch (UnsupportedEncodingException e) {
-					c_hash = null;
-				}
-	        }
-	        if (c_hash != null) {
-	            claims.setStringClaim("c_hash", c_hash);        	
-	        }
-	        
-	        Set<String> attrNames = (Set<String>)(attributes.keySet());
-	        for (String attrName : attrNames) {
-	        	Object attrValue = attributes.get(attrName);
-	        	if (attrValue instanceof Vector) {	// depricated but we still use the Vector type
-	        		claims.setStringListClaim(attrName, (Vector)attrValue);
-	        	} else {	// should be string
-	        		claims.setStringClaim(attrName, (String)attrValue);
-	        	}
-	        }
-	        
-	//        Key key = new HmacKey(secret.getBytes("UTF-8"));
-	
-	        JsonWebSignature jws = new JsonWebSignature();
-	        jws.setPayload(claims.toJson());
-	//        jws.setAlgorithmHeaderValue(AlgorithmIdentifiers.HMAC_SHA256);
-	        jws.setAlgorithmHeaderValue(AlgorithmIdentifiers.RSA_USING_SHA256);
-	//        jws.setKey(key);
-	        // Sign using the private key
-	//        jws.setKey(ASelectConfigManager.getHandle().getDefaultPrivateKey());	// RH, 20181114, o
-	        jws.setKey(pk);	// RH, 20181114, n
-	
-	        return jws.getCompactSerialization();
-	    }
-*/
 	
 	// RH, 20191206, sn
 	public void requestConsent(HttpServletRequest servletRequest, HttpServletResponse servletResponse, String action_url, HashMap<String, String> parms) throws ASelectException {
@@ -1568,6 +2192,5 @@ public class OPEndpointHandler extends ProtoRequestHandler
 		return;
 	}
 	// RH, 20190905, en
-	
 
 }
