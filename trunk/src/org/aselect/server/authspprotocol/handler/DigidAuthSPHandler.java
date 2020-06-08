@@ -5,10 +5,8 @@
  */
 package org.aselect.server.authspprotocol.handler;
 
-import java.io.UnsupportedEncodingException;
-import java.net.URLEncoder;
 import java.util.HashMap;
-import java.util.Set;
+import java.util.Vector;
 import java.util.logging.Level;
 
 import org.aselect.server.authspprotocol.IAuthSPProtocolHandler;
@@ -53,6 +51,8 @@ public class DigidAuthSPHandler  extends AbstractAuthSPProtocolHandler  implemen
 
 	private HashMap<String, String> _htBetrouwbaarheidsNiveaus;
 	private HashMap<String, String> _htSharedSecrets;
+
+	private HashMap<String, String> _htOptionalAttributes;	// RH, 20200525, n
 
 	/* (non-Javadoc)
 	 * @see org.aselect.server.authspprotocol.IAuthSPProtocolHandler#myRidName()
@@ -155,6 +155,14 @@ public class DigidAuthSPHandler  extends AbstractAuthSPProtocolHandler  implemen
 				loadBetrouwbaarheidsNiveau(oBetrouwbaarheidsNiveau);
 				oBetrouwbaarheidsNiveau = _configManager.getNextSection(oBetrouwbaarheidsNiveau);
 			}
+			// RH, 20200525, sn
+			HashMap<String, String> attr_names = new HashMap<String, String>();
+			// DO not use "values" (yet)
+			attr_names =  ASelectConfigManager.getTableFromConfig(oAuthSPConfig, attr_names, "optional_attributes", "attribute", "name", null, false, false);
+			if (attr_names != null && attr_names.size()>0) {
+				setOptionalAttributes(attr_names);
+			}
+			// RH, 20200525, en
 		}
 		catch (ASelectAuthSPException e) {
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not initialize", e);
@@ -469,6 +477,29 @@ public class DigidAuthSPHandler  extends AbstractAuthSPProtocolHandler  implemen
 				if (oAttributes != null)
 					result.put("attributes", oAttributes);
 
+				// RH, 20200608, sn
+				// get optional attributes here
+				if (getOptionalAttributes() != null) {
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Found optional attributes requested: " + getOptionalAttributes());
+					for (String attName : getOptionalAttributes().keySet()) {
+						Object attr = response.get(attName); // might be String or String[], String[] not handled well by some parts of aselect
+						if (attr != null && attr instanceof String[]) {
+							Vector<String> v = new Vector<String>();
+							for (String s : (String[])attr) {
+								v.add(s);
+							}
+							HashMap m = new HashMap();
+							m.put(attName, v);
+							attr = Utils.serializeAttributes(m);
+						}
+						if (attr != null) {
+							_systemLogger.log(Level.FINEST, MODULE, sMethod, "Set optional attribute: " + attName + "/" + Auxiliary.obfuscate(attr));
+							result.put(attName, attr);
+						}
+					}
+				}
+				// RH, 20200608, en
+
 				resultCode = Errors.ERROR_ASELECT_SUCCESS;
 				_authenticationLogger.log(new Object[] {
 					MODULE, Auxiliary.obfuscate(sUid), htResponse.get("client_ip"), sOrganization, sLocalAppId, "granted"
@@ -490,6 +521,20 @@ public class DigidAuthSPHandler  extends AbstractAuthSPProtocolHandler  implemen
 			result.put("result", e.getMessage());
 		}
 		return result;
+	}
+
+	/**
+	 * @return the _htOptionalAttributes
+	 */
+	public synchronized HashMap<String, String> getOptionalAttributes() {
+		return _htOptionalAttributes;
+	}
+
+	/**
+	 * @param _htOptionalAttributes the _htOptionalAttributes to set
+	 */
+	public synchronized void setOptionalAttributes(HashMap<String, String> _htOptionalAttributes) {
+		this._htOptionalAttributes = _htOptionalAttributes;
 	}
 
 	/* 20161129, Bauke: replaced by a call to the version in Utils
