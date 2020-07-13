@@ -202,6 +202,7 @@ public class AttributeSetter
 				if (oValue == null)
 					continue;
 				sValue = oValue.toString();
+				// Some day we'll want to allow empty strings
 				if (!Utils.hasValue(sValue))
 					continue;
 				
@@ -235,6 +236,7 @@ public class AttributeSetter
 					if (Utils.hasValue(sNewValue))
 						sValue = sNewValue;
 				}
+				sysLog.log(Level.FINEST, MODULE, sMethod, "Before matching and operation, value="+Auxiliary.obfuscate(sValue));
 				
 				// RH, 20160229, sn
 				if (setter.getMatchingPattern() != null) {
@@ -268,10 +270,11 @@ public class AttributeSetter
 						if (orValue == null)
 							continue;
 						String srValue = orValue.toString();
+						// Some day we'll want to allow empty strings
 						if (!Utils.hasValue(srValue))
 							continue;
 						sValue = Boolean.toString(slValue.equals(srValue));
-						sysLog.log(Level.FINEST, MODULE, sMethod, "Comparing:" + sSrc + " with:" + sDest + " results:" + sValue);
+						sysLog.log(Level.FINEST, MODULE, sMethod, "Comparing:" + sSrc + " with:" + sDest + " results:" + Auxiliary.obfuscate(sValue));
 					} 
 					// RH, 20190927, sn
 					else if ("DECRYPT".equalsIgnoreCase(setter.getOperator())) {
@@ -284,10 +287,31 @@ public class AttributeSetter
 						sValue = Auxiliary.encryptRSAString(slValue, pubKey, sysLog);
 					}
 					// RH, 20190927, en
-					
+					// RH, 20200713, sn
+					else if ("+=".equalsIgnoreCase(setter.getOperator())) {
+						Object orValue = (setter.isDestTgt())? htTGTContext.get(sDest): hmAttributes.get(sDest);
+						String srValue = null;
+						if (orValue == null) {
+							srValue = "";
+						} else {
+							srValue = orValue.toString();
+						}
+						sValue = slValue + srValue;
+						sysLog.log(Level.FINEST, MODULE, sMethod, "Concating:" + sSrc + " with:" + sDest + " results:" + Auxiliary.obfuscate(sValue));
+					}
+					else if ("++".equalsIgnoreCase(setter.getOperator())) {
+						sValue = slValue.toUpperCase();
+						sysLog.log(Level.FINEST, MODULE, sMethod, "toUpperCase:" + sSrc + " results:" + Auxiliary.obfuscate(sValue));
+					}
+					else if ("--".equalsIgnoreCase(setter.getOperator())) {
+						sValue = slValue.toLowerCase();
+						sysLog.log(Level.FINEST, MODULE, sMethod, "toLowerCase:" + sSrc + " results:" + Auxiliary.obfuscate(sValue));
+					}
+					// RH, 20200713, en
 				}
 				// RH, 20190208, en
 				
+				sysLog.log(Level.FINEST, MODULE, sMethod, "After matching and operation, value="+Auxiliary.obfuscate(sValue));
 				
 				if (setter.isDestTgt()) {
 					sysLog.log(Level.FINEST, MODULE, sMethod, "Tgt: "+sDest+"="+Auxiliary.obfuscate(sValue));
