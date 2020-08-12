@@ -928,30 +928,51 @@ int longest_cmp_match(char *pcRegexp, char *pcString)
 //
 // Checks the uri to decide whether it's a public or a secure application
 //
-int aselect_filter_check_app_uri(pool *pPool, PASELECT_FILTER_CONFIG pConfig, char *pcUri)
+// int aselect_filter_check_app_uri(pool *pPool, PASELECT_FILTER_CONFIG pConfig, char *pcUri)
+int aselect_filter_check_app_uri(pool *pPool, PASELECT_FILTER_CONFIG pConfig, char *pcUri, char *pcForceAppid)
 {
     int i, len;
 	//int uriLen = strlen(pcUri);
     int iBestSec = -1, iBestPub = -1;
     int lenBestSec = 0, lenBestPub = 0;
+    int iForcedSec = -1;
 
+    TRACE1("aselect_filter_check_app_uri:: pcForceAppid=%s", pcForceAppid); 
+
+    
     for (i = 0; i < pConfig->iAppCount; i++) {
         TRACE4("aselect_filter_check_app_uri::comparing directory(%d):\"%s\" to URI: \"%s\", enabled=%d", 
 					i, pConfig->pApplications[i].pcLocation, pcUri, pConfig->pApplications[i].bEnabled);
-		if (pConfig->bUseRegexp == TRUE)
-			len = longest_re_match(pConfig->pApplications[i].pcLocation, pcUri);
-		else
-			len = longest_cmp_match(pConfig->pApplications[i].pcLocation, pcUri);
-		TRACE1("aselect_filter_check_app_uri:: secure match_len=%d", len); 
-		//len = strlen(pConfig->pApplications[i].pcLocation);
+        if (pConfig->bUseRegexp == TRUE)
+                len = longest_re_match(pConfig->pApplications[i].pcLocation, pcUri);
+        else
+                len = longest_cmp_match(pConfig->pApplications[i].pcLocation, pcUri);
+        TRACE1("aselect_filter_check_app_uri:: secure match_len=%d", len); 
+        //len = strlen(pConfig->pApplications[i].pcLocation);
         //if (len > 0 && len <= uriLen && strncmp(pcUri, pConfig->pApplications[i].pcLocation, len) == 0) {  // a match
-		if (len > 0) {
+	if (len > 0) {
             if (pConfig->pApplications[i].bEnabled) {  // skip disabled apps
-				if (len > lenBestSec) {
-					TRACE2("aselect_filter_check_app_uri::better match secure[%d] len=%d", i, len); 
-					iBestSec = i;
-					lenBestSec = len;
-				}
+                            if (len > lenBestSec) {
+                                    TRACE2("aselect_filter_check_app_uri::better match secure[%d] len=%d", i, len); 
+                                    iBestSec = i;
+                                    lenBestSec = len;
+                                    iForcedSec = -1;    // RH, 20190715, n  // we found a better application match so reset force_app_id
+                                    // RH, 20190712, sn
+                                    TRACE1("aselect_filter_check_app_uri:: found a better application match, comparing pcForceAppid with:%s", pConfig->pApplications[i].pcAppId); 
+                                    if (pcForceAppid && !strcmp(pConfig->pApplications[i].pcAppId, pcForceAppid)) {
+                                        TRACE1("aselect_filter_check_app_uri:: better application match, found app_id for pcForceAppid=%s", pcForceAppid); 
+                                        iForcedSec = i;
+                                    }
+                                    // RH, 20190712, en
+//                            } RH, 20190715, o
+                            } else if (len == lenBestSec) {// RH, 20190715, sn
+                                    TRACE1("aselect_filter_check_app_uri:: found an equal application match, comparing pcForceAppid with:%s", pConfig->pApplications[i].pcAppId); 
+                                    if (pcForceAppid && !strcmp(pConfig->pApplications[i].pcAppId, pcForceAppid)) {
+                                        TRACE1("aselect_filter_check_app_uri:: equal application match, found app_id for pcForceAppid=%s", pcForceAppid); 
+                                        iForcedSec = i;
+                                    }
+                                    // RH, 20190715, en
+                            }
             }
             // else: App found, but the rule was disabled
         }
@@ -976,12 +997,14 @@ int aselect_filter_check_app_uri(pool *pPool, PASELECT_FILTER_CONFIG pConfig, ch
 		}
     }
     TRACE4("aselect_filter_check_app_uri::Secure: index=%d len=%d Public: index=%d len=%d", iBestSec, lenBestSec, iBestPub, lenBestPub);
-    if (iBestSec < 0 && iBestPub < 0) {
+//    if (iBestSec < 0 && iBestPub < 0) {   // RH, 20190715, o
+    if (iBestSec < 0 && iBestPub < 0 || (iBestSec >= 0 && pcForceAppid && iForcedSec < 0)) {   // RH, 20190715, n    // if there is a froce_app_id, there must be a match
 		return -1;  // no match at all
     }
 
     if (lenBestSec >= lenBestPub) {
-		pConfig->pCurrentApp = &pConfig->pApplications[iBestSec];
+//		pConfig->pCurrentApp = &pConfig->pApplications[iBestSec];    // RH, 20190712, o
+		pConfig->pCurrentApp = &pConfig->pApplications[(iForcedSec >= 0 ? iForcedSec : iBestSec)];    // RH, 20190712, n
 		return 1;  // secure ok
     }
     return 0;  // public app ok

@@ -18,6 +18,7 @@ case $@ in
     cd src
     $APXS -i -a -DNO_TRACE_LOG -c $SRC
     cd ..
+    cd ./src/.libs;md5sum -b ./mod_aselect_filter.so > ./mod_aselect_filter.so.${LAST_VERSION}.md5;cd ../..
     echo Version=$LAST_VERSION
     ;;
 clean)

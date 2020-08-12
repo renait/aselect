@@ -76,7 +76,7 @@ module AP_MODULE_DECLARE_DATA aselect_filter_module;
 //static handler_rec      aselect_filter_handlers[];
 static const command_rec    aselect_filter_cmds[];
 
-char *version_number = "====subversion_599M====";
+char *version_number = "====subversion_670M====";
 
 // -----------------------------------------------------
 // Functions 
@@ -628,6 +628,8 @@ static int aselect_filter_handler(request_rec *pRequest)
     char *securedAselectAppArgs = NULL;
     char *passUsiAttribute = NULL; 
 	char *pcCookiePath = NULL;
+    char *pcForceAppid;
+
     int try, rc;
 	char *p, sep;
     TIMER_DATA timer_data;
@@ -690,7 +692,9 @@ static int aselect_filter_handler(request_rec *pRequest)
 
     // 20120530, Bauke: new mechanism to choose public/secure using match length
     // 20120608: default is secure
-    rc = aselect_filter_check_app_uri(pPool, pConfig, pRequest->uri);
+    pcForceAppid = aselect_filter_get_param(pPool, pRequest->args, "force_app_id", "&", TRUE);
+
+    rc = aselect_filter_check_app_uri(pPool, pConfig, pRequest->uri, pcForceAppid);
     if (rc == 0) {  // public
 		ap_log_error(APLOG_MARK, APLOG_INFO, 0, pRequest->server,
 			/*ap_psprintf(pRequest->pool, */"SIAM:: Public - %s", pRequest->uri);
