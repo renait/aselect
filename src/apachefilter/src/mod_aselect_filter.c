@@ -76,7 +76,7 @@ module AP_MODULE_DECLARE_DATA aselect_filter_module;
 //static handler_rec      aselect_filter_handlers[];
 static const command_rec    aselect_filter_cmds[];
 
-char *version_number = "====subversion_670M====";
+char *version_number = "====subversion_706====";
 
 // -----------------------------------------------------
 // Functions 
@@ -780,8 +780,14 @@ static int aselect_filter_handler(request_rec *pRequest)
 
     TRACE3("==== 1. Start iError=%d iAction=%s, iRet=%s", iError, filter_action_text(iAction), filter_return_text(iRet));
     TRACE4("     (DECLINED=%d DONE=%d FORBIDDEN=%d OK=%d)", DECLINED, DONE, FORBIDDEN, OK);
-    addedSecurity = (strchr(pConfig->pcAddedSecurity, 'c')!=NULL)? " secure; HttpOnly": "";
-
+//    addedSecurity = (strchr(pConfig->pcAddedSecurity, 'c')!=NULL)? " secure; HttpOnly": "";   // RH, 20200812, o
+//    addedSecurity = (strchr(pConfig->pcAddedSecurity, 'c')!=NULL)? " Secure; HttpOnly; SameSite=None": "";
+       // RH, 20200812, sn
+    addedSecurity = (strchr(pConfig->pcAddedSecurity, 'c')!=NULL)? " Secure; HttpOnly; SameSite=None": 
+        (strchr(pConfig->pcAddedSecurity, 's')!=NULL)? " Secure; HttpOnly; SameSite=Lax":
+            (strchr(pConfig->pcAddedSecurity, 'S')!=NULL)? " Secure; HttpOnly; SameSite=Strict": "";
+       // RH, 20200812, en
+    
 	//
 	// Set Cookie Path for all cookies
 	//
@@ -887,16 +893,19 @@ static int aselect_filter_handler(request_rec *pRequest)
 					}
 					else {
 						pRequest->content_type = "text/html; charset=utf-8";
-						pcCookie = ap_psprintf(pPool, "%s=; version=1; max-age=0; path=%s;%s", "aselectticket", pcCookiePath, addedSecurity);
+//						pcCookie = ap_psprintf(pPool, "%s=; version=1; max-age=0; path=%s;%s", "aselectticket", pcCookiePath, addedSecurity);
+						pcCookie = ap_psprintf(pPool, "%s=; max-age=0; path=%s;%s", "aselectticket", pcCookiePath, addedSecurity);
 						TRACE1("Delete cookie: %s", pcCookie);
 						ap_table_add(headers_out, "Set-Cookie", pcCookie);
 
-						pcCookie = ap_psprintf(pPool, "%s=; version=1; max-age=0; path=%s;%s", "aselectattributes", pcCookiePath, addedSecurity);
+//						pcCookie = ap_psprintf(pPool, "%s=; version=1; max-age=0; path=%s;%s", "aselectattributes", pcCookiePath, addedSecurity);
+						pcCookie = ap_psprintf(pPool, "%s=; max-age=0; path=%s;%s", "aselectattributes", pcCookiePath, addedSecurity);
 						TRACE1("Delete cookie: %s", pcCookie);
 						ap_table_add(headers_out, "Set-Cookie", pcCookie);
 
 						if (strchr(pConfig->pcPassAttributes,'c')!=0 || strchr(pConfig->pcPassAttributes,'C')!=0) {  // Bauke: added
-							pcCookie = ap_psprintf(pPool, "%s=; version=1; max-age=0; path=%s;%s", "aselectattributes", pcCookiePath, addedSecurity);
+//							pcCookie = ap_psprintf(pPool, "%s=; version=1; max-age=0; path=%s;%s", "aselectattributes", pcCookiePath, addedSecurity);
+							pcCookie = ap_psprintf(pPool, "%s=; max-age=0; path=%s;%s", "aselectattributes", pcCookiePath, addedSecurity);
 							TRACE1("Delete cookie: %s", pcCookie);
 							ap_table_add(headers_out, "Set-Cookie", pcCookie);
 						}
@@ -1093,11 +1102,13 @@ static int aselect_filter_handler(request_rec *pRequest)
 									// Successfully killed the ticket, now redirect to the aselect-server
 									if ((pcASelectServerURL = aselect_filter_get_cookie(pPool, headers_in, "aselectserverurl"))) {
 										pRequest->content_type = "text/html; charset=utf-8";
-										pcCookie = ap_psprintf(pPool, "%s=; version=1; max-age=0; path=%s;%s", "aselectticket", pcCookiePath, addedSecurity);
+//										pcCookie = ap_psprintf(pPool, "%s=; version=1; max-age=0; path=%s;%s", "aselectticket", pcCookiePath, addedSecurity);
+										pcCookie = ap_psprintf(pPool, "%s=; max-age=0; path=%s;%s", "aselectticket", pcCookiePath, addedSecurity);
 										TRACE1("Delete cookie: %s", pcCookie);
 										ap_table_add(headers_out, "Set-Cookie", pcCookie);
 										if (strchr(pConfig->pcPassAttributes,'C')!=0) {  // 20120703: Bauke: added
-											pcCookie = ap_psprintf(pPool, "%s=; version=1; max-age=0; path=%s;%s", "aselectuid", pcCookiePath, addedSecurity);
+//											pcCookie = ap_psprintf(pPool, "%s=; version=1; max-age=0; path=%s;%s", "aselectuid", pcCookiePath, addedSecurity);
+											pcCookie = ap_psprintf(pPool, "%s=; max-age=0; path=%s;%s", "aselectuid", pcCookiePath, addedSecurity);
 											TRACE1("Delete cookie: %s", pcCookie);
 											ap_table_add(headers_out, "Set-Cookie", pcCookie);
 										}
@@ -1105,11 +1116,13 @@ static int aselect_filter_handler(request_rec *pRequest)
 										//		pcCookiePath, addedSecurity);
 										//TRACE1("Delete cookie: %s", pcCookie);
 										//ap_table_add(headers_out, "Set-Cookie", pcCookie);
-										pcCookie = ap_psprintf(pPool, "%s=; version=1; max-age=0; path=%s;%s", "aselectserverurl", pcCookiePath, addedSecurity);
+//										pcCookie = ap_psprintf(pPool, "%s=; version=1; max-age=0; path=%s;%s", "aselectserverurl", pcCookiePath, addedSecurity);
+										pcCookie = ap_psprintf(pPool, "%s=; max-age=0; path=%s;%s", "aselectserverurl", pcCookiePath, addedSecurity);
 										TRACE1("Delete cookie: %s", pcCookie);
 										ap_table_add(headers_out, "Set-Cookie", pcCookie);
 										if (strchr(pConfig->pcPassAttributes,'c')!=0 || strchr(pConfig->pcPassAttributes,'C')!=0) {  // Bauke: added
-											pcCookie = ap_psprintf(pPool, "%s=; version=1; max-age=0; path=%s;%s", "aselectattributes", pcCookiePath, addedSecurity);
+//											pcCookie = ap_psprintf(pPool, "%s=; version=1; max-age=0; path=%s;%s", "aselectattributes", pcCookiePath, addedSecurity);
+											pcCookie = ap_psprintf(pPool, "%s=; max-age=0; path=%s;%s", "aselectattributes", pcCookiePath, addedSecurity);
 											TRACE1("Delete cookie: %s", pcCookie);
 											ap_table_add(headers_out, "Set-Cookie", pcCookie);
 										}
@@ -1279,7 +1292,8 @@ static int aselect_filter_handler(request_rec *pRequest)
 			TRACE3("Action: ASELECT_FILTER_ACTION_SET_TICKET: %s - %s - %s", pcTicketOut, pcUIDOut, pcOrganizationOut);
 			// Bauke: added: Pass attributes in a cookie
 			if (strchr(pConfig->pcPassAttributes,'c')!=0 || strchr(pConfig->pcPassAttributes,'C')!=0) {
-				pcCookie4 = ap_psprintf(pPool, "%s=%s; version=1; path=%s;%s", "aselectattributes", 
+//				pcCookie4 = ap_psprintf(pPool, "%s=%s; version=1; path=%s;%s", "aselectattributes", 
+				pcCookie4 = ap_psprintf(pPool, "%s=%s; path=%s;%s", "aselectattributes", 
 					(pcAttributes == NULL) ? "" : pcAttributes, pcCookiePath, addedSecurity);
 				TRACE1("Set-Cookie: %s", pcCookie4);
 				ap_table_add(headers_out, "Set-Cookie", pcCookie4); 
@@ -1290,11 +1304,13 @@ static int aselect_filter_handler(request_rec *pRequest)
 				iError = aselect_filter_passAttributesInUrl(iError, pcAttributes, passUsiAttribute, pPool,
 						pRequest, pConfig, pcTicketOut, pcRequestLanguage, headers_in, &timer_data);
 			}
-			pcCookie = ap_psprintf(pPool, "%s=%s; version=1; path=%s;%s", "aselectticket", pcTicketOut, pcCookiePath, addedSecurity);
+//			pcCookie = ap_psprintf(pPool, "%s=%s; version=1; path=%s;%s", "aselectticket", pcTicketOut, pcCookiePath, addedSecurity);
+			pcCookie = ap_psprintf(pPool, "%s=%s; path=%s;%s", "aselectticket", pcTicketOut, pcCookiePath, addedSecurity);
 			TRACE1("Set-Cookie: %s", pcCookie);
 			ap_table_add(headers_out, "Set-Cookie", pcCookie); 
 			if (strchr(pConfig->pcPassAttributes,'C')!=0) {  // 20120703: Bauke: added for backward compatibility
-				pcCookie2 = ap_psprintf(pPool, "%s=%s; version=1; path=%s;%s", "aselectuid", pcUIDOut, pcCookiePath, addedSecurity);
+//				pcCookie2 = ap_psprintf(pPool, "%s=%s; version=1; path=%s;%s", "aselectuid", pcUIDOut, pcCookiePath, addedSecurity);
+				pcCookie2 = ap_psprintf(pPool, "%s=%s; path=%s;%s", "aselectuid", pcUIDOut, pcCookiePath, addedSecurity);
 				TRACE1("Set-Cookie: %s", pcCookie2);
 				ap_table_add(headers_out, "Set-Cookie", pcCookie2); 
 			}
@@ -1342,7 +1358,8 @@ static int aselect_filter_handler(request_rec *pRequest)
 			if (strchr(pConfig->pcPassAttributes,'C')!=0 && (ap_table_get(headers_in, "X-A-aselectuid-cookie") != NULL) ) {  // 20150417: Remy: added
 				// TRACE1("X-A-aselectuid-cookie: %s", ap_table_get(headers_in, "X-A-aselectuid-cookie"));
 				// overwrite the cookie
-				pcCookie2 = ap_psprintf(pPool, "%s=%s; version=1; path=%s;%s", "aselectuid",
+//				pcCookie2 = ap_psprintf(pPool, "%s=%s; version=1; path=%s;%s", "aselectuid",
+				pcCookie2 = ap_psprintf(pPool, "%s=%s; path=%s;%s", "aselectuid",
 						ap_table_get(headers_in, "X-A-aselectuid-cookie"), pcCookiePath, addedSecurity);
 				TRACE1("Set-Cookie: %s", pcCookie2);
 				ap_table_add(headers_out, "Set-Cookie", pcCookie2);
@@ -2332,8 +2349,23 @@ static const char *aselect_filter_added_security(cmd_parms *parms, void *mconfig
 		return "A-Select ERROR: Internal error during added_security";
     }
     strcpy(pConfig->pcAddedSecurity, "");
+    // RH, 20200812, so
     if (!arg || strstr(arg, "cookies") != NULL)  // It's the default as well
 		strcat(pConfig->pcAddedSecurity, "c");  // add Secure & HttpOnly to cookies
+    // RH, 20200812, eo
+    // RH, 20200812, sn
+    if (!arg || strstr(arg, "cookies") != NULL || strstr(arg, "samesitenone") != NULL)  // It's the default as well
+		strcat(pConfig->pcAddedSecurity, "c");  // add Secure & HttpOnly to cookies
+    else
+    {
+    if (arg && strstr(arg, "samesitelax") != NULL)  // It's the default as well
+		strcat(pConfig->pcAddedSecurity, "s");  // add Secure & HttpOnly to cookies
+    else 
+    if (arg && strstr(arg, "samesitestrict") != NULL)  // It's the default as well
+		strcat(pConfig->pcAddedSecurity, "S");  // add Secure & HttpOnly to cookies
+    }
+    // RH, 20200812, en
+
     TRACE1("aselect_filter_added_security:: %s", pConfig->pcAddedSecurity);
     return NULL;
 }
