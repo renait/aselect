@@ -809,7 +809,8 @@ int aselect_filter_gen_top_redirect(pool *pPool, char *addedSecurity, request_re
     // but first strip any parameters from the url
     // Cookie path should be: pConfig->pCurrentApp->pcLocation
     pcASelectServerURL = aselect_filter_strip_param(pPool, pcASUrl);
-    pcCookie = ap_psprintf(pPool, "aselectserverurl=%s; version=1; path=%s;%s", pcASelectServerURL, cookiePath, addedSecurity);
+//    pcCookie = ap_psprintf(pPool, "aselectserverurl=%s; version=1; path=%s;%s", pcASelectServerURL, cookiePath, addedSecurity);
+    pcCookie = ap_psprintf(pPool, "aselectserverurl=%s; path=%s;%s", pcASelectServerURL, cookiePath, addedSecurity);
     ap_table_add(headers_out, "Set-Cookie", pcCookie);
     TRACE1("Set-Cookie: %s", pcCookie);
 
