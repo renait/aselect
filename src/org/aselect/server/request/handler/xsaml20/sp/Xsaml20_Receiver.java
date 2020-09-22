@@ -303,6 +303,19 @@ public class Xsaml20_Receiver extends Saml20_BrowserHandler
 	}
 	*/
 
+	// RH, 20200918, sn
+	@Override
+	public List <PublicKey> retrievePublicSigningKey(String resourceGroup, String sEntityId)
+	throws ASelectException
+	{
+		String sMethod = "retrievePublicSigningKey";
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "Get Public key for for: "+sEntityId);
+		return retrievePublicSigningKey(sEntityId);
+	}
+	// RH, 20200918, en
+	
+	
+	
 	// RH, 20181119, sn
 	/**
 	 * Override ProtoRequestHandler version to use signing key from Application
