@@ -77,6 +77,32 @@ static void aselect_filter_removeUnwantedCharacters2(char *args)
     int stop, len;
     char *p, *q;
 
+
+    for (stop=0 ; !stop; ) {
+		len = strlen(args);
+//		aselect_filter_url_decode(args);
+		TRACE1("Loop: %s", (args)? args: "NULL");
+		if (len == strlen(args)) {
+			for (p = q = args; *q; ) {
+				// 20100521, Bauke: " added to the list below
+				if (*q == '\r' || *q == '\n' || *q == '>' || *q == '<' || *q == '"')
+					q++;
+				else
+                                    if ( (*q == '%') &&
+                                            ( ((*(q+1) == '0') && ( *(q+2) == 'A' || *(q+2) == 'a' || *(q+2) == 'D' || *(q+2) == 'd' ) ) ||
+                                                ((*(q+1) == '3') && ( *(q+2) == 'C' || *(q+2) == 'c' || *(q+2) == 'E' || *(q+2) == 'e' )) ||
+                                                ((*(q+1) == '2') && ( *(q+2) == '2')) )
+                                       )
+                                        q = q+3;
+                                    else
+					*p++ = *q++;
+			}
+			*p++ = '\0';
+			stop = 1;
+		}
+    }
+
+/*
     for (stop=0 ; !stop; ) {
 		len = strlen(args);
 		aselect_filter_url_decode(args);
@@ -93,6 +119,7 @@ static void aselect_filter_removeUnwantedCharacters2(char *args)
 			stop = 1;
 		}
     }
+*/
 }
 
 
