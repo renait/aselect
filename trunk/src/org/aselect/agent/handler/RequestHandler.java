@@ -1604,16 +1604,19 @@ public class RequestHandler extends Thread
 				String sAttributes = (String) htResponseParameters.get("attributes");
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "attributes from server=" + Auxiliary.obfuscate(sAttributes));
 				if (sAttributes != null) {
-					HashMap newAttr = org.aselect.system.utils.Utils.deserializeAttributes(sAttributes);
+//					HashMap newAttr = org.aselect.system.utils.Utils.deserializeAttributes(sAttributes);	// RH, 20200612, o
+					HashMap newAttr = org.aselect.system.utils.Utils.deserializeAttributes(sAttributes, _systemLogger);	// RH, 20200612, n
 					_systemLogger.log(Level.FINEST, MODULE, sMethod, "newAttr=" +  Auxiliary.obfuscate(newAttr));
 					String sStoredAttr = (String) htTicketContext.get("attributes");
 
-					HashMap storedAttr = org.aselect.system.utils.Utils.deserializeAttributes(sStoredAttr);
+//					HashMap storedAttr = org.aselect.system.utils.Utils.deserializeAttributes(sStoredAttr);	// RH, 20200612, o
+					HashMap storedAttr = org.aselect.system.utils.Utils.deserializeAttributes(sStoredAttr, _systemLogger);	// RH, 20200612, n
 					_systemLogger.log(Level.FINEST, MODULE, sMethod, "storedAttr=" +  Auxiliary.obfuscate(storedAttr));
 
 					storedAttr.putAll(newAttr);// replace stored attributes with new attributes
 					_systemLogger.log(Level.FINEST, MODULE, sMethod, "storedAttr after merge=" +  Auxiliary.obfuscate(storedAttr));
-					sAttributes = org.aselect.system.utils.Utils.serializeAttributes(storedAttr);
+//					sAttributes = org.aselect.system.utils.Utils.serializeAttributes(storedAttr);	// RH, 20200612, o
+					sAttributes = org.aselect.system.utils.Utils.serializeAttributes(storedAttr, _systemLogger);	// RH, 20200612, o
 					
 					htTicketContext.put("attributes", sAttributes);	// save the new to be retrieved by processAttributeRequest
 					// Store hash of attributes (we use this in verify_ticket)

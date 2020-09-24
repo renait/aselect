@@ -94,8 +94,10 @@ import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URLDecoder;
 import java.net.URLEncoder;
+import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Properties;
+import java.util.Vector;
 import java.util.logging.Level;
 
 import javax.servlet.ServletConfig;
@@ -141,7 +143,7 @@ public class NullAuthSP extends AbstractAuthSP
 	/**
 	 * Initialization of the Null AuthSP. <br>
 	 * <br>
-	 * <b>Description:</b> <br>
+	 * <b>DescGET beginription:</b> <br>
 	 * The Null AuthSP uses the following components from the A-Select AuthSP Server<br>
 	 * - the config manager<br>
 	 * - the crypto engine<br>
@@ -458,7 +460,8 @@ public class NullAuthSP extends AbstractAuthSP
 		try {
 			// Get the session
 			HashMap sessionContext = _sessionManager.getSessionContext(sRid);
-			HashMap<String,String> hmAttributes = new HashMap<String, String>();
+//			HashMap<String,String> hmAttributes = new HashMap<String, String>();
+			HashMap<String,Object> hmAttributes = new HashMap<String, Object>();
 			String sLanguage = (String)sessionContext.get("language");
 
 			if (!_cryptoEngine.verifyMySignature(sRid, sSignature)) {
@@ -469,10 +472,24 @@ public class NullAuthSP extends AbstractAuthSP
 					String sName = "attr_name"+i;
 					String sValue = "attr_value"+i;
 					String sNameValue = (String)servletRequest.getParameter(sName);
-					String sValueValue = (String)servletRequest.getParameter(sValue);
-					if (!Utils.hasValue(sNameValue) || !Utils.hasValue(sValueValue))
+//					String sValueValue = (String)servletRequest.getParameter(sValue);
+//					if (!Utils.hasValue(sNameValue) || !Utils.hasValue(sValueValue))
+					if (!Utils.hasValue(sNameValue))	// stop on first empty attr_name
 						break;
-					hmAttributes.put(sNameValue, sValueValue);
+					String[] sValueValues = servletRequest.getParameterValues(sValue);
+					if (sValueValues != null && sValueValues.length == 1 && sValueValues[0].length() > 0) {
+						String sValueValue = sValueValues[0];
+						hmAttributes.put(sNameValue, sValueValue);	// like we used to
+						_systemLogger.log(Level.FINE, MODULE, sMethod, "Single valued attribute received: "+Auxiliary.obfuscate(hmAttributes));
+					}
+					else {
+						Vector<String> v = new Vector<String>();
+						if (sValueValues != null && sValueValues.length > 1) {
+							v = new Vector<String>(Arrays.asList(sValueValues));
+						}
+						hmAttributes.put(sNameValue, v);
+						_systemLogger.log(Level.FINE, MODULE, sMethod, "Multi valued or empty attribute received: "+Auxiliary.obfuscate(hmAttributes));
+					}
 				}
 				_systemLogger.log(Level.FINE, MODULE, sMethod, "Attributes="+Auxiliary.obfuscate(hmAttributes));
 				sResult = Errors.ERROR_NULL_SUCCESS;
@@ -519,7 +536,8 @@ public class NullAuthSP extends AbstractAuthSP
 	 * @throws IOException
 	 *             Signals that an I/O exception has occurred.
 	 */
-	private void handleResult(HashMap servletRequest, HttpServletResponse servletResponse, HashMap<String,String> hmAttributes,
+//	private void handleResult(HashMap servletRequest, HttpServletResponse servletResponse, HashMap<String,String> hmAttributes,
+	private void handleResult(HashMap servletRequest, HttpServletResponse servletResponse, HashMap<String,Object> hmAttributes,
 				String sResultCode, String sLanguage, PrintWriter pwOut)
 	throws IOException
 	{
@@ -533,7 +551,8 @@ public class NullAuthSP extends AbstractAuthSP
 				if (sRid != null && sAsUrl != null && sAsId != null) {
 					String sSerializedAttrs = null;
 					if (hmAttributes != null) {  // pass the attributes too
-						sSerializedAttrs = Utils.serializeAttributes(hmAttributes);	// creates base64
+//						sSerializedAttrs = Utils.serializeAttributes(hmAttributes);	// creates base64	// RH, 20200612, o
+						sSerializedAttrs = Utils.serializeAttributes(hmAttributes, _systemLogger);	// creates base64	// RH, 20200612, n
 					}
 					StringBuffer sbSignature = new StringBuffer(sRid);
 					sbSignature.append(sAsUrl);

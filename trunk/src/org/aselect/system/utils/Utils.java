@@ -1141,7 +1141,8 @@ public class Utils
 	 * @return Serialized representation of the attributes
 	 * @throws ASelectException - If serialization fails.
 	 */
-	public static String serializeAttributes(Map htAttributes)
+//	public static String serializeAttributes(Map htAttributes)	// RH, 20200612, o
+	public static String serializeAttributes(Map htAttributes,  ISystemLogger logger)	// RH, 20200612, n
 	throws ASelectException
 	{
 		final String sMethod = "serializeAttributes";
@@ -1163,14 +1164,27 @@ public class Utils
 					sKey = URLEncoder.encode(sKey + "[]", "UTF-8");
 //					Enumeration eEnum = vValue.elements();
 					Iterator itr =  vValue.iterator();
-					while (itr.hasNext()) {
+					// RH, 20200612, so
+//					while (itr.hasNext()) {
+//						String sValue = (String) itr.next();
+//	
+//						// add: key[]=value
+//						sb.append(sKey).append("=").append(URLEncoder.encode(sValue, "UTF-8"));
+//						if (itr.hasNext())
+//							sb.append("&");
+//					}
+					// RH, 20200612, eo
+					// RH, 20200612, s
+					sb.append(sKey).append("=");
+					while (itr.hasNext()) {	// fix, this does not allow empty valued elements
 						String sValue = (String) itr.next();
 	
 						// add: key[]=value
-						sb.append(sKey).append("=").append(URLEncoder.encode(sValue, "UTF-8"));
+						sb.append(URLEncoder.encode(sValue, "UTF-8"));
 						if (itr.hasNext())
-							sb.append("&");
+							sb.append("&").append(sKey).append("=");
 					}
+					// RH, 20200612, en
 				}
 				else if (oValue instanceof String) {// it's a single value attribute
 					String sValue = (String) oValue;
@@ -1190,7 +1204,13 @@ public class Utils
 //			ASelectSystemLogger logger = ASelectSystemLogger.getHandle();
 //			logger.log(Level.WARNING, MODULE, sMethod, "Could not serialize attributes", e);
 			// RH, 20190926, eo
-			_oSysLog.log(Level.WARNING, MODULE, sMethod, "Could not serialize attributes", e);	// RH, 20190926, n
+			// RH, 20200612, sn
+//			_oSysLog.log(Level.WARNING, MODULE, sMethod, "Could not serialize attributes", e);	// RH, 20190926, n	// RH, 20200612, o
+			// RH, 20200612, sn
+			if (logger != null) {
+				logger.log(Level.WARNING, MODULE, sMethod, "Could not serialize attributes", e);	// RH, 20190926, n	// RH, 20200612, o
+			}
+			// RH, 20200612, en
 			throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR);
 		}
 	}
@@ -1206,7 +1226,8 @@ public class Utils
 	 * @throws ASelectException
 	 *             If URLDecode fails
 	 */
-	public static HashMap deserializeAttributes(String sSerializedAttributes)
+//	public static HashMap deserializeAttributes(String sSerializedAttributes)	// RH, 20200612, o
+	public static HashMap deserializeAttributes(String sSerializedAttributes, ISystemLogger logger)	// RH, 20200612, n
 	throws ASelectException
 	{
 		String sMethod = "deSerializeAttributes";
@@ -1250,7 +1271,12 @@ public class Utils
 //				ASelectSystemLogger logger = ASelectSystemLogger.getHandle();
 //				logger.log(Level.WARNING, Utils.MODULE, sMethod, "Error during deserialization of attributes", e);
 				// RH, 20190926, eo
-				_oSysLog.log(Level.WARNING, Utils.MODULE, sMethod, "Error during deserialization of attributes", e);	// RH, 20190926, n
+//				_oSysLog.log(Level.WARNING, Utils.MODULE, sMethod, "Error during deserialization of attributes", e);	// RH, 20190926, n	// RH, 20200612, o
+				// RH, 20200612, sn
+				if (logger != null) {
+					logger.log(Level.WARNING, Utils.MODULE, sMethod, "Error during deserialization of attributes", e);	// RH, 20190926, n
+				}
+				// RH, 20200612, en
 				throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR, e);
 			}
 		}
@@ -1640,6 +1666,6 @@ public class Utils
 		}
 		return sToParse;
 	}
-	// RH, 20190211, sn
+	// RH, 20190211, en
 
 }

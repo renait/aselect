@@ -13,7 +13,6 @@
 package org.aselect.server.utils;
 
 import java.io.IOException;
-import java.net.URLDecoder;
 import java.net.URLEncoder;
 import java.util.Enumeration;
 import java.util.HashMap;
@@ -33,7 +32,6 @@ import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.logging.SystemLogger;
-import org.aselect.system.utils.BASE64Decoder;
 import org.aselect.system.utils.BASE64Encoder;
 
 /**
@@ -212,6 +210,8 @@ public class Utils
 	public static String serializeAttributes(HashMap htAttributes)
 	throws ASelectException
 	{
+		// Is now delegated to system
+		/*
 		final String sMethod = "serializeAttributes";
 		try {
 			if (htAttributes == null || htAttributes.isEmpty())
@@ -230,13 +230,22 @@ public class Utils
 	
 					sKey = URLEncoder.encode(sKey + "[]", "UTF-8");
 					Enumeration eEnum = vValue.elements();
-					while (eEnum.hasMoreElements()) {
+//					while (eEnum.hasMoreElements()) {	// fix, this does not allow empty valued elements
+//						String sValue = (String) eEnum.nextElement();
+//	
+//						// add: key[]=value
+//						sb.append(sKey).append("=").append(URLEncoder.encode(sValue, "UTF-8"));
+//						if (eEnum.hasMoreElements())
+//							sb.append("&");
+//					}
+					sb.append(sKey).append("=");
+					while (eEnum.hasMoreElements()) {	// fix, this does not allow empty valued elements
 						String sValue = (String) eEnum.nextElement();
 	
 						// add: key[]=value
-						sb.append(sKey).append("=").append(URLEncoder.encode(sValue, "UTF-8"));
+						sb.append(URLEncoder.encode(sValue, "UTF-8"));
 						if (eEnum.hasMoreElements())
-							sb.append("&");
+							sb.append("&").append(sKey).append("=");
 					}
 				}
 				else if (oValue instanceof String) {// it's a single value attribute
@@ -257,6 +266,9 @@ public class Utils
 			logger.log(Level.WARNING, MODULE, sMethod, "Could not serialize attributes", e);
 			throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR);
 		}
+		*/
+		ASelectSystemLogger logger = ASelectSystemLogger.getHandle();
+		return org.aselect.system.utils.Utils.serializeAttributes(htAttributes, logger);
 	}
 
 	/**
@@ -273,6 +285,8 @@ public class Utils
 	public static HashMap deserializeAttributes(String sSerializedAttributes)
 	throws ASelectException
 	{
+		// Is now delegated to system
+		/*
 		String sMethod = "deSerializeAttributes";
 		HashMap htAttributes = new HashMap();
 		if (sSerializedAttributes != null) {  // Attributes available
@@ -316,5 +330,9 @@ public class Utils
 			}
 		}
 		return htAttributes;
+		*/
+		ASelectSystemLogger logger = ASelectSystemLogger.getHandle();
+		return org.aselect.system.utils.Utils.deserializeAttributes(sSerializedAttributes, logger);
 	}
+	
 }
