@@ -1530,7 +1530,8 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 						}
 						// bad TGT or forced_authenticate
 					}
-					_systemLogger.log(Level.INFO, _sModule, sMethod, "TGT not OK");
+//					_systemLogger.log(Level.INFO, _sModule, sMethod, "TGT not OK");	// RH, 20200526, o
+					_systemLogger.log(Level.INFO, _sModule, sMethod, "TGT not OK or forced_authenticate");	// RH, 20200526, n
 
 					////////////////////////////////////////////// handle forced_passive	////////////////////////////////////
 					Boolean forced_passive = (Boolean) _htSessionContext.get("forced_passive");
@@ -1571,30 +1572,7 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 					rc = handleLogin2(htServiceRequest, servletResponse, pwOut);
 					_systemLogger.log(Level.FINEST, _sModule, sMethod, "Return for retry, rc=" + rc);
 					// RH, 20190625, sn
-					// check single sign-on groups, special case, all have but one application
-					boolean keepTgt = false;
-					if (_htSessionContext != null && _htTGTContext != null) {
-						Vector vCurSSOGroups = (Vector)_htSessionContext.get("sso_groups");
-						String sessionAppId = (String) _htSessionContext.get("app_id");	// RH, 20190823, n
-						Vector vOldSSOGroups = (Vector)_htTGTContext.get("sso_groups");
-						String tgtAppId = (String) _htTGTContext.get("app_id");	// RH, 20190823, n
-						HashMap appsperssogroup = _applicationManager.getAppsPerSSOGroup();
-						_systemLogger.log(Level.FINEST, _sModule, sMethod, "Found sso_groups configuration session: " +vCurSSOGroups + " and tgt: " 
-								+ vOldSSOGroups);
-						if (vCurSSOGroups != null && vCurSSOGroups.size() == 1 && !"0".equals(vCurSSOGroups.elementAt(0))
-								&& 
-							vOldSSOGroups != null && vOldSSOGroups.size() == 1 && !"0".equals(vOldSSOGroups.elementAt(0))) {
-							// RH, 20190823, sn
-							_systemLogger.log(Level.FINEST, _sModule, sMethod, "Found apps per sso_group session : " +vCurSSOGroups.get(0) + "/" + appsperssogroup.get(vCurSSOGroups.get(0)) + " and tgt: " 
-									+ vOldSSOGroups.get(0) + "/" + appsperssogroup.get(vOldSSOGroups.get(0)));
-							if ( ((Vector)appsperssogroup.get(vCurSSOGroups.get(0))).size() == 1 && ((Vector)appsperssogroup.get(vOldSSOGroups.get(0))).size() == 1 
-								) {
-								_systemLogger.log(Level.FINEST, _sModule, sMethod, "Found special sso_groups configuration");
-								// RH, 20190823, en
-								keepTgt = true;
-							}
-						}
-					}
+					boolean keepTgt = isSpecialSSOGroups();
 					if (keepTgt) {
 						_systemLogger.log(Level.INFO, _sModule, sMethod, "Retaining tgt due to special sso_groups configuration");
 					} else {
@@ -1700,6 +1678,40 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 			throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR, e);
 		}
 		return 0;
+	}
+
+	/**
+	 * @param sMethod
+	 * @return
+	 */
+	protected boolean isSpecialSSOGroups() {
+		// check single sign-on groups, special case, all have but one application
+		final String sMethod = "inspectSpecialSSOGroups";
+
+		boolean keepTgt = false;
+		if (_htSessionContext != null && _htTGTContext != null) {
+			Vector vCurSSOGroups = (Vector)_htSessionContext.get("sso_groups");
+			String sessionAppId = (String) _htSessionContext.get("app_id");	// RH, 20190823, n
+			Vector vOldSSOGroups = (Vector)_htTGTContext.get("sso_groups");
+			String tgtAppId = (String) _htTGTContext.get("app_id");	// RH, 20190823, n
+			HashMap appsperssogroup = _applicationManager.getAppsPerSSOGroup();
+			_systemLogger.log(Level.FINEST, _sModule, sMethod, "Found sso_groups configuration session: " +vCurSSOGroups + " and tgt: " 
+					+ vOldSSOGroups);
+			if (vCurSSOGroups != null && vCurSSOGroups.size() == 1 && !"0".equals(vCurSSOGroups.elementAt(0))
+					&& 
+				vOldSSOGroups != null && vOldSSOGroups.size() == 1 && !"0".equals(vOldSSOGroups.elementAt(0))) {
+				// RH, 20190823, sn
+				_systemLogger.log(Level.FINEST, _sModule, sMethod, "Found apps per sso_group session : " +vCurSSOGroups.get(0) + "/" + appsperssogroup.get(vCurSSOGroups.get(0)) + " and tgt: " 
+						+ vOldSSOGroups.get(0) + "/" + appsperssogroup.get(vOldSSOGroups.get(0)));
+				if ( ((Vector)appsperssogroup.get(vCurSSOGroups.get(0))).size() == 1 && ((Vector)appsperssogroup.get(vOldSSOGroups.get(0))).size() == 1 
+					) {
+					_systemLogger.log(Level.FINEST, _sModule, sMethod, "Found special sso_groups configuration");
+					// RH, 20190823, en
+					keepTgt = true;
+				}
+			}
+		}
+		return keepTgt;
 	}
 
 	/**
@@ -3427,9 +3439,11 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 		if (!sServerId.equals(_sMyServerId)) {
 			return -1;
 		}
+		
 		_systemLogger.log(Level.INFO, _sModule, sMethod, "checkCred SSO");
-
+		if (!isSpecialSSOGroups()) {	// RH, 20200526, n
 		// check single sign-on groups
+		_systemLogger.log(Level.FINEST, _sModule, sMethod, "checking sso_groups");
 		Vector vCurSSOGroups = (Vector)_htSessionContext.get("sso_groups");
 		Vector vOldSSOGroups = (Vector)_htTGTContext.get("sso_groups");
 		if (vCurSSOGroups != null && vOldSSOGroups != null) {
@@ -3438,6 +3452,12 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 					return -1;
 			}
 		}
+		// RH, 20200526, sn
+		} else {
+			_systemLogger.log(Level.FINEST, _sModule, sMethod, "found special sso_groups, skip checking isValidSSOGroup");
+		}
+		// RH, 20200526, en
+		
 		intRequiredLevel = (Integer)_htSessionContext.get("level");
 		int iTGTLevel = getLevelFromTGT(_htTGTContext);
 		_systemLogger.log(Level.INFO, _sModule, sMethod, "CHECK LEVEL, requires: " + intRequiredLevel+" tgt: "+iTGTLevel);
