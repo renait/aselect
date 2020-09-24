@@ -926,7 +926,8 @@ public class DelegatorAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit
 					// delegate_session and delegate_timeout not implemented by the other side (yet)
 //					sDelegateSession = (String) responseParameters.get("delegate_session");
 //					sDelegateTimeout = (String) responseParameters.get("delegate_timeout");
-					sDelegateFields = Utils.serializeAttributes(responseParameters);	// creates base64
+//					sDelegateFields = Utils.serializeAttributes(responseParameters);	// creates base64	// RH, 20200612, o
+					sDelegateFields = Utils.serializeAttributes(responseParameters, _systemLogger);	// creates base64	// RH, 20200612, n
 //					_systemLogger.log(Level.FINEST, MODULE, sMethod, "sDelegateFields=" + sDelegateFields);
 				}
 				if (sRid == null || sAsUrl == null || sAsId == null) {
