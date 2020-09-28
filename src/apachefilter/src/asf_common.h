@@ -315,7 +315,7 @@ void timer_finish(TIMER_DATA *pTimer);
 char *timer_pack(pool *pPool, TIMER_DATA *pTimer, char *senderId, char *sAppId, int ok);
 
 char *aselect_filter_get_header(pool *pPool, table *headers_in, char *pcHeaderName );// RH, 20161107, n
-
+void aselect_filter_removeUnwantedCharacters2(char *args);    // RH, 20200925, n
 
 
 #define ASELECT_FILTER_TRACE

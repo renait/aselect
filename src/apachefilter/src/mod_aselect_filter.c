@@ -76,7 +76,7 @@ module AP_MODULE_DECLARE_DATA aselect_filter_module;
 //static handler_rec      aselect_filter_handlers[];
 static const command_rec    aselect_filter_cmds[];
 
-char *version_number = "====subversion_707====";
+char *version_number = "====subversion_711M====";
 
 // -----------------------------------------------------
 // Functions 
@@ -1552,7 +1552,9 @@ static int aselect_filter_passAttributesInUrl(int iError, char *pcAttributes, ch
 		TRACE1("Attributes from Agent: %s", pcAttributes);
 		// Filter out unwanted characters in the URL
 		if (pConfig->bSecureUrl && pRequest->args) {
-			aselect_filter_removeUnwantedCharacters(pRequest->args);
+//			aselect_filter_removeUnwantedCharacters(pRequest->args);    // RH, 20200925, o
+                        TRACE("aselect_filter_removeUnwantedCharacters2");    // RH, 20200925, n
+			aselect_filter_removeUnwantedCharacters2(pRequest->args);    // RH, 20200925, n
 		}
 		TRACE2("End: %s, AttrCount=%d", (pRequest->args)? pRequest->args: "NULL", pConfig->iAttrCount);
 
@@ -2617,7 +2619,8 @@ static const char *aselect_filter_secure_url(cmd_parms *parms, void *mconfig, co
 		if ((pcSecureUrl = ap_pstrdup(parms->pool, arg))) {
 			TRACE1("aselect_filter_secure_url:: %s", pcSecureUrl);
 			pConfig->bSecureUrl = TRUE;  // the default
-			if (strcmp(pcSecureUrl, "0") == 0)
+//			if (strcmp(pcSecureUrl, "0") == 0)  // RH, 20200929, o
+			if (pcSecureUrl && strcmp(pcSecureUrl, "0") == 0)  // RH, 20200929, n
 				pConfig->bSecureUrl = FALSE;
 		}
 		else {
@@ -2770,6 +2773,7 @@ void *aselect_filter_create_server_config(apr_pool_t *pPool, server_rec *pServer
 		return NULL;
     }
     memset( pConfig, 0, sizeof( ASELECT_FILTER_CONFIG ) );
+    pConfig->bSecureUrl = TRUE;  // RH, 20200928, only place to set it before config hooks
     return pConfig;
 }
 
