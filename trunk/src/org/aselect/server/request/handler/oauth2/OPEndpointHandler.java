@@ -321,6 +321,7 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 		// verify this is a authorization request here. e.g. url end with _authorize and/or if it is's a GET
 		// rfc6749 says authorization endpoint must support GET, may support POST
 		// token endpoint must use POST
+		
 
 		String client_id =  servletRequest.getParameter("client_id");	// maybe use this as app_id as well, need some security though
    		String redirect_uri =  servletRequest.getParameter("redirect_uri");
@@ -542,7 +543,8 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 										_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not URLDecode attributes: " + e1.getMessage());
 										extractedAttributes = "";
 									}	
-						    		HashMap hmExtractedAttributes = Utils.deserializeAttributes(extractedAttributes);
+//						    		HashMap hmExtractedAttributes = Utils.deserializeAttributes(extractedAttributes);	// RH, 20200612, o
+						    		HashMap hmExtractedAttributes = org.aselect.server.utils.Utils.deserializeAttributes(extractedAttributes);	// RH, 20200612, n 
 									_systemLogger.log(Level.FINEST, MODULE, sMethod, "hmExtractedAttributes after verify_credentials: " + Auxiliary.obfuscate(hmExtractedAttributes));
 									
 						    		String extractedResultCode = verify_result.replaceFirst(".*result_code=([^&]*).*$", "$1");
@@ -653,8 +655,16 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 			       		// scope might be in the request
 
 						if (client_id == null) {
-							client_id = getPassword_credentials_client_id();
-							_systemLogger.log(Level.INFO, MODULE, sMethod, "Using client_id from config:" + client_id);
+							//
+							client_id = getBasicAuthUser(auth_header);
+							if ( client_id != null ) {
+								_systemLogger.log(Level.INFO, MODULE, sMethod, "Using client_id from BasicAuth:" + client_id);
+							} else {
+								//
+								client_id = getPassword_credentials_client_id();
+								_systemLogger.log(Level.INFO, MODULE, sMethod, "Using client_id from config:" + client_id);
+							//
+							}
 						}
 						String app_id = findAppid(client_id , forced_app_id_hint);
 		        		// Handle unconfigured app_id
@@ -701,7 +711,7 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 								_systemLogger.log(Level.WARNING, MODULE, sMethod, "Client auth header present but not validated, ONLY FOR TESTING");
 							}
 						}
-				   		if (client_may_pass) {	// All well
+				   		if (client_may_pass) {	// All well so far
 				   		// call to requester
 							HashMap password_verify_result = null;
 							IAttributeRequestor passwordVerifyAttrRequestor = null;
@@ -778,7 +788,9 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 											_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not URLDecode attributes: " + e1.getMessage());
 											extractedAttributes = "";
 										}	
-							    		HashMap hmExtractedAttributes = Utils.deserializeAttributes(extractedAttributes);
+//							    		HashMap hmExtractedAttributes = Utils.deserializeAttributes(extractedAttributes);	// RH, 20200612, o
+							    		HashMap hmExtractedAttributes = org.aselect.server.utils.Utils.deserializeAttributes(extractedAttributes);	// RH, 20200612, n
+							    		
 										_systemLogger.log(Level.FINEST, MODULE, sMethod, "hmExtractedAttributes after verify_credentials: " + Auxiliary.obfuscate(hmExtractedAttributes));
 										
 							    		String extractedResultCode = verify_result.replaceFirst(".*result_code=([^&]*).*$", "$1");
@@ -1326,7 +1338,9 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 					extractedAttributes = "";
 				}	
 	    		// RH, 20181108, en
-	    		HashMap hmExtractedAttributes = Utils.deserializeAttributes(extractedAttributes);
+//	    		HashMap hmExtractedAttributes = Utils.deserializeAttributes(extractedAttributes);	// RH, 20200612, o
+	    		HashMap hmExtractedAttributes = org.aselect.server.utils.Utils.deserializeAttributes(extractedAttributes);	// RH, 20200612, n
+	    		
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "hmExtractedAttributes after verify_credentials: " + Auxiliary.obfuscate(hmExtractedAttributes));
 	    		
 	    		String extractedResultCode = finalResult.replaceFirst(".*result_code=([^&]*).*$", "$1");
@@ -1821,6 +1835,45 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 		return result;
 	}
 
+	
+	private String getBasicAuthUser(String auth_header)
+	{
+		String sMethod = "getBasicAuthUser";
+
+		String result = null;
+		if (auth_header != null) {
+			StringTokenizer tkn = new StringTokenizer(auth_header, " \t");
+			ArrayList<String> auth_tokens = new ArrayList<String>();
+			while (tkn.hasMoreTokens()) {
+				auth_tokens.add(tkn.nextToken());
+			}
+			if ( auth_tokens.size() >=2 && ("Basic".equalsIgnoreCase(auth_tokens.get(0))) && auth_tokens.get(1) != null ) {	// only Basic allowed
+				BASE64Decoder b64dec = new BASE64Decoder();
+				byte[] baUserpass = b64dec.decodeBuffer(auth_tokens.get(1));
+				try {
+					String userpass = new String(baUserpass, "UTF-8");
+					String[] cred = userpass.split(":", 2); // split in two
+					if (cred.length == 2) {	// should be two tokens
+						result = cred[0];
+					} else {
+						_systemLogger.log(Level.WARNING, MODULE, sMethod, "Authentication header not two tokens separated by ':'");
+					}
+				}
+				catch (UnsupportedEncodingException e) {
+					_systemLogger.log(Level.WARNING, MODULE, sMethod, "UnsupportedEncodingException");
+				}
+			} else {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Authentication header syntax invalid");
+			}
+		} else {
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Authentication header empty");
+		}
+		return result;
+	}
+
+	
+	
+	
 	// Should go to some utilities class
 	/**
 	 * 
