@@ -13,9 +13,16 @@
 	<!-- default only does compile and jars	-->
 	<!-- consider using "clean jars commitlog libs" 	-->
 
+	<!--
 	<property name="ant.build.javac.source" value="1.6" />
 	<property name="ant.build.javac.target" value="1.6" />
-	
+	-->
+	<!--
+	<property name="ant.build.javac.source" value="1.7" />
+	<property name="ant.build.javac.target" value="1.7" />
+	-->
+	<property name="ant.build.javac.source" value="1.8" />
+	<property name="ant.build.javac.target" value="1.8" />
 
 <!--
 	<buildnumber/>
@@ -131,6 +138,7 @@
 	  	<copy file="target/org.aselect.lbsensor.jar" tofile="deployable/org.aselect.lbsensor.jar" preservelastmodified="true"/>
 	  	<copy file="target/org.aselect.eu.stork.jar" tofile="deployable/org.aselect.eu.stork.jar" preservelastmodified="true"/>
 		<copy file="target/org.aselect.agent.jar" tofile="deployable/org.aselect.agent.jar" preservelastmodified="true"/>
+	  	<!-- add StopAgent.class as well	-->
 		<copy file="target/svn.commit.log" tofile="deployable/svn.commit.log" preservelastmodified="true"/>
 	  </target>
 	
@@ -163,7 +171,15 @@
         <javac destdir="target/classes" optimize="true" srcdir="src/eu" sourcepath="">
           <!--	-->
       <classpath>
+      	<!--
         <fileset dir="lib">
+          <include name="*.jar" />
+        </fileset>
+        -->
+            <fileset dir="aselect-dependencies">
+              <include name="*.jar" />
+            </fileset>
+        <fileset dir="opensaml-dependencies">
           <include name="*.jar" />
         </fileset>
         <fileset dir="lib-compile">
@@ -175,19 +191,36 @@
     <!-- A-SELECT	-->
   	 <!--
 	    <javac destdir="target/classes" optimize="true" debug="true" debuglevel="vars,source,lines" srcdir="src/org" sourcepath="">
-	  -->
-  	<!--		-->
-        <javac destdir="target/classes" optimize="true" srcdir="src/org" sourcepath="">
-        	<!--	   -->
+	 -->
+  	<!--	-->
+        <javac destdir="target/classes" optimize="true" srcdir="src/org" sourcepath="">        	
+	<!--	-->
+
       <classpath>
+      	<!--
         <fileset dir="lib">
           <include name="*.jar" />
         </fileset>
+        -->
+            <fileset dir="aselect-dependencies">
+              <include name="*.jar" />
+            </fileset>
+        <fileset dir="opensaml-dependencies">
+          <include name="*.jar" />
+        </fileset>
+
         <fileset dir="lib-compile">
           <include name="*.jar" />
         </fileset>
       </classpath>
     </javac>
+
+    <!-- A-SELECT default package for StopAgent and InstallCert	-->
+  	 <!-- TODO
+	    <javac destdir="target/classes" optimize="true" debug="true" debuglevel="vars,source,lines" srcdir="src/org" sourcepath="">
+	  -->
+  	<!--		-->
+
   </target>
 
   <target name="jars" description="Build the JAR files." depends="compile">
@@ -237,6 +270,9 @@
     			<attribute name="Class-Path" value="org.aselect.system.jar cryptix-jce-provider.jar xercesImpl.jar xmlParserAPIs.jar 
     			 commons-dbcp-1.2.2.jar commons-pool-1.4.jar . "/>
     			-->
+    			<attribute name="Class-Path" value="org.aselect.system.jar mysql-connector-java-5.1.7-bin.jar sqljdbc4.jar  
+    			 cryptix-jce-provider.jar xercesImpl-2.9.1.jar xml-apis-2.9.1.jar 
+    			 commons-dbcp-1.2.2.jar commons-pool-1.4.jar . "/>
     			
     		</manifest>
     	</manifest-tag>
@@ -263,6 +299,7 @@
     <build-jar jar-name="authsp.pki" include-pattern="org/aselect/authspserver/authsp/pki/**/*.class" />
     <build-jar jar-name="authsp.radius" include-pattern="org/aselect/authspserver/authsp/radius/**/*.class" />
     <build-jar jar-name="authsp.sms" include-pattern="org/aselect/authspserver/authsp/sms/**/*.class" />
+
     <build-jar jar-name="authspserver"
                include-pattern="org/aselect/authspserver/**/*.class"
                exclude-pattern-1="org/aselect/authspserver/authsp/**/*.class" />
@@ -300,8 +337,9 @@
                include-pattern="org/aselect/server/authspprotocol/handler/PKI.class" />
     <build-jar jar-name="server.authsphandler.radius"
                include-pattern="org/aselect/server/authspprotocol/handler/Radius.class" />
-    <build-jar jar-name="server.authsphandler.smd"
+    <build-jar jar-name="server.authsphandler.sms"
                include-pattern="org/aselect/server/authspprotocol/handler/SMSAuthSPHandler.class" />
+
     <build-jar jar-name="server"
                include-pattern="org/aselect/server/**/*.class"
                exclude-pattern-1="org/aselect/server/attributes/requestors/*/**/*.class"
