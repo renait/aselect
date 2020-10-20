@@ -490,7 +490,8 @@ public class DigidAuthSPHandler  extends AbstractAuthSPProtocolHandler  implemen
 							}
 							HashMap m = new HashMap();
 							m.put(attName, v);
-							attr = Utils.serializeAttributes(m);
+//							attr = Utils.serializeAttributes(m);	// RH, 20200612, o
+							attr = org.aselect.server.utils.Utils.serializeAttributes(m);	// RH, 20200612, n
 						}
 						if (attr != null) {
 							_systemLogger.log(Level.FINEST, MODULE, sMethod, "Set optional attribute: " + attName + "/" + Auxiliary.obfuscate(attr));

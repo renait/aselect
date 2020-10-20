@@ -697,7 +697,10 @@ public class IdinAuthSPHandler  extends AbstractAuthSPProtocolHandler  implement
 				Map<String,String> oAttributes = saml.getAttributes();
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Set attributes=" + Auxiliary.obfuscate( (oAttributes.toString()) ));
 				if (oAttributes != null) {
-					result.put("attributes", Utils.serializeAttributes(oAttributes));
+//					result.put("attributes", Utils.serializeAttributes(oAttributes));	// RH, 20200612, o
+					HashMap hmAttributes = new HashMap(oAttributes);	// RH, 20200612, n
+//					result.put("attributes", org.aselect.server.utils.Utils.serializeAttributes(oAttributes));	// RH, 20200612, o
+					result.put("attributes", org.aselect.server.utils.Utils.serializeAttributes(hmAttributes));	// RH, 20200612, n
 					sUid = oAttributes.get(_bankidConsumerBinAttribute);
 					result.put("uid", sUid);
 					result.put("user_id", sUid);
