@@ -44,16 +44,32 @@ public class PolyKeyUtil {
 	private PseudonymDecryptKey pDecryptKey;
 	private PseudonymClosingKey pClosingKey;
 	
+	private PrivateKey  privatekey;
+	
 	private ASelectConfigManager _configManager = ASelectConfigManager.getHandle();
 	private ASelectSystemLogger _systemLogger = ASelectSystemLogger.getHandle();
 
 	private PolyKeyUtil() {	// hide this contructor
 		
 	}
-	
+
 	public PolyKeyUtil(String idkey_location, String identity_point, 
 			String pdkey_location, String pckey_location, String pseudonym_point)
 	{
+		this(idkey_location, identity_point, 
+			pdkey_location, pckey_location, pseudonym_point, null);
+	}
+
+//	public PolyKeyUtil(String idkey_location, String identity_point, 
+//			String pdkey_location, String pckey_location, String pseudonym_point)
+	public PolyKeyUtil(String idkey_location, String identity_point, 
+			String pdkey_location, String pckey_location, String pseudonym_point, PrivateKey  privatekey)	// RH, 20201218, n
+	{
+		// RH, 20201218, sn
+		if (privatekey != null) {
+			setPrivatekey(privatekey);
+		}
+		// RH, 20201218, en
 		fixKeyLength();
 		Security.addProvider(new org.bouncycastle.jce.provider.BouncyCastleProvider());
 
@@ -121,8 +137,14 @@ public class PolyKeyUtil {
 	}
 	
 	private PrivateKey getPrivateKey() throws Exception {
-		
-        return _configManager.getDefaultPrivateKey();
+		// RH, 20201218, sn
+		if (getPrivatekey() != null) {
+			return getPrivatekey();
+		} else {
+			return _configManager.getDefaultPrivateKey();
+		}
+		// RH, 20201218, en
+//		return _configManager.getDefaultPrivateKey();	// RH, 20201218, o
         
     }
 		
@@ -187,6 +209,20 @@ public class PolyKeyUtil {
 	    }
 	    if (newMaxKeyLength < 256)
 	        throw new RuntimeException(errorString); // hack failed
+	}
+
+	/**
+	 * @return the privatekey
+	 */
+	public synchronized PrivateKey getPrivatekey() {
+		return privatekey;
+	}
+
+	/**
+	 * @param privatekey the privatekey to set
+	 */
+	public synchronized void setPrivatekey(PrivateKey privatekey) {
+		this.privatekey = privatekey;
 	}
 
 }
