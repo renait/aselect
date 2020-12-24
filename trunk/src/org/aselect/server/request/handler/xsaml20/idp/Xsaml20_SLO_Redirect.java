@@ -22,7 +22,6 @@ import javax.servlet.http.HttpServletResponse;
 
 import org.aselect.server.application.ApplicationManager;
 import org.aselect.server.config.ASelectConfigManager;
-import org.aselect.server.crypto.CryptoEngine;
 import org.aselect.server.request.HandlerTools;
 import org.aselect.server.request.handler.xsaml20.Saml20_BrowserHandler;
 import org.aselect.server.request.handler.xsaml20.SamlHistoryManager;
@@ -229,10 +228,15 @@ public class Xsaml20_SLO_Redirect extends Saml20_BrowserHandler
 			}
 			*/
 			// render tgt invalid
-			htTGTContext.put("invalidatedby" , MODULE+"->"+ sMethod);
-			tgtManager.updateTGT(htTGTContext.get("cookiestgt") != null ? (String)htTGTContext.get("cookiestgt") : sNameID, htTGTContext);
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "tgt rendered invalid");
-			//////////////////////////////////////////////////////////
+			// RH, 20200804, sn	// only if tgt exists
+			if (htTGTContext != null) {
+				htTGTContext.put("invalidatedby" , MODULE+"->"+ sMethod);
+				tgtManager.updateTGT(htTGTContext.get("cookiestgt") != null ? (String)htTGTContext.get("cookiestgt") : sNameID, htTGTContext);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "tgt rendered invalid");
+			} else {
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "tgt not rendered invalid, already gone");
+			}
+			// RH, 20200804, en
 			// RH, 20191114, en
 			
 			// Will save TGT (including the RelayState) as well
