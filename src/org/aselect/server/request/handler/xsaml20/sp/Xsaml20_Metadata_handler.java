@@ -11,39 +11,41 @@
  */
 package org.aselect.server.request.handler.xsaml20.sp;
 
-import java.security.PrivateKey;
 import java.security.cert.CertificateEncodingException;
 import java.util.Enumeration;
 import java.util.Hashtable;
-import java.util.List;
 import java.util.Map;
+import java.util.Set;
 import java.util.logging.Level;
 
 import javax.servlet.ServletConfig;
 import javax.xml.namespace.QName;
 
 import org.apache.commons.codec.binary.Base64;
-import org.aselect.server.attributes.requestors.GenericAttributeRequestor;
 import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.server.request.handler.xsaml20.AbstractMetaDataManager;
 import org.aselect.server.request.handler.xsaml20.PartnerData;
+import org.aselect.server.request.handler.xsaml20.PartnerData.ContactInfo;
+import org.aselect.server.request.handler.xsaml20.PartnerData.Crypto;
+import org.aselect.server.request.handler.xsaml20.PartnerData.HandlerInfo;
+import org.aselect.server.request.handler.xsaml20.PartnerData.Metadata4Partner;
 import org.aselect.server.request.handler.xsaml20.PartnerData.NamespaceInfo;
 import org.aselect.server.request.handler.xsaml20.Saml20_Metadata;
 import org.aselect.server.request.handler.xsaml20.SamlTools;
-import org.aselect.server.request.handler.xsaml20.PartnerData.ContactInfo;
-import org.aselect.server.request.handler.xsaml20.PartnerData.HandlerInfo;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.joda.time.DateTime;
 import org.opensaml.common.SAMLObjectBuilder;
 import org.opensaml.common.xml.SAMLConstants;
+import org.opensaml.saml2.core.AttributeValue;
 import org.opensaml.saml2.metadata.ArtifactResolutionService;
 import org.opensaml.saml2.metadata.AssertionConsumerService;
 import org.opensaml.saml2.metadata.AttributeConsumingService;
 import org.opensaml.saml2.metadata.ContactPerson;
 import org.opensaml.saml2.metadata.ContactPersonTypeEnumeration;
 import org.opensaml.saml2.metadata.EmailAddress;
+import org.opensaml.saml2.metadata.EntitiesDescriptor;
 import org.opensaml.saml2.metadata.EntityDescriptor;
 import org.opensaml.saml2.metadata.GivenName;
 import org.opensaml.saml2.metadata.KeyDescriptor;
@@ -58,10 +60,14 @@ import org.opensaml.saml2.metadata.ServiceName;
 import org.opensaml.saml2.metadata.SingleLogoutService;
 import org.opensaml.saml2.metadata.SurName;
 import org.opensaml.saml2.metadata.TelephoneNumber;
+import org.opensaml.xml.Configuration;
 import org.opensaml.xml.Namespace;
+import org.opensaml.xml.XMLObjectBuilderFactory;
 import org.opensaml.xml.io.Marshaller;
 import org.opensaml.xml.io.MarshallerFactory;
 import org.opensaml.xml.io.MarshallingException;
+import org.opensaml.xml.schema.XSString;
+import org.opensaml.xml.schema.impl.XSStringBuilder;
 import org.opensaml.xml.signature.KeyInfo;
 import org.opensaml.xml.signature.KeyName;
 import org.opensaml.xml.signature.X509Certificate;
@@ -230,15 +236,6 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 		String xmlMDRequest = null;
 		DateTime tStamp = new DateTime();
 
-		// RH, 20110113, sn
-		boolean addkeyname = false;
-		boolean addcertificate = false;
-		boolean usesha256 = false;
-		// RH, 20110113, en
-		boolean includesigningcertificate = true;	// RH, 20160225, n, defaults to true for backwards compatibility
-		boolean includesigningkeyname = false;	// RH, 20160225, n, defaults to false for backwards compatibility
-		boolean includeencryptioncertificate = false;	// RH, 20160225, n, defaults to false for backwards compatibility
-		boolean includeencryptionkeyname = false;	// RH, 20160225, n, defaults to false for backwards compatibility
 		
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "Starting to build metadata");
 //		 RH, 20110111, sn
@@ -253,29 +250,104 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 		if (partnerData != null)
 			sLocalIssuer = partnerData.getLocalIssuer();
 
+		Node node = null;
+		
+		
+		Metadata4Partner metadata4partner = partnerData.getMetadata4partner();
+		Crypto crypto4partner = partnerData.getCrypto();
+		EntityDescriptor entityDescriptor = createEntityDescriptor(tStamp, /*partnerData,*/ sLocalIssuer, metadata4partner, crypto4partner);
+		
+		EntitiesDescriptor entitiesDescriptor = null;
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "partnerData  getMetadataDVs():" + partnerData.getMetadataDVs());
+		if (partnerData.getMetadataDVs() != null && partnerData.getMetadataDVs().size() > 0) {
+			// Create the EntitiesDescriptor
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "Adding DVs");
+			SAMLObjectBuilder<EntitiesDescriptor> entitiesDescriptorBuilder = (SAMLObjectBuilder<EntitiesDescriptor>) _oBuilderFactory
+					.getBuilder(EntitiesDescriptor.DEFAULT_ELEMENT_NAME);
+
+			entitiesDescriptor = entitiesDescriptorBuilder.buildObject();
+			entitiesDescriptor.getEntityDescriptors().add(entityDescriptor);
+			// add DVs
+			Set<String> dvs = partnerData.getMetadataDVs().keySet();
+			for (String dv : dvs) {
+				Metadata4Partner dvmeta =  partnerData.getMetadataDVs().get(dv);
+				
+				EntityDescriptor entityDescriptorDV = createEntityDescriptor(tStamp, /*partnerData,*/ sLocalIssuer, dvmeta, crypto4partner);
+				entitiesDescriptor.getEntityDescriptors().add(entityDescriptorDV);
+			}
+		}
+		
+		// Marshall to the Node
+		MarshallerFactory factory = org.opensaml.xml.Configuration.getMarshallerFactory();
+//		Marshaller marshaller = factory.getMarshaller(entityDescriptor);
+		Marshaller marshaller = factory.getMarshaller(entitiesDescriptor != null ? entitiesDescriptor : entityDescriptor);
+		try {
+//			node = marshaller.marshall(entityDescriptor);
+			node = marshaller.marshall(entitiesDescriptor != null ? entitiesDescriptor : entityDescriptor);
+		}
+		catch (MarshallingException e) {
+			_systemLogger.log(Level.SEVERE, MODULE, sMethod, e.getMessage(), e);
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not marshall metadata", e);
+			throw new ASelectException(Errors.ERROR_ASELECT_INIT_ERROR, e);
+		}
+		
+		
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "Marshalling done");
+		xmlMDRequest = XMLHelper.nodeToString(node);
+
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "xmlMDRequest: " + xmlMDRequest);
+		return xmlMDRequest;
+	}
+
+	/**
+	 * @param tStamp
+	 * @param partnerData
+	 * @param sLocalIssuer
+	 * @param metadata4partner
+	 * @param crypto TODO
+	 * @return
+	 * @throws ASelectException
+	 */
+	protected EntityDescriptor createEntityDescriptor(DateTime tStamp, /*PartnerData partnerData,*/
+			String sLocalIssuer, Metadata4Partner metadata4partner, Crypto crypto) throws ASelectException {
+		
+		String sMethod = "createEntityDescriptor";
+
+		// RH, 20110113, sn
+		boolean addkeyname = false;
+		boolean addcertificate = false;
+		boolean usesha256 = false;
+		// RH, 20110113, en
+		boolean includesigningcertificate = true;	// RH, 20160225, n, defaults to true for backwards compatibility
+		boolean includesigningkeyname = false;	// RH, 20160225, n, defaults to false for backwards compatibility
+		boolean includeencryptioncertificate = false;	// RH, 20160225, n, defaults to false for backwards compatibility
+		boolean includeencryptionkeyname = false;	// RH, 20160225, n, defaults to false for backwards compatibility
+		
+		
 //		 RH, 20110111, en
 		// RH, 20110113, sn
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "setting partnerdata");
-		if (partnerData != null) {
-			addkeyname = Boolean.parseBoolean(partnerData.getMetadata4partner().getAddkeyname());
-			addcertificate = Boolean.parseBoolean(partnerData.getMetadata4partner().getAddcertificate());
+//		if (partnerData != null) {
+		if (metadata4partner != null) {
+			addkeyname = Boolean.parseBoolean(metadata4partner.getAddkeyname());
+			addcertificate = Boolean.parseBoolean(metadata4partner.getAddcertificate());
 			
 			// RH, 20160225, sn
-			String _includesigningcertificate = partnerData.getMetadata4partner().getIncludesigningcertificate();
+			String _includesigningcertificate = metadata4partner.getIncludesigningcertificate();
 			if (_includesigningcertificate != null)
 				includesigningcertificate = Boolean.parseBoolean(_includesigningcertificate);
-			String _includeencryptioncertificate = partnerData.getMetadata4partner().getIncludeencryptioncertificate();
+			String _includeencryptioncertificate = metadata4partner.getIncludeencryptioncertificate();
 			if (_includeencryptioncertificate != null)
 				includeencryptioncertificate = Boolean.parseBoolean(_includeencryptioncertificate);
-			String _includesigningkeyname = partnerData.getMetadata4partner().getIncludesigningkeyname();
+			String _includesigningkeyname = metadata4partner.getIncludesigningkeyname();
 			if (_includesigningkeyname != null)
 				includesigningkeyname = Boolean.parseBoolean(_includesigningkeyname);
-			String _includeencryptionkeyname = partnerData.getMetadata4partner().getIncludeencryptionkeyname();
+			String _includeencryptionkeyname = metadata4partner.getIncludeencryptionkeyname();
 			if (_includeencryptionkeyname != null)
 				includeencryptionkeyname = Boolean.parseBoolean(_includeencryptionkeyname);
 			// RH, 20160225, en
 
-			String specialsettings = partnerData.getMetadata4partner().getSpecialsettings();
+			String specialsettings = metadata4partner.getSpecialsettings();
 			usesha256 = specialsettings != null && specialsettings.toLowerCase().contains("sha256");
 			
 		}
@@ -297,8 +369,9 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 			entityDescriptor.setCacheDuration(getCacheDuration());
 		
 		//	RH, 20140320, sn
-		if (partnerData != null && partnerData.getMetadata4partner().getNamespaceInfo().size() > 0) {	// Get namespaceinfo + additional attributes to publish from partnerdata
-			Enumeration<NamespaceInfo> eHandler = partnerData.getMetadata4partner().getNamespaceInfo().elements();
+//		if (partnerData != null && partnerData.getMetadata4partner().getNamespaceInfo().size() > 0) {	// Get namespaceinfo + additional attributes to publish from partnerdata
+		if (metadata4partner != null && metadata4partner.getNamespaceInfo().size() > 0) {	// Get namespaceinfo + additional attributes to publish from partnerdata
+			Enumeration<NamespaceInfo> eHandler = metadata4partner.getNamespaceInfo().elements();
 			while (eHandler.hasMoreElements()) {
 				NamespaceInfo nsi = eHandler.nextElement();
 				entityDescriptor.addNamespace(new Namespace(nsi.getUri(), nsi.getPrefix()));
@@ -329,8 +402,9 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 		X509Certificate x509Certificate = x509CertificateBuilder.buildObject();
 		
 		// RH, 20180920, sn
-		if (partnerData != null && partnerData.getCrypto() != null) {
-			java.security.cert.X509Certificate x509Cert = partnerData.getCrypto().getX509Cert();
+//		if (partnerData != null && crypto != null) {
+		if (crypto != null) {
+			java.security.cert.X509Certificate x509Cert = crypto.getX509Cert();
 			try {
 				String encodedCert = new String(Base64.encodeBase64(x509Cert.getEncoded()));
 				x509Certificate.setValue(encodedCert);
@@ -359,8 +433,10 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 			.getBuilder(KeyName.DEFAULT_ELEMENT_NAME);
 			KeyName keyName = keyNameBuilder.buildObject();
 			// RH, 20180920, sn
-			if (partnerData != null && partnerData.getCrypto() != null) {
-				keyName.setValue( partnerData.getCrypto().getCertFingerPrint());
+			
+//			if (partnerData != null && partnerData.getCrypto() != null) {
+			if (crypto != null) {
+				keyName.setValue( crypto.getCertFingerPrint());
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "Adding specific partner certificate keyname to Signing keyinfo");	// RH, 20160223, n
 			} else {
 				// RH, 20180920, en
@@ -381,8 +457,9 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 
 		X509Certificate x509CertificateEncryption = x509CertificateBuilder.buildObject();
 		// RH, 20180920, sn
-		if (partnerData != null && partnerData.getCrypto() != null) {
-			java.security.cert.X509Certificate x509Cert = partnerData.getCrypto().getX509Cert();
+//		if (partnerData != null && partnerData.getCrypto() != null) {
+		if (crypto != null) {
+			java.security.cert.X509Certificate x509Cert = crypto.getX509Cert();
 			try {
 				String encodedCert = new String(Base64.encodeBase64(x509Cert.getEncoded()));
 				x509CertificateEncryption.setValue(encodedCert);
@@ -407,8 +484,9 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 			.getBuilder(KeyName.DEFAULT_ELEMENT_NAME);
 			KeyName keyNameEncryption = keyNameBuilder.buildObject();
 			// RH, 20180920, sn
-			if (partnerData != null && partnerData.getCrypto() != null) {
-				keyNameEncryption.setValue( partnerData.getCrypto().getCertFingerPrint());
+//			if (partnerData != null && partnerData.getCrypto() != null) {
+			if (crypto != null) {
+				keyNameEncryption.setValue( crypto.getCertFingerPrint());
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "Adding specific partner certificate keyname to Encryption keyinfo");
 			} else {
 				// RH, 20180920, en
@@ -426,10 +504,11 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 		SPSSODescriptor ssoDescriptor = ssoDescriptorBuilder.buildObject();
 
 		// RH, 20110113, sn
-		if (partnerData != null && partnerData.getMetadata4partner().getHandlers().size() > 0) {	// Get handlers to publish from partnerdata
+//		if (partnerData != null && partnerData.getMetadata4partner().getHandlers().size() > 0) {	// Get handlers to publish from partnerdata
+		if (metadata4partner != null && metadata4partner.getHandlers().size() > 0) {	// Get handlers to publish from partnerdata
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "Using Parnerdata for handlers");
 
-			Enumeration<HandlerInfo> eHandler = partnerData.getMetadata4partner().getHandlers().elements();
+			Enumeration<HandlerInfo> eHandler = metadata4partner.getHandlers().elements();
 			while (eHandler.hasMoreElements()) {
 				HandlerInfo hHandler = eHandler.nextElement();
 				if (AssertionConsumerService.DEFAULT_ELEMENT_LOCAL_NAME.equalsIgnoreCase(hHandler.getType()) ) {
@@ -566,6 +645,7 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 					// <ServiceDescription> // optional	// not implemented yet
 					// <RequestedAttribute>	
 					for (Map<String, ?> attribute : hHandler.getAttributes()) {
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Adding RequestedAttribute: "+ attribute);
 						SAMLObjectBuilder<RequestedAttribute> requestedAttributeBuilder = (SAMLObjectBuilder<RequestedAttribute>) _oBuilderFactory
 								.getBuilder(RequestedAttribute.DEFAULT_ELEMENT_NAME);
 						RequestedAttribute requestedAttribute = requestedAttributeBuilder.buildObject();
@@ -576,7 +656,30 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 						if (isrequired != null) {
 							requestedAttribute.setIsRequired(isrequired);
 						}
-						// <saml:AttributeValue> optional	// not implemented yet
+						// <saml:AttributeValue> optional	// not implemented yet	// RH, 20201029, o
+						// RH, 20201029, sn
+						// attributevalue implementation for eID SAML4.4
+						// only single valued attributevalue allowed
+						String sValue = (String)attribute.get("value");
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Found attribute value: " + sValue);
+						if (sValue != null && sValue.length()>0 ) {	// Should not be null nor length = 0
+							
+							XSString theAttributeValue = null;
+							XMLObjectBuilderFactory newbuilderFactory = Configuration.getBuilderFactory();
+							XSStringBuilder newstringBuilder = (XSStringBuilder)newbuilderFactory.getBuilder(XSString.TYPE_NAME);
+
+//							XMLObjectBuilder stringBuilder = _oBuilderFactory.getBuilder(XSString.TYPE_NAME);
+//							XSStringBuilder stringBuilder = (XSStringBuilder)_oBuilderFactory.getBuilder(XSString.TYPE_NAME);
+							theAttributeValue = (XSString)newstringBuilder.buildObject(AttributeValue.DEFAULT_ELEMENT_NAME, XSString.TYPE_NAME);
+							theAttributeValue.setValue(sValue);
+							_systemLogger.log(Level.FINEST, MODULE, sMethod, "theAttributeValue: " + theAttributeValue);
+							requestedAttribute.getAttributeValues().add(theAttributeValue);
+							_systemLogger.log(Level.FINEST, MODULE, sMethod, "requestedAttribute.getAttributeValues().size() : " + requestedAttribute.getAttributeValues().size());
+						} else {
+							_systemLogger.log(Level.FINEST, MODULE, sMethod, "Empty attribute value found, skipping empty");
+						}
+						// RH, 20201029, en
+
 						attrConsumingService.getRequestAttributes().add(requestedAttribute);
 					}
 					ssoDescriptor.getAttributeConsumingServices().add(attrConsumingService);
@@ -640,10 +743,11 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 		}
 		// RH, 20200220, en
 		
-	}		// end publish all handlers in config 
-		
+		}		// end publish all handlers in config 
+				
 		// Publish Organization info
-		if (partnerData != null && partnerData.getMetadata4partner().getMetaorgname() != null) {	// If Organization present name is mandatory, so check name
+//		if (partnerData != null && partnerData.getMetadata4partner().getMetaorgname() != null) {	// If Organization present name is mandatory, so check name
+		if (metadata4partner != null && metadata4partner.getMetaorgname() != null) {	// If Organization present name is mandatory, so check name
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "Setting Organization info");
 
 			SAMLObjectBuilder<Organization> organizationBuilder = (SAMLObjectBuilder<Organization>) _oBuilderFactory
@@ -652,23 +756,23 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 			SAMLObjectBuilder<OrganizationName> organizationNameBuilder = (SAMLObjectBuilder<OrganizationName>) _oBuilderFactory
 			.getBuilder(OrganizationName.DEFAULT_ELEMENT_NAME);
 			OrganizationName organizationName = organizationNameBuilder.buildObject();
-			organizationName.setName(new LocalizedString(partnerData.getMetadata4partner().getMetaorgname(), partnerData.getMetadata4partner().getMetaorgnamelang()));
+			organizationName.setName(new LocalizedString(metadata4partner.getMetaorgname(), metadata4partner.getMetaorgnamelang()));
 			organization.getOrganizationNames().add(organizationName);
 
 			
-			if (partnerData.getMetadata4partner().getMetaorgdisplname() != null) {
+			if (metadata4partner.getMetaorgdisplname() != null) {
 				SAMLObjectBuilder<OrganizationDisplayName> organizationDisplayNameBuilder = (SAMLObjectBuilder<OrganizationDisplayName>) _oBuilderFactory
 				.getBuilder(OrganizationDisplayName.DEFAULT_ELEMENT_NAME);
 				OrganizationDisplayName organizationDisplayName = organizationDisplayNameBuilder.buildObject();
-				organizationDisplayName.setName(new LocalizedString(partnerData.getMetadata4partner().getMetaorgdisplname(), partnerData.getMetadata4partner().getMetaorgdisplnamelang()));
+				organizationDisplayName.setName(new LocalizedString(metadata4partner.getMetaorgdisplname(), metadata4partner.getMetaorgdisplnamelang()));
 				organization.getDisplayNames().add(organizationDisplayName);
 			}
 
-			if (partnerData.getMetadata4partner().getMetaorgurl() != null) {
+			if (metadata4partner.getMetaorgurl() != null) {
 				SAMLObjectBuilder<OrganizationURL> organizationURLBuilder = (SAMLObjectBuilder<OrganizationURL>) _oBuilderFactory
 				.getBuilder(OrganizationURL.DEFAULT_ELEMENT_NAME);
 				OrganizationURL organizationURL = organizationURLBuilder.buildObject();
-				organizationURL.setURL(new LocalizedString(partnerData.getMetadata4partner().getMetaorgurl(), partnerData.getMetadata4partner().getMetaorgurllang()));
+				organizationURL.setURL(new LocalizedString(metadata4partner.getMetaorgurl(), metadata4partner.getMetaorgurllang()));
 				organization.getURLs().add(organizationURL);
 			}
 		
@@ -677,13 +781,14 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 
 		
 		//	publish ContactPerson info
-
+		
 //		if (partnerData != null && partnerData.getMetadata4partner().getMetacontacttype() != null) {	// If ContactPerson present  ContactType  is mandatory so check  ContactType
 //			_systemLogger.log(Level.INFO, MODULE, sMethod, "Setting ContactPerson info");
-		if (partnerData != null && partnerData.getMetadata4partner().getContactInfo().size() > 0) {	// Get ContactPerson(s) to publish from partnerdata
+//		if (partnerData != null && partnerData.getMetadata4partner().getContactInfo().size() > 0) {	// Get ContactPerson(s) to publish from partnerdata
+		if (metadata4partner != null && metadata4partner.getContactInfo().size() > 0) {	// Get ContactPerson(s) to publish from partnerdata
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "Using ContactInfo for ContactInfo");
 
-			Enumeration<ContactInfo> eContactInfos = partnerData.getMetadata4partner().getContactInfo().elements();
+			Enumeration<ContactInfo> eContactInfos = metadata4partner.getContactInfo().elements();
 			while (eContactInfos.hasMoreElements()) {
 				ContactInfo eContactInfo = eContactInfos.nextElement();
 
@@ -797,8 +902,9 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 
 		// RH, 20180918, sn
 		PartnerData.Crypto specificCrypto = null;
-		if (partnerData != null) {
-			specificCrypto = partnerData.getCrypto();	// might be null
+//		if (partnerData != null) {
+		if (crypto != null) {
+			specificCrypto = crypto;	// might be null
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "Signing metadata with specific partner private key");
 			// RH, 20180920, en
 		}
@@ -815,23 +921,6 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 
 		// The Session Sync descriptor (PDPDescriptor?) would go here
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "entityDescriptor done");
-
-		// Marshall to the Node
-		MarshallerFactory factory = org.opensaml.xml.Configuration.getMarshallerFactory();
-		Marshaller marshaller = factory.getMarshaller(entityDescriptor);
-		Node node = null;
-		try {
-			node = marshaller.marshall(entityDescriptor);
-		}
-		catch (MarshallingException e) {
-			_systemLogger.log(Level.SEVERE, MODULE, sMethod, e.getMessage(), e);
-			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not marshall metadata", e);
-			throw new ASelectException(Errors.ERROR_ASELECT_INIT_ERROR, e);
-		}
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "Marshalling done");
-		xmlMDRequest = XMLHelper.nodeToString(node);
-
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "xmlMDRequest: " + xmlMDRequest);
-		return xmlMDRequest;
+		return entityDescriptor;
 	}
 }

@@ -24,8 +24,8 @@ import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.server.request.handler.xsaml20.AbstractMetaDataManager;
 import org.aselect.server.request.handler.xsaml20.PartnerData;
 import org.aselect.server.request.handler.xsaml20.PartnerData.HandlerInfo;
+import org.aselect.server.request.handler.xsaml20.PartnerData.Metadata4Partner;
 import org.aselect.server.request.handler.xsaml20.SecurityLevel;
-import org.aselect.server.request.handler.xsaml20.SecurityLevel.SecurityLevelEntry;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
@@ -264,208 +264,31 @@ public class MetaDataManagerSp extends AbstractMetaDataManager
 			
 			// Set specific metadata for this partner
 			Object metadataSection = Utils.getSimpleSection(_configManager, _systemLogger, idpSection, "metadata", false);
-			if (metadataSection != null) {
-				// get handlers to publish
-				Object metaHandler = Utils.getSimpleSection(_configManager, _systemLogger, metadataSection, "handler", false);
-				if (metaHandler == null) {
-					_systemLogger.log(Level.WARNING, MODULE, sMethod, "No handlers found in metadata section for: "+ sId);
-				}
-				while (metaHandler != null) {
-					String metahandlertype = Utils.getSimpleParam(_configManager, _systemLogger, metaHandler, "type", false);
-					// RM_72_01
-					String metahandlerbinding = Utils.getSimpleParam(_configManager, _systemLogger, metaHandler, "binding", false);
-					// RM_72_02
-					String metahandlerisdefault = Utils.getSimpleParam(_configManager, _systemLogger, metaHandler, "isdefault", false);
-					Boolean bMetahandlerisdefault = null;
-					if (metahandlerisdefault != null) {
-						metahandlerisdefault = metahandlerisdefault.toLowerCase();
-						bMetahandlerisdefault = new Boolean(metahandlerisdefault);
-					}
-					String metahandlerindex = Utils.getSimpleParam(_configManager, _systemLogger, metaHandler, "index", false);
-					Integer iMetahandlerindex = null;
-					if (metahandlerindex != null) {
-						iMetahandlerindex = new Integer(metahandlerindex);
-					}
-					
-					// RH, 20120703, sn, Added optional location
-					String metahandlerlocation = Utils.getSimpleParam(_configManager, _systemLogger, metaHandler, "location", false);
-					// RH, 20120703, en
-
-					String metahandlerresponselocation = Utils.getSimpleParam(_configManager, _systemLogger, metaHandler, "responselocation", false);
-					
-					// RH, 20160419, sn, get optional attributeconsumingservice
-					HandlerInfo handerInfo = idpData.new HandlerInfo(metahandlertype,metahandlerbinding,  bMetahandlerisdefault,  iMetahandlerindex, metahandlerresponselocation, metahandlerlocation);
-					if (AttributeConsumingService.DEFAULT_ELEMENT_LOCAL_NAME.equalsIgnoreCase(metahandlertype)) {
-						Object servicesSection = Utils.getSimpleSection(_configManager, _systemLogger, metaHandler, "services", true);
-						while (servicesSection != null) {
-							_systemLogger.log(Level.CONFIG, MODULE, sMethod, "services section section found for: "+ sId);
-	
-							Object serviceSection = Utils.getSimpleSection(_configManager, _systemLogger, servicesSection, "service", true);
-							while (serviceSection != null) {
-										Map<String, Object> reqService = new Hashtable<String, Object>();
-										String  attributeconsumingservice_service_name = Utils.getSimpleParam(_configManager, _systemLogger, serviceSection, "name", true);
-										reqService.put("name", attributeconsumingservice_service_name);
-										String  attributeconsumingservice_service_lang = Utils.getSimpleParam(_configManager, _systemLogger, serviceSection, "lang", true);
-										reqService.put("lang", attributeconsumingservice_service_lang);
-	
-										handerInfo.getServices().add(reqService);
-										serviceSection = _configManager.getNextSection(serviceSection);
-							}
-							servicesSection = _configManager.getNextSection(servicesSection);
-						}
-	
-						Object attributesSection = Utils.getSimpleSection(_configManager, _systemLogger, metaHandler, "attributes", true);
-						while (attributesSection != null) {
-							_systemLogger.log(Level.CONFIG, MODULE, sMethod, "attributes section section found for: "+ sId);
-	
-							Object attributeSection = Utils.getSimpleSection(_configManager, _systemLogger, attributesSection, "attribute", true);
-							while (attributeSection != null) {
-										Map<String, Object> reqAttr = new Hashtable<String, Object>();
-										String  attributeconsumingservice_attribute_name = Utils.getSimpleParam(_configManager, _systemLogger, attributeSection, "name", true);
-										reqAttr.put("name", attributeconsumingservice_attribute_name);
-										String  attributeconsumingservice_attribute_required = Utils.getSimpleParam(_configManager, _systemLogger, attributeSection, "isrequired", false);
-										if (attributeconsumingservice_attribute_required != null) {
-											reqAttr.put("isrequired", Boolean.valueOf(attributeconsumingservice_attribute_required));
-										}
-	
-										// attributevalues not implemented
-										handerInfo.getAttributes().add(reqAttr);
-							
-										attributeSection = _configManager.getNextSection(attributeSection);
-	
-							}
-							attributesSection = _configManager.getNextSection(attributesSection);
-						}
-					}
-					// RH, 20160419, en
-					
-//					idpData.getMetadata4partner().getHandlers().add(idpData.new HandlerInfo(metahandlertype,metahandlerbinding,  bMetahandlerisdefault,  iMetahandlerindex, metahandlerresponselocation, metahandlerlocation) );	// RH, 20160428, o
-					idpData.getMetadata4partner().getHandlers().add( handerInfo );	// RH, 20160428, n
-					metaHandler = _configManager.getNextSection(metaHandler);
-				}
-
-				// RH, 20140320, sn, get optional entitydescriptorextension
-				Object extensionSection = Utils.getSimpleSection(_configManager, _systemLogger, metadataSection, "entitydescriptorextension", false);
-				if (extensionSection != null) {
-					Object metaNamespace = Utils.getSimpleSection(_configManager, _systemLogger, extensionSection, "namespace", false);
-					if (metaNamespace == null) {
-						_systemLogger.log(Level.WARNING, MODULE, sMethod, "No namespace element found in entitydescriptorextension section for: "+ sId);
-					}
-					while (metaNamespace != null) {
-						String metaNamespacePrefix = Utils.getSimpleParam(_configManager, _systemLogger, metaNamespace, "prefix", false);
-						_systemLogger.log(Level.FINEST, MODULE, sMethod, "prefix found in entitydescriptorextension section: "+ metaNamespacePrefix);
-						String metaNamespaceUri = Utils.getSimpleParam(_configManager, _systemLogger, metaNamespace, "uri", false);
-						_systemLogger.log(Level.FINEST, MODULE, sMethod, "uri found in entitydescriptorextension section: "+ metaNamespaceUri);
-						if ( metaNamespacePrefix != null && metaNamespaceUri != null ) {
-							Object metaAttribute = Utils.getSimpleSection(_configManager, _systemLogger, metaNamespace, "attribute", false);
-							if (metaAttribute == null) {
-								_systemLogger.log(Level.WARNING, MODULE, sMethod, "No attribute element found in entitydescriptorextension section for uri: "+ metaNamespaceUri);
-							}
-							Hashtable<String, String> attributes = new Hashtable<String, String>();
-							while (metaAttribute != null) {
-								String metaAttributeValue = Utils.getSimpleParam(_configManager, _systemLogger, metaAttribute, "value", false);
-								String metaAttributeLocalPart = Utils.getSimpleParam(_configManager, _systemLogger, metaAttribute, "localpart", false);
-								_systemLogger.log(Level.FINEST, MODULE, sMethod, "localpart found in attribute section: "+ metaAttributeLocalPart + " with value: " + metaAttributeValue);
-								if ( metaAttributeValue != null && metaAttributeLocalPart != null) {
-									attributes.put(metaAttributeLocalPart, metaAttributeValue);
-								} else {
-									_systemLogger.log(Level.WARNING, MODULE, sMethod, "one of localpart or value == null section with uri: "+ metaNamespaceUri);
-								}
-								metaAttribute = _configManager.getNextSection(metaAttribute);
-							}
-							idpData.getMetadata4partner().getNamespaceInfo().add(idpData.new NamespaceInfo(metaNamespacePrefix, metaNamespaceUri, attributes));
-						} else {
-							_systemLogger.log(Level.WARNING, MODULE, sMethod, "one of prefix or uri == null namespace section");
-						}
-						metaNamespace = _configManager.getNextSection(metaNamespace);
-					}
-				} else {
-					_systemLogger.log(Level.INFO, MODULE, sMethod, "No entitydescriptorextension found in metadata section for: "+ sId);
-				}
-				// RH, 20140320, en
-				
-				
-				
-				
-				String metaaddkeyname = Utils.getSimpleParam(_configManager, _systemLogger, metadataSection, "addkeyname", false);
-				if (metaaddkeyname != null)
-					idpData.getMetadata4partner().setAddkeyname(metaaddkeyname);
-
-				String metaaddcertificate = Utils.getSimpleParam(_configManager, _systemLogger, metadataSection, "addcertificate", false);
-				if (metaaddcertificate != null)
-					idpData.getMetadata4partner().setAddcertificate(metaaddcertificate);
-				// RH, 20160225, sn
-				Object keyDescriptorSection = Utils.getSimpleSection(_configManager, _systemLogger, metadataSection, "keydescriptor", false);
-				if (keyDescriptorSection == null) {
-					_systemLogger.log(Level.WARNING, MODULE, sMethod, "No keydescriptorsection element found in metadata section for: "+ sId + ", using defaults");
-				}
-				while (keyDescriptorSection != null) {
-					String usage = Utils.getSimpleParam(_configManager, _systemLogger, keyDescriptorSection, "usage", false);
-					if ("signing".equalsIgnoreCase(usage) ) {
-						String includesigningcertificate = Utils.getParamFromSection(_configManager, _systemLogger, keyDescriptorSection, "keyinfo", "includecertificate", false);
-						if (includesigningcertificate != null)
-							idpData.getMetadata4partner().setIncludesigningcertificate(includesigningcertificate);
-						String includesigningkeyname = Utils.getParamFromSection(_configManager, _systemLogger, keyDescriptorSection, "keyinfo", "includekeyname", false);
-						if (includesigningkeyname != null)
-							idpData.getMetadata4partner().setIncludesigningkeyname(includesigningkeyname);
-					}
-					if ("encryption".equalsIgnoreCase(usage) ) {
-						String includeencryptioncertificate = Utils.getParamFromSection(_configManager, _systemLogger, keyDescriptorSection, "keyinfo", "includecertificate", false);
-						if (includeencryptioncertificate != null)
-							idpData.getMetadata4partner().setIncludeencryptioncertificate(includeencryptioncertificate);
-						String includeencryptionkeyname = Utils.getParamFromSection(_configManager, _systemLogger, keyDescriptorSection, "keyinfo", "includekeyname", false);
-						if (includeencryptionkeyname != null)
-							idpData.getMetadata4partner().setIncludeencryptionkeyname(includeencryptionkeyname);
-					}
-					keyDescriptorSection = _configManager.getNextSection(keyDescriptorSection);
-				}
-				// RH, 20160225, en
-
-				String metaspecialSettings = Utils.getSimpleParam(_configManager, _systemLogger, metadataSection, "special_settings", false);
-				if (metaspecialSettings != null)
-					idpData.getMetadata4partner().setSpecialsettings(specialSettings);
-
-				Object orgSection = Utils.getSimpleSection(_configManager, _systemLogger, metadataSection, "organization", false);
-				if (orgSection != null) {
-					String metaorgname = Utils.getSimpleParam(_configManager, _systemLogger, orgSection, "organizationname", false);
-					String metaorgnamelang = Utils.getParamFromSection(_configManager, _systemLogger, orgSection, "organizationname", "lang", false);
-					String metaorgdisplname = Utils.getSimpleParam(_configManager, _systemLogger, orgSection, "organizationdisplayname", false);
-					String metaorgdisplnamelang = Utils.getParamFromSection(_configManager, _systemLogger, orgSection, "organizationdisplayname", "lang", false);
-					String metaorgurl = Utils.getSimpleParam(_configManager, _systemLogger, orgSection, "organizationurl", false);
-					String metaorgurllang = Utils.getParamFromSection(_configManager, _systemLogger, orgSection, "organizationurl", "lang", false);
-					
-					idpData.getMetadata4partner().setOrganizationInfo(metaorgname, metaorgnamelang, metaorgdisplname, metaorgdisplnamelang, metaorgurl, metaorgurllang);
-				} else {
-					_systemLogger.log(Level.CONFIG, MODULE, sMethod, "No organization found in metadata section for: "+ sId);
-				}
-
-				Object contactSection = Utils.getSimpleSection(_configManager, _systemLogger, metadataSection, "contactperson", false);
-//				if (contactSection != null) {
-				if (contactSection == null) {
-					_systemLogger.log(Level.CONFIG, MODULE, sMethod, "No contactperson found in metadata section for: "+ sId);
-				}
-				while (contactSection != null) {
-					String metacontacttype = Utils.getSimpleParam(_configManager, _systemLogger, contactSection, "contacttype", false);
-					if (metacontacttype == null) {
-						_systemLogger.log(Level.WARNING, MODULE, sMethod, "No contacttype found in metadata section for: "+ sId + ", contacttype is mandatory if contactperson present !");
-					}
-					String metacontactname = Utils.getSimpleParam(_configManager, _systemLogger, contactSection, "givenname", false);
-					String metacontactsurname = Utils.getSimpleParam(_configManager, _systemLogger, contactSection, "surname", false);
-					String metacontactemail = Utils.getSimpleParam(_configManager, _systemLogger, contactSection, "emailaddress", false);
-					String metacontactephone = Utils.getSimpleParam(_configManager, _systemLogger, contactSection, "telephonenumber", false);
-
-//					idpData.getMetadata4partner().setContactInfo(metacontacttype, metacontactname, metacontactsurname, metacontactemail, metacontactephone);
-					idpData.getMetadata4partner().addContactInfo(idpData.new ContactInfo(metacontacttype, metacontactname, metacontactsurname, metacontactemail, metacontactephone));
-					
-					contactSection = _configManager.getNextSection(contactSection);
-				}	
-//				} else {
-//					_systemLogger.log(Level.CONFIG, MODULE, sMethod, "No contactperson found in metadata section for: "+ sId);
-//				}
-			} else {
-				_systemLogger.log(Level.CONFIG, MODULE, sMethod, "No metadata section found for: "+ sId);
-			}
+			Metadata4Partner metadata4partner = idpData.getMetadata4partner();
+			loadPartnerMetadata(metadataSection, sId, idpData, specialSettings, metadata4partner);
 			// End Set specific metadata for this partner
+
+			// start load metadata_dvs
+			Object metadataDVsSection = Utils.getSimpleSection(_configManager, _systemLogger, idpSection, "metadata_dvs", false);
+			if (metadataDVsSection != null) {
+				Object metadataDVSection = Utils.getSimpleSection(_configManager, _systemLogger, metadataDVsSection, "metadata", false);
+				if (metadataDVSection != null) {
+					while (metadataDVSection != null) {
+						String entityID =  Utils.getSimpleParam(_configManager, _systemLogger, metadataDVSection, "id", true);
+						Metadata4Partner metadata4dv = idpData.getMetadataDV(entityID);
+						loadPartnerMetadata(metadataDVSection, entityID, idpData, specialSettings, metadata4dv);
+						_systemLogger.log(Level.CONFIG, MODULE, sMethod, "Loaded metadataDV for : "+ entityID);
+						metadataDVSection = _configManager.getNextSection(metadataDVSection);
+					}
+				} else {
+					_systemLogger.log(Level.SEVERE, MODULE, sMethod, "metadata section missing for metadata_dvs in resource: "+ sId);
+					throw new ASelectConfigException(Errors.ERROR_ASELECT_CONFIG_ERROR);
+				}
+			} else {
+				_systemLogger.log(Level.CONFIG, MODULE, sMethod, "no metadata_dvs section for resource: "+ sId + ", continuing");
+			}
+			// end load metadata_dvs
+			
 
 			//  Start Set PEPS/STORK extensions data for this partner
 			Object extensionsdataSection = Utils.getSimpleSection(_configManager, _systemLogger, idpSection, "storkextensions", false);
@@ -554,10 +377,45 @@ public class MetaDataManagerSp extends AbstractMetaDataManager
 				_systemLogger.log(Level.CONFIG, MODULE, sMethod, "Using extensionsdataSection : "+ idpData.getExtensionsdata4partner().toString());
 
 			} else {
-				_systemLogger.log(Level.CONFIG, MODULE, sMethod, "No extensionsdataSection section found for: "+ sId);
+//				_systemLogger.log(Level.CONFIG, MODULE, sMethod, "No extensionsdataSection section found for: "+ sId);	// RH, 20200629, o
+				_systemLogger.log(Level.CONFIG, MODULE, sMethod, "No storkextensionsdataSection section found for: "+ sId);	// RH, 20200629, n
 			}
-			
 			//  End Set PEPS/STORK extension data for this partner
+
+			// RH, 20200629, sn
+			//  Start Set eID extensions data for this partner
+			Object eIDextensionsdataSection = Utils.getSimpleSection(_configManager, _systemLogger, idpSection, "eidextensions", false);
+			if (eIDextensionsdataSection != null) {
+				_systemLogger.log(Level.CONFIG, MODULE, sMethod, "eidextensionsdataSection section found for: "+ sId);
+				Object extensions_attributes = Utils.getSimpleSection(_configManager, _systemLogger, eIDextensionsdataSection, "attributes", false);
+				if (extensions_attributes != null) {
+					Map<String, String> attrs = new HashMap<String, String>();
+					Object extensions_attribute = Utils.getSimpleSection(_configManager, _systemLogger, extensions_attributes, "attribute", false);
+					if (extensions_attribute != null) {
+						while (extensions_attribute != null) {
+							String  extensions_attribute_name = Utils.getSimpleParam(_configManager, _systemLogger, extensions_attribute, "name", true);
+							String  extensions_attribute_value = Utils.getSimpleParam(_configManager, _systemLogger, extensions_attribute, "value", true);
+							attrs.put(extensions_attribute_name, extensions_attribute_value);
+							extensions_attribute = _configManager.getNextSection(extensions_attribute);
+						}
+					} else {
+						_systemLogger.log(Level.SEVERE, MODULE, sMethod, "At least one attribute needed for resource: "+ sId);
+						throw new ASelectConfigException(Errors.ERROR_ASELECT_CONFIG_ERROR);
+					}
+					idpData.getExtensionsdata4partner().seteIDAttributes(attrs);
+				} else {
+					_systemLogger.log(Level.SEVERE, MODULE, sMethod, "attributes section missing for resource: "+ sId);
+					throw new ASelectConfigException(Errors.ERROR_ASELECT_CONFIG_ERROR);
+				}
+				_systemLogger.log(Level.CONFIG, MODULE, sMethod, "Using extensionsdataSection : "+ idpData.getExtensionsdata4partner().toString());
+
+
+			} else {
+				_systemLogger.log(Level.CONFIG, MODULE, sMethod, "No eidextensionsdataSection section found for: "+ sId);
+			}
+			//  End Set eID extension data for this partner
+			// RH, 20200629, en
+
 			
 			// Set specific testdata for this partner
 			Object testdataSection = Utils.getSimpleSection(_configManager, _systemLogger, idpSection, "testdata", false);
@@ -627,6 +485,233 @@ public class MetaDataManagerSp extends AbstractMetaDataManager
 		catch (ASelectConfigException e) {
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Metadata retrieval failed", e);
 			// maybe throw more serious error here
+		}
+	}
+
+	/**
+	 * @param metadataSection
+	 * @param sId
+	 * @param idpData
+	 * @param specialSettings
+	 * @param sMethod
+	 * @throws ASelectConfigException
+	 * @throws ASelectException
+	 */
+	protected void loadPartnerMetadata(Object metadataSection, String sId, PartnerData idpData,
+			String specialSettings, Metadata4Partner metadata) throws ASelectConfigException, ASelectException {
+		
+		String sMethod = "loadPartnerMetadata";
+
+		if (metadataSection != null) {
+			// get handlers to publish
+			Object metaHandler = Utils.getSimpleSection(_configManager, _systemLogger, metadataSection, "handler", false);
+			if (metaHandler == null) {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "No handlers found in metadata section for: "+ sId);
+			}
+			while (metaHandler != null) {
+				String metahandlertype = Utils.getSimpleParam(_configManager, _systemLogger, metaHandler, "type", false);
+				// RM_72_01
+				String metahandlerbinding = Utils.getSimpleParam(_configManager, _systemLogger, metaHandler, "binding", false);
+				// RM_72_02
+				String metahandlerisdefault = Utils.getSimpleParam(_configManager, _systemLogger, metaHandler, "isdefault", false);
+				Boolean bMetahandlerisdefault = null;
+				if (metahandlerisdefault != null) {
+					metahandlerisdefault = metahandlerisdefault.toLowerCase();
+					bMetahandlerisdefault = new Boolean(metahandlerisdefault);
+				}
+				String metahandlerindex = Utils.getSimpleParam(_configManager, _systemLogger, metaHandler, "index", false);
+				Integer iMetahandlerindex = null;
+				if (metahandlerindex != null) {
+					iMetahandlerindex = new Integer(metahandlerindex);
+				}
+				
+				// RH, 20120703, sn, Added optional location
+				String metahandlerlocation = Utils.getSimpleParam(_configManager, _systemLogger, metaHandler, "location", false);
+				// RH, 20120703, en
+
+				String metahandlerresponselocation = Utils.getSimpleParam(_configManager, _systemLogger, metaHandler, "responselocation", false);
+				
+				// RH, 20160419, sn, get optional attributeconsumingservice
+				HandlerInfo handerInfo = idpData.new HandlerInfo(metahandlertype,metahandlerbinding,  bMetahandlerisdefault,  iMetahandlerindex, metahandlerresponselocation, metahandlerlocation);
+				if (AttributeConsumingService.DEFAULT_ELEMENT_LOCAL_NAME.equalsIgnoreCase(metahandlertype)) {
+					Object servicesSection = Utils.getSimpleSection(_configManager, _systemLogger, metaHandler, "services", true);
+					while (servicesSection != null) {
+						_systemLogger.log(Level.CONFIG, MODULE, sMethod, "services section section found for: "+ sId);
+
+						Object serviceSection = Utils.getSimpleSection(_configManager, _systemLogger, servicesSection, "service", true);
+						while (serviceSection != null) {
+									Map<String, Object> reqService = new Hashtable<String, Object>();
+									String  attributeconsumingservice_service_name = Utils.getSimpleParam(_configManager, _systemLogger, serviceSection, "name", true);
+									reqService.put("name", attributeconsumingservice_service_name);
+									String  attributeconsumingservice_service_lang = Utils.getSimpleParam(_configManager, _systemLogger, serviceSection, "lang", true);
+									reqService.put("lang", attributeconsumingservice_service_lang);
+
+									handerInfo.getServices().add(reqService);
+									serviceSection = _configManager.getNextSection(serviceSection);
+						}
+						servicesSection = _configManager.getNextSection(servicesSection);
+					}
+
+					Object attributesSection = Utils.getSimpleSection(_configManager, _systemLogger, metaHandler, "attributes", true);
+					while (attributesSection != null) {
+						_systemLogger.log(Level.CONFIG, MODULE, sMethod, "attributes section section found for: "+ sId);
+
+						Object attributeSection = Utils.getSimpleSection(_configManager, _systemLogger, attributesSection, "attribute", true);
+						while (attributeSection != null) {
+									Map<String, Object> reqAttr = new Hashtable<String, Object>();
+									String  attributeconsumingservice_attribute_name = Utils.getSimpleParam(_configManager, _systemLogger, attributeSection, "name", true);
+									reqAttr.put("name", attributeconsumingservice_attribute_name);
+									String  attributeconsumingservice_attribute_required = Utils.getSimpleParam(_configManager, _systemLogger, attributeSection, "isrequired", false);
+									if (attributeconsumingservice_attribute_required != null) {
+										reqAttr.put("isrequired", Boolean.valueOf(attributeconsumingservice_attribute_required));
+									}
+
+									// attributevalues not implemented, RH, 20201029, o
+									// RH, 20201029, sn
+									// attributevalue implementation for eID SAML4.4
+									// only single valued attributevalue allowed
+									String  attributeconsumingservice_attribute_value = Utils.getSimpleParam(_configManager, _systemLogger, attributeSection, "value", false);
+									if (attributeconsumingservice_attribute_value != null && attributeconsumingservice_attribute_value.length()>0 ) {	// Should not be null nor length = 0
+										reqAttr.put("value", attributeconsumingservice_attribute_value);
+									} else {
+										_systemLogger.log(Level.FINEST, MODULE, sMethod, "Empty attribute value found, skipping empty value for key: "+ attributeconsumingservice_attribute_name);
+									}
+									// RH, 20201029, en
+									handerInfo.getAttributes().add(reqAttr);
+						
+									attributeSection = _configManager.getNextSection(attributeSection);
+
+						}
+						attributesSection = _configManager.getNextSection(attributesSection);
+					}
+				}
+				// RH, 20160419, en
+				
+//					idpData.getMetadata4partner().getHandlers().add(idpData.new HandlerInfo(metahandlertype,metahandlerbinding,  bMetahandlerisdefault,  iMetahandlerindex, metahandlerresponselocation, metahandlerlocation) );	// RH, 20160428, o
+				metadata.getHandlers().add( handerInfo );	// RH, 20160428, n
+				metaHandler = _configManager.getNextSection(metaHandler);
+			}
+
+			// RH, 20140320, sn, get optional entitydescriptorextension
+			Object extensionSection = Utils.getSimpleSection(_configManager, _systemLogger, metadataSection, "entitydescriptorextension", false);
+			if (extensionSection != null) {
+				Object metaNamespace = Utils.getSimpleSection(_configManager, _systemLogger, extensionSection, "namespace", false);
+				if (metaNamespace == null) {
+					_systemLogger.log(Level.WARNING, MODULE, sMethod, "No namespace element found in entitydescriptorextension section for: "+ sId);
+				}
+				while (metaNamespace != null) {
+					String metaNamespacePrefix = Utils.getSimpleParam(_configManager, _systemLogger, metaNamespace, "prefix", false);
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "prefix found in entitydescriptorextension section: "+ metaNamespacePrefix);
+					String metaNamespaceUri = Utils.getSimpleParam(_configManager, _systemLogger, metaNamespace, "uri", false);
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "uri found in entitydescriptorextension section: "+ metaNamespaceUri);
+					if ( metaNamespacePrefix != null && metaNamespaceUri != null ) {
+						Object metaAttribute = Utils.getSimpleSection(_configManager, _systemLogger, metaNamespace, "attribute", false);
+						if (metaAttribute == null) {
+							_systemLogger.log(Level.WARNING, MODULE, sMethod, "No attribute element found in entitydescriptorextension section for uri: "+ metaNamespaceUri);
+						}
+						Hashtable<String, String> attributes = new Hashtable<String, String>();
+						while (metaAttribute != null) {
+							String metaAttributeValue = Utils.getSimpleParam(_configManager, _systemLogger, metaAttribute, "value", false);
+							String metaAttributeLocalPart = Utils.getSimpleParam(_configManager, _systemLogger, metaAttribute, "localpart", false);
+							_systemLogger.log(Level.FINEST, MODULE, sMethod, "localpart found in attribute section: "+ metaAttributeLocalPart + " with value: " + metaAttributeValue);
+							if ( metaAttributeValue != null && metaAttributeLocalPart != null) {
+								attributes.put(metaAttributeLocalPart, metaAttributeValue);
+							} else {
+								_systemLogger.log(Level.WARNING, MODULE, sMethod, "one of localpart or value == null section with uri: "+ metaNamespaceUri);
+							}
+							metaAttribute = _configManager.getNextSection(metaAttribute);
+						}
+						metadata.getNamespaceInfo().add(idpData.new NamespaceInfo(metaNamespacePrefix, metaNamespaceUri, attributes));
+					} else {
+						_systemLogger.log(Level.WARNING, MODULE, sMethod, "one of prefix or uri == null namespace section");
+					}
+					metaNamespace = _configManager.getNextSection(metaNamespace);
+				}
+			} else {
+				_systemLogger.log(Level.INFO, MODULE, sMethod, "No entitydescriptorextension found in metadata section for: "+ sId);
+			}
+			// RH, 20140320, en
+			
+			
+			
+			
+			String metaaddkeyname = Utils.getSimpleParam(_configManager, _systemLogger, metadataSection, "addkeyname", false);
+			if (metaaddkeyname != null)
+				metadata.setAddkeyname(metaaddkeyname);
+
+			String metaaddcertificate = Utils.getSimpleParam(_configManager, _systemLogger, metadataSection, "addcertificate", false);
+			if (metaaddcertificate != null)
+				metadata.setAddcertificate(metaaddcertificate);
+			// RH, 20160225, sn
+			Object keyDescriptorSection = Utils.getSimpleSection(_configManager, _systemLogger, metadataSection, "keydescriptor", false);
+			if (keyDescriptorSection == null) {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "No keydescriptorsection element found in metadata section for: "+ sId + ", using defaults");
+			}
+			while (keyDescriptorSection != null) {
+				String usage = Utils.getSimpleParam(_configManager, _systemLogger, keyDescriptorSection, "usage", false);
+				if ("signing".equalsIgnoreCase(usage) ) {
+					String includesigningcertificate = Utils.getParamFromSection(_configManager, _systemLogger, keyDescriptorSection, "keyinfo", "includecertificate", false);
+					if (includesigningcertificate != null)
+						metadata.setIncludesigningcertificate(includesigningcertificate);
+					String includesigningkeyname = Utils.getParamFromSection(_configManager, _systemLogger, keyDescriptorSection, "keyinfo", "includekeyname", false);
+					if (includesigningkeyname != null)
+						metadata.setIncludesigningkeyname(includesigningkeyname);
+				}
+				if ("encryption".equalsIgnoreCase(usage) ) {
+					String includeencryptioncertificate = Utils.getParamFromSection(_configManager, _systemLogger, keyDescriptorSection, "keyinfo", "includecertificate", false);
+					if (includeencryptioncertificate != null)
+						metadata.setIncludeencryptioncertificate(includeencryptioncertificate);
+					String includeencryptionkeyname = Utils.getParamFromSection(_configManager, _systemLogger, keyDescriptorSection, "keyinfo", "includekeyname", false);
+					if (includeencryptionkeyname != null)
+						metadata.setIncludeencryptionkeyname(includeencryptionkeyname);
+				}
+				keyDescriptorSection = _configManager.getNextSection(keyDescriptorSection);
+			}
+			// RH, 20160225, en
+
+			String metaspecialSettings = Utils.getSimpleParam(_configManager, _systemLogger, metadataSection, "special_settings", false);
+			if (metaspecialSettings != null)
+				metadata.setSpecialsettings(specialSettings);
+
+			Object orgSection = Utils.getSimpleSection(_configManager, _systemLogger, metadataSection, "organization", false);
+			if (orgSection != null) {
+				String metaorgname = Utils.getSimpleParam(_configManager, _systemLogger, orgSection, "organizationname", false);
+				String metaorgnamelang = Utils.getParamFromSection(_configManager, _systemLogger, orgSection, "organizationname", "lang", false);
+				String metaorgdisplname = Utils.getSimpleParam(_configManager, _systemLogger, orgSection, "organizationdisplayname", false);
+				String metaorgdisplnamelang = Utils.getParamFromSection(_configManager, _systemLogger, orgSection, "organizationdisplayname", "lang", false);
+				String metaorgurl = Utils.getSimpleParam(_configManager, _systemLogger, orgSection, "organizationurl", false);
+				String metaorgurllang = Utils.getParamFromSection(_configManager, _systemLogger, orgSection, "organizationurl", "lang", false);
+				
+				metadata.setOrganizationInfo(metaorgname, metaorgnamelang, metaorgdisplname, metaorgdisplnamelang, metaorgurl, metaorgurllang);
+			} else {
+				_systemLogger.log(Level.CONFIG, MODULE, sMethod, "No organization found in metadata section for: "+ sId);
+			}
+
+			Object contactSection = Utils.getSimpleSection(_configManager, _systemLogger, metadataSection, "contactperson", false);
+//				if (contactSection != null) {
+			if (contactSection == null) {
+				_systemLogger.log(Level.CONFIG, MODULE, sMethod, "No contactperson found in metadata section for: "+ sId);
+			}
+			while (contactSection != null) {
+				String metacontacttype = Utils.getSimpleParam(_configManager, _systemLogger, contactSection, "contacttype", false);
+				if (metacontacttype == null) {
+					_systemLogger.log(Level.WARNING, MODULE, sMethod, "No contacttype found in metadata section for: "+ sId + ", contacttype is mandatory if contactperson present !");
+				}
+				String metacontactname = Utils.getSimpleParam(_configManager, _systemLogger, contactSection, "givenname", false);
+				String metacontactsurname = Utils.getSimpleParam(_configManager, _systemLogger, contactSection, "surname", false);
+				String metacontactemail = Utils.getSimpleParam(_configManager, _systemLogger, contactSection, "emailaddress", false);
+				String metacontactephone = Utils.getSimpleParam(_configManager, _systemLogger, contactSection, "telephonenumber", false);
+
+//					idpData.getMetadata4partner().setContactInfo(metacontacttype, metacontactname, metacontactsurname, metacontactemail, metacontactephone);
+				metadata.addContactInfo(idpData.new ContactInfo(metacontacttype, metacontactname, metacontactsurname, metacontactemail, metacontactephone));
+				
+				contactSection = _configManager.getNextSection(contactSection);
+			}	
+//				} else {
+//					_systemLogger.log(Level.CONFIG, MODULE, sMethod, "No contactperson found in metadata section for: "+ sId);
+//				}
+		} else {
+			_systemLogger.log(Level.CONFIG, MODULE, sMethod, "No metadata section found for: "+ sId);
 		}
 	}
 	
