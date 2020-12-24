@@ -60,6 +60,8 @@ import org.opensaml.common.xml.SAMLConstants;
 import org.opensaml.saml2.binding.encoding.HTTPRedirectDeflateEncoder;
 import org.opensaml.saml2.common.Extensions;
 import org.opensaml.saml2.common.impl.ExtensionsBuilder;
+import org.opensaml.saml2.core.Attribute;
+import org.opensaml.saml2.core.AttributeValue;
 import org.opensaml.saml2.core.AuthnContextClassRef;
 import org.opensaml.saml2.core.AuthnContextComparisonTypeEnumeration;
 import org.opensaml.saml2.core.AuthnRequest;
@@ -75,6 +77,7 @@ import org.opensaml.saml2.metadata.SingleSignOnService;
 import org.opensaml.ws.transport.http.HttpServletResponseAdapter;
 import org.opensaml.xml.Configuration;
 import org.opensaml.xml.XMLObject;
+import org.opensaml.xml.XMLObjectBuilder;
 import org.opensaml.xml.XMLObjectBuilderFactory;
 import org.opensaml.xml.io.Marshaller;
 import org.opensaml.xml.io.MarshallerFactory;
@@ -82,6 +85,7 @@ import org.opensaml.xml.io.Unmarshaller;
 import org.opensaml.xml.io.UnmarshallerFactory;
 import org.opensaml.xml.io.UnmarshallingException;
 import org.opensaml.xml.schema.XSAny;
+import org.opensaml.xml.schema.XSString;
 import org.opensaml.xml.security.x509.BasicX509Credential;
 import org.opensaml.xml.util.XMLHelper;
 import org.w3c.dom.Document;
@@ -482,6 +486,18 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 				authnRequest = (AuthnRequest) HandlerTools.rebuildAssertion(authnRequest);
 			}
 
+			// RH, 20200629, sn
+			else {	// either Stork or eID for now
+				if (partnerData != null && partnerData.getExtensionsdata4partner().geteIDAttributes() != null ) {
+					// Add the eID extensions
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Adding eID extensions");
+					Extensions extensions = createeIDExtensions(sApplicationLevel, sApplicationId, partnerData);
+					authnRequest.setExtensions(extensions);
+					authnRequest = (AuthnRequest) HandlerTools.rebuildAssertion(authnRequest);
+				}
+			}
+			// RH, 20200629, en
+
 			 
 			// We should be able to set AssertionConsumerServiceIndex. This is according to saml specs mutually exclusive with
 			// ProtocolBinding and AssertionConsumerServiceURL
@@ -772,6 +788,23 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 		return new RequestState(null);
 	}
 
+	// RH, 20200616, sn
+	public Extensions createClusterExtensions(String sApplicationLevel, String sApplicationId, PartnerData partnerData)
+			throws JAXBException, PropertyException, ParserConfigurationException, UnmarshallingException, ASelectException
+		{
+			String sMethod = "createClusterExtensions";
+			Extensions extensions = new ExtensionsBuilder().buildObject(new QName(SAMLConstants.SAML20P_NS,
+			        Extensions.LOCAL_NAME, SAMLConstants.SAML20P_PREFIX));
+			ArrayList<XMLObject> extObjects = new ArrayList<XMLObject>();
+
+			
+			extensions.getUnknownXMLObjects().addAll(extObjects);
+			return extensions;
+
+		}
+	// RH, 20200616, en
+
+	
 	/**
 	 * @param sMethod
 	 * @return
@@ -1088,6 +1121,59 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 		return extensions;
 	}
 
+	// RH, 20200629, sn
+	/**
+	 * @param sMethod
+	 * @return
+	 * @throws JAXBException
+	 * @throws PropertyException
+	 * @throws ParserConfigurationException
+	 * @throws UnmarshallingException
+	 * @throws ASelectException 
+	 */
+	public Extensions createeIDExtensions(String sApplicationLevel, String sApplicationId, PartnerData partnerData)
+		throws JAXBException, PropertyException, ParserConfigurationException, UnmarshallingException, ASelectException
+	{
+		
+		String sMethod = "createeIDExtensions";
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Building eID extensions");
+
+		ArrayList<XMLObject> extObjects = new ArrayList<XMLObject>();
+		XMLObjectBuilderFactory builderFactory = Configuration.getBuilderFactory();
+		XMLObjectBuilder stringBuilder = builderFactory.getBuilder(XSString.TYPE_NAME);
+
+
+		
+		Extensions extensions = new ExtensionsBuilder().buildObject(new QName(SAMLConstants.SAML20P_NS,
+		        Extensions.LOCAL_NAME, SAMLConstants.SAML20P_PREFIX));
+		
+		
+		// Create an attribute builder
+		QName qName = Attribute.DEFAULT_ELEMENT_NAME;
+		_systemLogger.log(Level.FINER, MODULE, sMethod, "Attribute qName="+qName);
+		SAMLObjectBuilder<Attribute> attributeBuilder = (SAMLObjectBuilder<Attribute>) builderFactory.getBuilder(qName);
+
+		for (String attName : partnerData.getExtensionsdata4partner().geteIDAttributes().keySet()) {
+			Attribute theAttribute = attributeBuilder.buildObject();
+			String sKey = attName;
+			String sValue = partnerData.getExtensionsdata4partner().geteIDAttributes().get(sKey);
+			theAttribute.setName(sKey);
+			if (sValue != null && sValue.length()>0 ) {	// Should not be null nor length = 0
+				XSString theAttributeValue = null;
+				theAttributeValue = (XSString)stringBuilder.buildObject(AttributeValue.DEFAULT_ELEMENT_NAME, XSString.TYPE_NAME);
+				theAttributeValue.setValue(sValue);
+				theAttribute.getAttributeValues().add(theAttributeValue);
+			} else {
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Empty attribute value found, skipping empty value for key: "+ sKey);
+			}
+			extObjects.add(theAttribute);
+		}
+
+		extensions.getUnknownXMLObjects().addAll(extObjects);
+		
+		return extensions;
+	}
+	// RH, 20200629, en
 	
 	
 	/**
