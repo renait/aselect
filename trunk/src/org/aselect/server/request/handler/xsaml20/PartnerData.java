@@ -17,21 +17,17 @@ import java.security.KeyStore;
 import java.security.MessageDigest;
 import java.security.PrivateKey;
 import java.util.ArrayList;
-import java.util.Arrays;
 import java.util.HashMap;
 import java.util.Hashtable;
 import java.util.List;
 import java.util.Map;
 import java.util.Vector;
-import java.util.logging.Level;
 import java.util.regex.Pattern;
 
 import org.apache.commons.lang.builder.ReflectionToStringBuilder;
 import org.apache.commons.lang.builder.StandardToStringStyle;
-import org.apache.commons.lang.builder.ToStringStyle;
 import org.aselect.server.request.handler.xsaml20.SecurityLevel.SecurityLevelEntry;
 import org.aselect.system.error.Errors;
-import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.Utils;
 
@@ -68,6 +64,9 @@ public class PartnerData
 	private Metadata4Partner metadata4partner = null;
 	private Testdata4Partner testdata4partner = null;
 	private Extensionsdata4Partner extensionsdata4partner = null;
+	
+	private Map<String,Metadata4Partner> metadataDVs = null;
+	
 
 	private Crypto crypto = null;	// RH, 20180917, n
 	// RH, 20181102, sn
@@ -92,7 +91,7 @@ public class PartnerData
 	{
 		return "IdPData["+partnerID+"] meta="+metadataUrl+" sync="+sessionSyncUrl+" spec="+specialSettings+" acsi="+assertionconsumerserviceindex;
 		
-//		return "PartnerData:" + new ReflectionToStringBuilder( this, new StandardToStringStyle()).toString();
+//		return "PartnerData:" + new ReflectionToStringBuilder( this, new StandardToStringStyle()).toString();	// for testing
 
 		  
 	}
@@ -471,6 +470,28 @@ public class PartnerData
 			metadata4partner = new Metadata4Partner();
 		}
 		return metadata4partner;
+	}
+
+	/**
+	 * @return the metadataDVs
+	 */
+	public synchronized Map<String, Metadata4Partner> getMetadataDVs() {
+		if (metadataDVs == null) {
+			metadataDVs = new HashMap<String, Metadata4Partner>();
+		}
+		return metadataDVs;
+	}
+
+	/**
+	 * @return the metadataDV for this entityID
+	 * @param entityID
+	 * @return (new) metadataDV
+	 */
+	public synchronized Metadata4Partner getMetadataDV(String entityID) {
+		if (!getMetadataDVs().containsKey(entityID)) {
+			getMetadataDVs().put(entityID, new Metadata4Partner());
+		}
+		return getMetadataDVs().get(entityID);
 	}
 
 	public synchronized SecurityLevelEntry[] getSecurityLevels() {
@@ -1047,6 +1068,8 @@ public class PartnerData
 		private Boolean eIDCrossBorderShare = null;
 		private List<Map<String, Object>> requestedAttributes = null;	// probably use ArrayList implementation
 
+		private Map<String, String> eIDAttributes = null;	// RH, 20200629, n
+
 //		@Override
 //		public String toString()
 //		{
@@ -1134,6 +1157,22 @@ public class PartnerData
 		{
 			this.requestedAttributes = requestedAttributes;
 		}
+
+		/**
+		 * @return the eIDAttributes
+		 */
+		public synchronized Map<String, String> geteIDAttributes() {
+			return eIDAttributes;
+		}
+
+
+		/**
+		 * @param eIDAttributes the eIDAttributes to set
+		 */
+		public synchronized void seteIDAttributes(Map<String, String> eIDAttributes) {
+			this.eIDAttributes = eIDAttributes;
+		}
+
 
 		public synchronized Boolean geteIDSectorShare()
 		{
