@@ -94,6 +94,8 @@ import org.aselect.system.logging.ISystemLogger;
 import org.aselect.system.logging.SystemLogger;
 import org.aselect.system.utils.crypto.Auxiliary;
 
+import net.sf.json.JSONObject;
+
 /**
  * Static class that implements generic, widely used utility methods. <br>
  * <br>
@@ -600,6 +602,11 @@ public class Utils
 		return sResult + sText;
 	}
 
+	
+	public static HashMap convertCGIMessage(String xMessage, boolean doUrlDecode)
+	{
+		return convertCGIMessage(xMessage, doUrlDecode, "&");
+	}
 	/**
 	 * Converts a CGI-based String to a hashtable. <br>
 	 * <br>
@@ -620,7 +627,8 @@ public class Utils
 	 *            run URL decode on the parsed values
 	 * @return HashMap containg the keys and corresponding values.
 	 */
-	public static HashMap convertCGIMessage(String xMessage, boolean doUrlDecode)
+//	public static HashMap convertCGIMessage(String xMessage, boolean doUrlDecode)	// RH, 20201008, o
+	public static HashMap convertCGIMessage(String xMessage, boolean doUrlDecode, String delimiters)	// RH, 20201008, n
 	{
 		String xToken, xKey, xValue;
 		StringTokenizer xST = null;
@@ -630,7 +638,8 @@ public class Utils
 		if (xMessage == null)
 			return xResponse;
 
-		xST = new StringTokenizer(xMessage, "&");
+//		xST = new StringTokenizer(xMessage, "&");	// RH, 20201008, o
+		xST = new StringTokenizer(xMessage, delimiters);	// RH, 20201008, n
 		while (xST.hasMoreElements()) {
 			xToken = (String) xST.nextElement();
 			if (!xToken.trim().equals("")) {
@@ -1174,15 +1183,32 @@ public class Utils
 //							sb.append("&");
 //					}
 					// RH, 20200612, eo
-					// RH, 20200612, s
+					// RH, 20200612, sn
 					sb.append(sKey).append("=");
-					while (itr.hasNext()) {	// fix, this does not allow empty valued elements
-						String sValue = (String) itr.next();
-	
-						// add: key[]=value
-						sb.append(URLEncoder.encode(sValue, "UTF-8"));
-						if (itr.hasNext())
-							sb.append("&").append(sKey).append("=");
+					while (itr.hasNext()) {	// fix, this did not allow empty valued elements
+//						String sValue = (String) itr.next();	// RH, 20201203, o
+						// RH, 20201203, sn
+						String sValue = "";
+						Object oSubValue = itr.next();
+						if (oSubValue instanceof JSONObject) {
+							sValue = ((JSONObject)oSubValue).toString(0);
+							sb.append(URLEncoder.encode(sValue, "UTF-8"));
+							if (itr.hasNext())
+								sb.append("&").append(sKey).append("=");
+						} else if (oSubValue instanceof String) {
+							sValue = (String) oSubValue;
+						// RH, 20201203, en
+							// add: key[]=value
+							sb.append(URLEncoder.encode(sValue, "UTF-8"));
+							if (itr.hasNext())
+								sb.append("&").append(sKey).append("=");
+						// RH, 20201203, sn	
+						} else {
+							if (logger != null) {
+								logger.log(Level.WARNING, MODULE, sMethod, "Unknown type of  attribute" + sKey);	// RH, 20190926, n	// RH, 20200612, o
+							}
+						}
+						// RH, 20201203, en
 					}
 					// RH, 20200612, en
 				}
