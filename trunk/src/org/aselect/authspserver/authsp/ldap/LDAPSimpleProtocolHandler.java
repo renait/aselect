@@ -322,7 +322,8 @@ public class LDAPSimpleProtocolHandler extends AbstractLDAPProtocolHandler
 	 * @throws NamingException
 	 * @throws ASelectException
 	 */
-	private int checkAllowedLogins(String sUserDN, DirContext oDirContext)
+//	private int checkAllowedLogins(String sUserDN, DirContext oDirContext)	// RH, 20190924, o
+	protected int checkAllowedLogins(String sUserDN, DirContext oDirContext)	// RH, 20190924, n
 	throws NamingException, ASelectException
 	{
 		final String sMethod = "checkAllowedLogins";
