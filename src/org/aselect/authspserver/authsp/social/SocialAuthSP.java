@@ -5,7 +5,6 @@ import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.net.URI;
 import java.net.URISyntaxException;
-import java.net.URL;
 import java.net.URLEncoder;
 import java.util.HashMap;
 import java.util.Map;
@@ -270,7 +269,8 @@ public class SocialAuthSP extends AbstractAuthSP  // 20141201, Bauke: inherit go
 			_systemLogger.log(Level.FINEST, MODULE, sMethod, "sReturnUrl="+sReturnUrl);
 
 			//String sUrl = socialAuthspManager.getAuthenticationUrl(sSocialLogin, sReturnUrl, Permission.AUTHENTICATE_ONLY); 
-			String sUrl = socialAuthspManager.getAuthenticationUrl(sSocialLogin, sReturnUrl, Permission.AUTHENTICATE_ONLY);
+			String sUrl = socialAuthspManager.getAuthenticationUrl(sSocialLogin, sReturnUrl, Permission.AUTHENTICATE_ONLY);	// RH, 20200403, o
+//			String sUrl = socialAuthspManager.getAuthenticationUrl(sSocialLogin, sReturnUrl, Permission.CUSTOM);	// RH, 20200403, n	// TEST
 			_systemLogger.log(Level.FINEST, MODULE, sMethod, "getAuthenticationUrl="+sUrl);
 			// The complete value of sUrl is URL encoded now
 			// Store in session
