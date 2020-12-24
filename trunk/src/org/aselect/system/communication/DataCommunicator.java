@@ -117,6 +117,7 @@ public class DataCommunicator
 			// open HTTP connection to URL
 //			connection = (HttpURLConnection) url.openConnection();
 			if ( sslSocketFactory != null ) {
+				systemLogger.log(Level.FINEST, MODULE, sMethod, "Setting sslFactory =" + sslSocketFactory);
 				sslconnection = (HttpsURLConnection) url.openConnection();
 				sslconnection.setSSLSocketFactory(sslSocketFactory);
 				connection = sslconnection;
@@ -131,7 +132,14 @@ public class DataCommunicator
 				if ("PATCH".equalsIgnoreCase(reqMethod)) {	// patch for java
 					allowMethods("PATCH");
 				}
-				connection.setRequestMethod(reqMethod);
+//				connection.setRequestMethod(reqMethod);	// RH, 20200528, o
+				// RH, 20200528, sn
+				if ("POST-JSON".equalsIgnoreCase(reqMethod)) {
+					connection.setRequestMethod("POST");
+				} else {
+					connection.setRequestMethod(reqMethod);
+				}
+				// RH, 20200528, en
 			}
 			// RH, 20190618, sn
 			// set mime headers
