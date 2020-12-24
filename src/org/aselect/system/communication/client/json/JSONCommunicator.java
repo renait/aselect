@@ -19,6 +19,7 @@ import java.net.MalformedURLException;
 import java.net.PasswordAuthentication;
 import java.net.URL;
 import java.net.URLConnection;
+import java.util.Collection;
 import java.util.HashMap;
 import java.util.Iterator;
 import java.util.Map;
@@ -34,6 +35,7 @@ import org.aselect.system.exception.ASelectCommunicationException;
 import org.aselect.system.logging.SystemLogger;
 import org.aselect.system.utils.crypto.Auxiliary;
 
+import net.sf.json.JSON;
 import net.sf.json.JSONArray;
 import net.sf.json.JSONObject;
 import net.sf.json.JSONSerializer;
@@ -141,7 +143,8 @@ public class JSONCommunicator implements ISecureClientCommunicator	// RH, 202003
 			_systemLogger.log( Level.FINEST, MODULE, sMethod, "Using: " +method );
 			sResponse = sendStringMessage(sRequest.toString(), target);	// does a POST
 			// RH, 20190618, sn
-		} else if ("PUT".equalsIgnoreCase(method) || "PATCH".equalsIgnoreCase(method)) {
+//		} else if ("PUT".equalsIgnoreCase(method) || "PATCH".equalsIgnoreCase(method)) {
+		} else if ("PUT".equalsIgnoreCase(method) || "PATCH".equalsIgnoreCase(method) || "POST-JSON".equalsIgnoreCase(method)) {	// RH, 20200527, n
 			sResponse = sendJSONMessage(parameters, target);	// does a PUT or PATCH
 		// RH, 20190618, en
 		} else {	// like we used to
@@ -156,7 +159,17 @@ public class JSONCommunicator implements ISecureClientCommunicator	// RH, 202003
 			try {
 			JSONArray jsonArray = (JSONArray) JSONSerializer.toJSON( sResponse );  
 			_systemLogger.log( Level.FINEST, MODULE, sMethod, "received message parsed to JSONArray:" + Auxiliary.obfuscate(jsonArray.toString()) );
-			htReturn = new HashMap((Map<String, Object>) JSONObject.toBean(jsonArray.getJSONObject(0), Map.class));
+			// RH, 20200520, sn
+			if (jsonArray.size() > 0) {
+				htReturn = new HashMap((Map<String, Object>) JSONObject.toBean(jsonArray.getJSONObject(0), Map.class));	// like we used to
+				// we'll have to accommodate for multiple elements received which was not in our previous contract
+				// so add all of them to the end as distinct entry with some arbitrary key 
+//				if (jsonArray.size() > 1) {
+					htReturn.put("_____"  , jsonArray);	// maybe make this parameter somehow
+//				}
+			}
+			// RH, 20200520, en			
+//			htReturn = new HashMap((Map<String, Object>) JSONObject.toBean(jsonArray.getJSONObject(0), Map.class));	// RH, 20200520, o
 			} catch (java.lang.ClassCastException cce) {	// not a JSONArray
 				// maybe a JSONObject
 				JSONObject jsonObject = (JSONObject) JSONSerializer.toJSON( sResponse );  
@@ -246,7 +259,15 @@ public class JSONCommunicator implements ISecureClientCommunicator	// RH, 202003
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Bearer Token =" + Auxiliary.obfuscate(bearerToken));
 				reqProps.put("Authorization", "Bearer " + bearerToken);
 			}
-			JSONObject jsonObj = JSONObject.fromObject(parameters);
+
+//			JSONObject jsonObj = JSONObject.fromObject(parameters);	// RH, 20200528, o
+			// RH, 20200528, sn
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "parameters before jsonizing =" + Auxiliary.obfuscate(parameters));
+			HashMap jsonParameters = asJsonized(parameters);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "parameters after jsonizing =" + Auxiliary.obfuscate(jsonParameters));
+			JSONObject jsonObj = JSONObject.fromObject(jsonParameters);
+			// RH, 20200528, en
+			
 			String sMessage =  jsonObj.toString();
 //			sResponse = DataCommunicator.dataComSend(_systemLogger, sMessage, sTarget, reqProps, method);	// RH, 20200323, o
 			sResponse = DataCommunicator.dataComSend(_systemLogger, sMessage, sTarget, reqProps, method, get_sslSocketFactory());	// RH, 20200323, n
@@ -412,6 +433,35 @@ public class JSONCommunicator implements ISecureClientCommunicator	// RH, 202003
 		// RH, 20151001, en
 	}
 
+	// RH, 20200528, sn
+	/**
+	 * @param parameters
+	 * @return
+	 */
+	private HashMap asJsonized(HashMap parameters) {
+		HashMap jsonParameters = new HashMap();
+		Iterator iter = parameters.keySet().iterator();
+		while (iter.hasNext()) {
+			Object key = (Object)iter.next();
+			Object value = parameters.get(key);
+			if (value instanceof String && (((String)value).startsWith("[") || ((String)value).startsWith("{"))) {
+				JSON json = JSONSerializer.toJSON(value);
+				if (json.isArray()) {
+					Collection col = JSONArray.toCollection((JSONArray)json);
+					jsonParameters.put(key, col);
+				} else {
+					Object obj = JSONObject.toBean((JSONObject)json);
+					jsonParameters.put(key, obj);	// just put back the old one
+				}
+			} else {
+				jsonParameters.put(key, parameters.get(key));	// just put back the bare one
+			}
+		}
+		return jsonParameters;
+	}	
+	// RH, 20200528, en
+
+	
 	public String getUser()
 	{
 		return user;
@@ -462,8 +512,6 @@ public class JSONCommunicator implements ISecureClientCommunicator	// RH, 202003
 	public SSLSocketFactory get_sslSocketFactory() {
 		return socketFactory;
 	}
-
-	
 
 }
 
