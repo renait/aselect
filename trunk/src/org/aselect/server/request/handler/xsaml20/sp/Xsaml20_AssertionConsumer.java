@@ -11,10 +11,8 @@
  */
 package org.aselect.server.request.handler.xsaml20.sp;
 
-import java.io.File;
 import java.io.PrintWriter;
 import java.io.StringReader;
-import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.Arrays;
@@ -28,7 +26,6 @@ import java.util.Vector;
 import java.util.logging.Level;
 import java.util.regex.Matcher;
 import java.util.regex.Pattern;
-import java.util.regex.PatternSyntaxException;
 
 import javax.servlet.ServletConfig;
 import javax.servlet.http.HttpServletRequest;
@@ -64,7 +61,6 @@ import org.opensaml.common.SAMLObject;
 import org.opensaml.common.SAMLObjectBuilder;
 import org.opensaml.common.SAMLVersion;
 import org.opensaml.common.xml.SAMLConstants;
-import org.opensaml.saml2.core.Advice;
 import org.opensaml.saml2.core.Artifact;
 import org.opensaml.saml2.core.ArtifactResolve;
 import org.opensaml.saml2.core.ArtifactResponse;
@@ -688,7 +684,18 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 						String sEncryptedID = XMLHelper.nodeToString(encryptedid.getDOM());
 						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Found EncryptedID:" + sEncryptedID);
 						// Try to get the NameID
-						SAMLObject decryptedObject = SamlTools.decryptSamlObject(encryptedid);
+ 
+						
+//						SAMLObject decryptedObject = SamlTools.decryptSamlObject(encryptedid);	// 20201210, RH, o
+	                   	// 20201210, RH, sn
+                    	// We'd like decryption with specific key for this partner here
+						//If we found a samlNameIDAssertion we should also use that specific Issuer resource
+						String issuer = (samlNameIDAssertion != null ? samlNameIDAssertion : samlAssertion).getIssuer().getValue();
+						_systemLogger.log(Level.FINE, MODULE, sMethod, "Using (specific) Issuer resourcedata to retrieve NameID: " + _sResourceGroup + " / " + issuer);
+						PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(_sResourceGroup, issuer);
+						SAMLObject decryptedObject = SamlTools.decryptSamlObject(encryptedid, (partnerData != null) ? partnerData.getCrypto() : null);
+                    	// 20201210, RH, en
+						
 //						if ( decryptedObject != null ) {
 //							String sDecryptedID = Auxiliary.obfuscate(XMLHelper.nodeToString(decryptedObject.getDOM()));
 //							_systemLogger.log(Level.FINEST, MODULE, sMethod, "Decrypted ID:" + sDecryptedID);
@@ -711,6 +718,7 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 							String sIssuer = (issuer == null)? null: issuer.getValue();
 							if (sIssuer != null) {
 //								PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sIssuer);	// RH, 20190325, o
+								_systemLogger.log(Level.FINE, MODULE, sMethod, "Retreiving resourcedata to retrieve Polymorf IPoint using (specific) Issuer:" + _sResourceGroup + " / " + issuer);	// RH, 20201210, n
 								PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(_sResourceGroup, sIssuer);	// RH, 20190325, n
 								if (partnerData != null) {
 									PolyKeyUtil keys = new PolyKeyUtil(partnerData.getId_keylocation(), partnerData.getI_point(), null, null, null); 
@@ -735,6 +743,7 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 							String sIssuer = (issuer == null)? null: issuer.getValue();
 							if (sIssuer != null) {
 //								PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sIssuer);	// RH, 20190325, o
+								_systemLogger.log(Level.FINE, MODULE, sMethod, "Retreiving resourcedata to retrieve Polymorf ClosingKey using (specific) Issuer:" + _sResourceGroup + " / " + issuer);	// RH, 20201210, n
 								PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(_sResourceGroup, sIssuer);	// RH, 20190325, n
 								if (partnerData != null) {
 									PolyKeyUtil keys = new PolyKeyUtil(null, null, partnerData.getPd_keylocation(), partnerData.getPc_keylocation(), partnerData.getP_point()); 
@@ -796,6 +805,7 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 //					String sAuthnContextClassRefURI = oAuthnContext.getAuthnContextClassRef().getAuthnContextClassRef();	// RH, 20160405, o
 					// RH, 20160405, sn
 //					PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sFederationUrl);	// RH, 20190325, o
+					_systemLogger.log(Level.FINE, MODULE, sMethod, "Retreiving resourcedata using (specific) FederationUrl:" + _sResourceGroup + " / " + sFederationUrl);	// RH, 20201210, n
 					PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(_sResourceGroup, sFederationUrl);	// RH, 20190325, o
 					// RH, 20180810, sn, Moved this up a bit
 					String specialSettings = (partnerData == null)? null: partnerData.getSpecialSettings();
@@ -882,7 +892,11 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 								while (encryptAttrIt.hasNext()) {
 									final EncryptedAttribute encryptedAttribute = encryptAttrIt.next();
 									// For every encrypted attribute
-									final Attribute attribute = (Attribute) SamlTools.decryptSamlObject(encryptedAttribute);
+//									final Attribute attribute = (Attribute) SamlTools.decryptSamlObject(encryptedAttribute);	// RH, 20201210, o
+	                            	// 20201210, RH, sn
+	                            	// We'd like decryption with specific key for this partner here
+									final Attribute attribute = (Attribute) SamlTools.decryptSamlObject(encryptedAttribute, (partnerData != null) ? partnerData.getCrypto() : null);
+	                            	// 20201210, RH, en
 									if ( attribute != null ) {
 									// (re)Inject the Attribute in the assertion
 										sAttr.getAttributes().add(attribute);
@@ -908,7 +922,8 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 								Vector sAttrValue = null;// RH, 20120124, sn	// RH, 20180910, n	// Vector for legacy
 								List <XMLObject> aValues = attr.getAttributeValues();
 //								if ( aValues != null && aValues.size() == 1 ) {	// For now we only allow single valued simple type xs:string attributes	// RH, 20180910, o
-									if ( aValues != null ) {	// Also allow for multi-valued simple type xs:string attributes	// RH, 20180910, n
+								// looks like if there are no values, getAttributeValues() returns empty list, not null
+								if ( aValues != null ) {	// Also allow for multi-valued simple type xs:string attributes	// RH, 20180910, n
 										sAttrValue = new Vector();	// at least one value
 										for (XMLObject xmlObj : aValues) {	// RH, 20180910, n
 		                 //           XMLObject xmlObj = aValues.get(0);	// RH, 20180910, o
@@ -929,11 +944,104 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 	        							if ("EncryptedID".equals(sLocalName)) {
 	        								eID = (EncryptedID)xmlObj.getOrderedChildren().get(0);
 	        	                            if ( eID != null) {
-	        	                            	final SAMLObject attributevalue = SamlTools.decryptSamlObject(eID);
+//	        	                            	final SAMLObject attributevalue = SamlTools.decryptSamlObject(eID);	// RH, 20201210, o
+	        	                            	// 20201210, RH, sn
+	        	                            	// We'd like decryption with specific key for this partner here
+	        	                            	final SAMLObject attributevalue = SamlTools.decryptSamlObject(eID, (partnerData != null) ? partnerData.getCrypto() : null);
+	        	                            	// 20201210, RH, en
+	        	                            	// RH, 20201218, sn
+	        	                            	// TESTING //
+	          		                            xmlObj = attributevalue;
+	          		                            String sattributevaluesNameID = null;
+	           	                            	if (attributevalue != null) {
+	        	                            		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Processing EncryptedID=" + Auxiliary.obfuscate(XMLHelper.prettyPrintXML(attributevalue.getDOM()),
+	        	                						Auxiliary.REGEX_PATTERNS));
+		        	                            	// This can be a NameID with NameQualifier object
+//	        	        							String attributevaluesLocalName = attributevalue.getOrderedChildren().get(0).getDOM().getLocalName();
+	        	        							String attributevaluesLocalName = attributevalue.getDOM().getLocalName();
+	        	        							_systemLogger.log(Level.FINEST, MODULE, sMethod, "Found attributevalue LocalName:" + attributevaluesLocalName);
+		        	                            	if ("NameID".equals(attributevaluesLocalName)) {
+		        	                					NameID attributevalueameid = (NameID) attributevalue;	// Should be a NameID Element
+		        	                					// start polymorf decryption
+		        	                					if  ( attributevalueameid != null ) {
+		        	                						sattributevaluesNameID = attributevalueameid.getValue();
+		        	                						_systemLogger.log(Level.FINE, MODULE, sMethod, "attributevalue NameID:" + Auxiliary.obfuscate(sattributevaluesNameID));
+		        	                						String sattributevaluesNameIDQualifier = attributevalueameid.getNameQualifier();
+		        	                						_systemLogger.log(Level.FINE, MODULE, sMethod, "attributevalue NameIDQualifier:" + sattributevaluesNameIDQualifier);
+		        	                						
+		        	                						if ("urn:etoegang:1.12:EntityConcernedID:BSN".equals(sattributevaluesNameIDQualifier)) {	// polymorf Identity
+		        	                							_systemLogger.log(Level.FINER, MODULE, sMethod, "Decrypting:" + "urn:etoegang:1.12:EntityConcernedID:BSN");
+		        	                							// we should get the Assertion issuer here, for now TESTING they're the same
+		        	                							Issuer issuer = samlResponse.getIssuer();
+		        	                							String sIssuer = (issuer == null)? null: issuer.getValue();
+		        	                							if (sIssuer != null) {
+		        	                								_systemLogger.log(Level.FINE, MODULE, sMethod, "Retreiving resourcedata to retreive Polymorf IPoint using (specific) Issuer:" + _sResourceGroup + " / " + ((issuer != null) ? issuer.getValue(): null) );	// RH, 20201210, n
+		        	                								PartnerData localpartnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(_sResourceGroup, sIssuer);	// RH, 20190325, n
+		        	                								if (localpartnerData != null) {
+//		        	                									PolyKeyUtil keys = new PolyKeyUtil(localpartnerData.getId_keylocation(), localpartnerData.getI_point(), null, null, null); 
+		        	                									PolyKeyUtil keys = new PolyKeyUtil(localpartnerData.getId_keylocation(), localpartnerData.getI_point(), null, null, null,
+		        	                									(localpartnerData.getCrypto() != null ? localpartnerData.getCrypto().getPrivateKey() : null)); 
+		        	                									if (keys.getDecryptKey() != null) {	// loading of keys went well
+		        	                										try {
+		        	                											sattributevaluesNameID = DecryptUtil.getIdentity(sattributevaluesNameID,keys.getDecryptKey(), keys.getVerifiers());
+		        	                										} catch (PolyPseudoException pex) {
+		        	                											_systemLogger.log(Level.WARNING, MODULE, sMethod, "Error polymorf decrypting: " + pex.getMessage());
+		        	                										}
+		        	                									} else {
+		        	                										_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not load necessary key(s), no polymorf decryption done");
+		        	                									}
+		        	                								} else {
+		        	                									_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not load necessary key(s), no partnerdata for Issuer, no polymorf decryption done");
+		        	                								}
+		        	                							} else {
+		        	                								_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not load necessary key(s), no issuer in Response, no polymorf decryption done");
+		        	                							}
+		        	                						} else if ("urn:etoegang:1.12:EntityConcernedID:PseudoID".equals(sattributevaluesNameIDQualifier)) {	// polymorf Pseudonym
+		        	                							_systemLogger.log(Level.FINER, MODULE, sMethod, "Decrypting:" + "urn:etoegang:1.12:EntityConcernedID:PseudoID");
+		        	                							Issuer issuer = samlResponse.getIssuer();
+		        	                							String sIssuer = (issuer == null)? null: issuer.getValue();
+		        	                							if (sIssuer != null) {
+//		        	                								PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sIssuer);	// RH, 20190325, o
+		        	                								_systemLogger.log(Level.FINE, MODULE, sMethod, "Retreiving resourcedata to retreive Polymorf ClosingKey using (specific) Issuer:" + _sResourceGroup + " / " + ((issuer != null) ? issuer.getValue(): null) );	// RH, 20201210, n
+		        	                								PartnerData localpartnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(_sResourceGroup, sIssuer);	// RH, 20190325, n
+		        	                								if (localpartnerData != null) {
+		        	                									
+//		        	                									PolyKeyUtil keys = new PolyKeyUtil(null, null, localpartnerData.getPd_keylocation(), localpartnerData.getPc_keylocation(), localpartnerData.getP_point()); 
+		        	                									PolyKeyUtil keys = new PolyKeyUtil(null, null, localpartnerData.getPd_keylocation(), localpartnerData.getPc_keylocation(), localpartnerData.getP_point(), 
+		        	                											(localpartnerData.getCrypto() != null ? localpartnerData.getCrypto().getPrivateKey() : null)); 
+		        	                									if (keys.getPDecryptKey() != null && keys.getPClosingKey() != null) {	// loading of keys went well
+		        	                										try {
+		        	                											sattributevaluesNameID = DecryptUtil.getPseudonym(sattributevaluesNameID, keys.getPDecryptKey(), keys.getPClosingKey(), keys.getPVerifiers());
+		        	                										} catch (PolyPseudoException pex) {
+		        	                											_systemLogger.log(Level.WARNING, MODULE, sMethod, "Error polymorf decrypting: " + pex.getMessage());
+		        	                										}
+		        	                									} else {
+		        	                										_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not load necessary key(s), no polymorf decryption done");
+		        	                									}
+		        	                								} else {
+		        	                									_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not load necessary key(s), no partnerdata for Issuer, no polymorf decryption done");
+		        	                								}
+		        	                							} else {
+		        	                								_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not load necessary key(s), no issuer in Response, no polymorf decryption done");
+		        	                							}
+		        	                						}
+		        	                					}
+		        	                					if (sattributevaluesNameID != null) { 
+		        	                						sAttrValue.add(sattributevaluesNameID);
+		        	                						xmlObj = null; 	// so we will not add it twice
+		        	                					} else {
+        	                								_systemLogger.log(Level.WARNING, MODULE, sMethod, "Attribute value null after decrypting, not added");		        	                					}
+		        	                            	} else {	// like we used to
+		        	        							_systemLogger.log(Level.FINEST, MODULE, sMethod, "LocalName not NameID, no polymorf decryption done");
+		        	                            	}
+	        	                            	} else {
+		        									_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not decrypt EcnryptedID");
+	        	                            	}
+	        	                            	// RH, 20201218, en
 	//        	    							_systemLogger.log(Level.FINEST, MODULE, sMethod, "attributevalue decrypted");
 //	        	    							String sDecryptedValue = Auxiliary.obfuscate(XMLHelper.nodeToString(attributevalue.getDOM()));
 //	        	    							_systemLogger.log(Level.FINEST, MODULE, sMethod, "sDecryptedValue:" + sDecryptedValue);
-	        		                            xmlObj = attributevalue;
+	      //  		                            xmlObj = attributevalue;	// RH, 20201218, o
 	        	                            } else {
 	        									_systemLogger.log(Level.WARNING, MODULE, sMethod, "AtrributeValue not an instance of EncryptedElementType");
 	        	                            }

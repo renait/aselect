@@ -27,14 +27,12 @@ import java.util.List;
 import java.util.StringTokenizer;
 import java.util.logging.Level;
 
-import javax.servlet.ServletOutputStream;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
 
 import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.server.crypto.CryptoEngine;
 import org.aselect.server.log.ASelectSystemLogger;
-import org.aselect.server.request.handler.xsaml20.SamlTools;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.Utils;
@@ -52,7 +50,6 @@ import org.opensaml.saml2.core.AuthnRequest;
 import org.opensaml.saml2.core.AuthnStatement;
 import org.opensaml.saml2.core.Conditions;
 import org.opensaml.saml2.core.EncryptedElementType;
-import org.opensaml.saml2.core.EncryptedID;
 import org.opensaml.saml2.core.Issuer;
 import org.opensaml.saml2.core.LogoutRequest;
 import org.opensaml.saml2.core.LogoutResponse;
@@ -837,9 +834,16 @@ public class SamlTools
 		return obj;
 	}
 	
-	
-//	public static SAMLObject decryptSamlObject(EncryptedID obj)
+	// RH, 20201210, sn
 	public static SAMLObject decryptSamlObject(EncryptedElementType obj)
+	{
+		return decryptSamlObject(obj, null);
+	}
+	// RH, 20201210, en
+
+//	public static SAMLObject decryptSamlObject(EncryptedID obj)
+//	public static SAMLObject decryptSamlObject(EncryptedElementType obj)	// RH, 20201210, o
+	public static SAMLObject decryptSamlObject(EncryptedElementType obj, PartnerData.Crypto specificCrypto)	// RH, 20201210, n
 	 
 	{
 		String sMethod = "decryptSamlObject";
@@ -849,9 +853,21 @@ public class SamlTools
 		ASelectSystemLogger _systemLogger = ASelectSystemLogger.getHandle();
 
 		ASelectConfigManager _oASelectConfigManager = ASelectConfigManager.getHandle();
-
-		PrivateKey privKey = _oASelectConfigManager.getDefaultPrivateKey();
-
+		
+//		PrivateKey privKey = _oASelectConfigManager.getDefaultPrivateKey();	// RH, 20201210, o
+		// RH, 20201210, sn
+		PrivateKey privKey = null;
+		if (specificCrypto != null) {
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Looking for specific private key");
+			privKey =  specificCrypto.getPrivateKey();	// might not be present
+		}
+		if (privKey != null) {
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Found specific private key");
+		} else {	// like we used to
+			privKey = _oASelectConfigManager.getDefaultPrivateKey();
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Using default private key");
+		}
+		// RH, 20201210, en
 		BasicCredential credential = new BasicCredential();
 		credential.setPrivateKey(privKey);
 		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Found private key with format:" + privKey.getFormat());
@@ -998,6 +1014,7 @@ public class SamlTools
 		NameID nameId = nameIdBuilder.buildObject();
 //		nameId.setFormat(NameIDType.TRANSIENT);	// RH, 20140801, n. We use transient id's for nameid	// RH, 20180619, o
 		nameId.setFormat(sNameID.equals(sTgT) ? NameIDType.TRANSIENT : NameIDType.PERSISTENT);	// RH, 20140801, n. We use transient id's for nameid	// RH, 20180619, n
+//		nameId.setFormat(NameIDType.TRANSIENT);	// RH, 20200121, n.For testing ddy
 		nameId.setValue(sNameID);
 		logoutRequest.setNameID(nameId);
 
