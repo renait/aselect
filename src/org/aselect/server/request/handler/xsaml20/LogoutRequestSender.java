@@ -11,18 +11,13 @@
  */
 package org.aselect.server.request.handler.xsaml20;
 
-import java.io.File;
 import java.io.IOException;
 import java.security.PrivateKey;
-import java.util.Arrays;
-import java.util.Collection;
-import java.util.Iterator;
 import java.util.List;
 import java.util.logging.Level;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
-
 
 import org.apache.velocity.app.VelocityEngine;
 import org.apache.velocity.runtime.RuntimeConstants;
@@ -39,22 +34,12 @@ import org.opensaml.common.SAMLObjectBuilder;
 import org.opensaml.common.SignableSAMLObject;
 import org.opensaml.common.binding.BasicSAMLMessageContext;
 import org.opensaml.common.binding.SAMLMessageContext;
-import org.opensaml.common.binding.artifact.BasicSAMLArtifactMap;
-import org.opensaml.common.binding.artifact.SAMLArtifactMap;
-import org.opensaml.common.binding.artifact.SAMLArtifactMap.SAMLArtifactMapEntry;
 import org.opensaml.common.impl.SAMLObjectContentReference;
-import org.opensaml.saml2.binding.artifact.AbstractSAML2Artifact;
-import org.opensaml.saml2.binding.artifact.SAML2ArtifactBuilder;
-import org.opensaml.saml2.binding.artifact.SAML2ArtifactType0004;
-import org.opensaml.saml2.binding.encoding.HTTPArtifactEncoder;
 import org.opensaml.saml2.binding.encoding.HTTPPostEncoder;
 import org.opensaml.saml2.binding.encoding.HTTPPostSimpleSignEncoder;
-import org.opensaml.saml2.binding.encoding.HTTPRedirectDeflateEncoder;
 import org.opensaml.saml2.core.LogoutRequest;
 import org.opensaml.saml2.metadata.AssertionConsumerService;
 import org.opensaml.saml2.metadata.Endpoint;
-import org.opensaml.util.storage.MapBasedStorageService;
-import org.opensaml.util.storage.StorageService;
 import org.opensaml.ws.message.encoder.MessageEncodingException;
 import org.opensaml.ws.transport.http.HttpServletResponseAdapter;
 import org.opensaml.xml.XMLObjectBuilder;
@@ -63,8 +48,6 @@ import org.opensaml.xml.encryption.EncryptionConstants;
 import org.opensaml.xml.io.Marshaller;
 import org.opensaml.xml.io.MarshallerFactory;
 import org.opensaml.xml.io.MarshallingException;
-import org.opensaml.xml.parse.BasicParserPool;
-import org.opensaml.xml.security.BasicSecurityConfiguration;
 import org.opensaml.xml.security.SecurityConfiguration;
 import org.opensaml.xml.security.SecurityHelper;
 import org.opensaml.xml.security.credential.Credential;
@@ -160,8 +143,8 @@ public class LogoutRequestSender
 		String sMethod = "sendLogoutRequest";
 		
 		// velocity logging quickfix
-		org.apache.log4j.BasicConfigurator.configure();
-		org.apache.log4j.Logger log = org.apache.log4j.Logger.getLogger( LOGGER_NAME );
+//		org.apache.log4j.BasicConfigurator.configure();
+//		org.apache.log4j.Logger log = org.apache.log4j.Logger.getLogger( LOGGER_NAME );
 		
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "Send LogoutRequest to: " + sServiceProviderUrl);
 		XMLObjectBuilderFactory builderFactory = org.opensaml.xml.Configuration.getBuilderFactory();
@@ -525,6 +508,7 @@ public class LogoutRequestSender
 		} 	// RH, 20200217, en
 		else {	// like we did before
 		//	RH, 20200110, en
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Send using: " + "Redirect");
 		
 			Saml20_RedirectEncoder encoder = new Saml20_RedirectEncoder();	// RH, 20190426, n
 			try {
