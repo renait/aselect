@@ -153,6 +153,11 @@ public class LDAPProtocolHandlerFactory
 				systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not initialize LDAP protocol handler.");
 				throw new ASelectException(Errors.ERROR_LDAP_COULD_NOT_AUTHENTICATE_USER);
 			}
+			// RH, 20191003, sn
+			if (!oProtocolHandler.postInit(oConfig, sUid, systemLogger)) {
+				throw new ASelectException(Errors.ERROR_LDAP_COULD_NOT_AUTHENTICATE_USER);
+			}
+			// RH, 20191003, en
 			return oProtocolHandler;
 
 		}

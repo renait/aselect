@@ -49,6 +49,7 @@ import java.util.logging.Level;
 
 import org.aselect.authspserver.log.AuthSPSystemLogger;
 import org.aselect.system.exception.ASelectException;
+import org.aselect.system.logging.SystemLogger;
 
 
 /**
@@ -181,5 +182,11 @@ public abstract class AbstractLDAPProtocolHandler implements ILDAPProtocolHandle
 	 */
 	abstract protected void doBind(String sPassword)
 	throws ASelectException;
+
+	// RH, 20191003, sn
+	public boolean postInit(Object oConfig, String sUid, SystemLogger oSystemLogger) {
+		return true;	// default implementation does nothing
+	}
+	// RH, 20191003, en
 
 }

@@ -38,6 +38,7 @@
 package org.aselect.authspserver.authsp.ldap;
 
 import org.aselect.authspserver.log.AuthSPSystemLogger;
+import org.aselect.system.logging.SystemLogger;
 
 
 /**
@@ -114,4 +115,7 @@ public interface ILDAPProtocolHandler
 	 * @return The authentication result code (as specified in {@link Errors}).
 	 */
 	public String authenticate(String sPassword);
+	
+	boolean postInit(Object oConfig, String sUid, SystemLogger oSystemLogger);	// RH, 20191003, n
+
 }
