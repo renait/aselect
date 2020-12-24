@@ -101,6 +101,8 @@ public class TCPProtocolRequest implements IProtocolRequest
 	private StringBuffer _sbInputBuffer;
 
 	private SystemLogger _oSystemLogger;
+	
+	private Socket _socket;
 
 	/**
 	 * Create a new instance. <br>
@@ -132,6 +134,7 @@ public class TCPProtocolRequest implements IProtocolRequest
 		_sbInputBuffer = new StringBuffer();
 		_isInput = oRequestSocket.getInputStream();
 		_oSystemLogger = oSystemLogger;
+		_socket = oRequestSocket;
 		readRequest(oRequestSocket);
 	}
 
@@ -334,5 +337,15 @@ public class TCPProtocolRequest implements IProtocolRequest
 	public String getMessage()
 	{
 		return _sbInputBuffer.toString();
+	}
+
+	@Override
+	public String getClientIP() {
+		// We should check/filter for the ipv4 address. For now assume this is a ipv4 address xxx.xxx.xxx.xxx
+		if (_socket != null) {
+			return _socket.getInetAddress().getHostAddress();
+		} else {
+			return null;
+		}
 	}
 }

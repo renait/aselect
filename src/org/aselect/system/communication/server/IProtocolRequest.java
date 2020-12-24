@@ -103,11 +103,20 @@ public interface IProtocolRequest
 	 * <b>Postconditions:</b> <br>
 	 * - <br>
 	 * 
-	 * @return <code>InputStream</code> from which the incomming message can be retrieved.
+	 * @return <code>InputStream</code> from which the incoming message can be retrieved.
 	 * @throws IOException
 	 *             if <CODE>InputStream</CODE> can't be retrieved from the protocol.
 	 */
 	public InputStream getInputStream()
 	throws IOException;
-
+	
+	/**
+	 * get remote (client) ip if possible. Return null otherwise
+	 * 
+	 * 
+	 * @return ip v4 address of the remote (client) as String xxx.xxx.xxx.xxx
+	 */
+	public String getClientIP();
+	
+	
 }
