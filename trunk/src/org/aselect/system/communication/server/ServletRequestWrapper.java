@@ -158,4 +158,15 @@ public class ServletRequestWrapper implements IProtocolRequest
 	{
 		return _sMessage;
 	}
+
+	@Override
+	public String getClientIP() {
+		// we should check/filter on the ipv4 address. For now suppose it is ipv4 xxx.xxx.xxx.xxx	
+		if (_oRequest != null) {
+			return _oRequest.getRemoteAddr();
+		} else {
+			return null;
+		}
+	}
+	
 }
