@@ -9,16 +9,13 @@
 package org.aselect.server.crypto;
 
 
-import java.io.File;
 import java.io.FileInputStream;
 import java.io.InputStream;
 import java.lang.reflect.Constructor;
 import java.lang.reflect.Field;
 import java.lang.reflect.Modifier;
-import java.security.KeyFactory;
 import java.security.PrivateKey;
 import java.security.Security;
-import java.security.spec.PKCS8EncodedKeySpec;
 import java.util.Map;
 import java.util.logging.Level;
 
