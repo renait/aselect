@@ -199,7 +199,11 @@ public abstract class BasicRequestHandler
 			int i =  sAppUrl.indexOf('?');
 			if ( i >= 0 ) {
 				String app_url_querystring = sAppUrl.substring(i + 1);	// cut the '?'
-				HashMap app_url_parms = Utils.convertCGIMessage(app_url_querystring, false); 	// already URL decoded, returns lowercase keys
+				// RH, 20201008, sn
+				// app_url_querystring is '&amp;' delimited, not just '&'
+				app_url_querystring = app_url_querystring.replaceAll("&amp;", "&");
+				// RH, 20201008, en
+				HashMap app_url_parms = Utils.convertCGIMessage(app_url_querystring, false); 	// already URL decoded, returns lowercase keys	// RH, 20201008, o
 				Iterator<String> iter = _configManager.getParameters2forward().keySet().iterator();
 				while (iter.hasNext()) {
 					String parm2forward = iter.next();
