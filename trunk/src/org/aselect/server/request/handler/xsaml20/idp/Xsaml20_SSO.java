@@ -1179,13 +1179,14 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 						sValue = (String)oValue;
 					} else {
 //						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Non String attribute found, skipping:  "+sKey+"="+aValues);	// RH, 20190129, o
-						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Non String attribute found, skipping:  "+sKey+"="+Auxiliary.obfuscate(aValues));	// RH, 20190129, n
+//						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Non String attribute found, skipping:  "+sKey+"="+Auxiliary.obfuscate(aValues));	// RH, 20190129, n	//RH,  20200615, o
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Non String attribute value found, only String type supported, skipping: " +Auxiliary.obfuscate(oValue));	// RH, 20190129, n	//RH,  20200615, n
 						continue;
 					}
 					
 	//				Attribute theAttribute = attributeBuilder.buildObject();
 					theAttribute.setName(sKey);
-					XSString theAttributeValue = null;
+//					XSString theAttributeValue = null;	// RH, 20200616, o
 					boolean bNvlAttrName = _sAddedPatching.contains("nvl_attrname");
 					if (bNvlAttrName) {
 						// add namespaces to the attribute
@@ -1198,11 +1199,19 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 						theAttribute.setNameFormat(Attribute.BASIC);  // URI_REFERENCE);  // BASIC);
 						_systemLogger.log(Level.FINER, MODULE, sMethod, "Novell Attribute="+theAttribute);
 					}
-					theAttributeValue = (XSString)stringBuilder.buildObject(AttributeValue.DEFAULT_ELEMENT_NAME, XSString.TYPE_NAME);
-					theAttributeValue.setValue(sValue);
-					
-					theAttribute.getAttributeValues().add(theAttributeValue);
-				
+					// RH, 20200616, sn
+					// SAML2 specs say, no Empty values allowed 
+					if (sValue != null && sValue.length()>0 ) {	// Should not be null nor length = 0
+						XSString theAttributeValue = null;
+//						// RH, 20200616, en
+						theAttributeValue = (XSString)stringBuilder.buildObject(AttributeValue.DEFAULT_ELEMENT_NAME, XSString.TYPE_NAME);
+						theAttributeValue.setValue(sValue);
+						theAttribute.getAttributeValues().add(theAttributeValue);
+					// RH, 20200616, sn
+					} else {
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Empty attribute value found, skipping empty value for key: "+sKey);
+					}
+//					// RH, 20200616, en
 				}
 				
 				attributeStatement.getAttributes().add(theAttribute); // add this attribute
