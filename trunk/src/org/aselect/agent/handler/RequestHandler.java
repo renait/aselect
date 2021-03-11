@@ -730,7 +730,12 @@ public class RequestHandler extends Thread
 			HashMap htRequest = new HashMap();
 			htRequest.put("request", "authenticate");
 			// Bauke: added htmlEncode to prevent cross-site scripting
-			htRequest.put("app_url", Tools.htmlEncode(sAppUrl));
+//			htRequest.put("app_url", Tools.htmlEncode(sAppUrl));	//	RH, 20210114, o
+			// RH, 20210114, sn
+			// unfortunately this encoding is never undone
+			// Check should be done in filter now
+			htRequest.put("app_url", sAppUrl);
+			// RH, 20210114, en
 			htRequest.put("app_id", sAppId);
 			if (sUid != null)
 				htRequest.put("uid", sUid);
