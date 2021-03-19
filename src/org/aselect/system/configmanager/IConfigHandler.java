@@ -363,6 +363,12 @@ public interface IConfigHandler
 	public void saveConfig()
 	throws ASelectConfigException;
 
+	// RH, 20200302, sn
+	public boolean isDirty(Object oSection)
+	throws ASelectConfigException;
+	// RH, 20200302, en
+	
+	
 	/**
 	 * Import configuration items into this configuration. <br>
 	 * <br>
