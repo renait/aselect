@@ -80,6 +80,7 @@ import java.util.logging.Level;
 
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
@@ -1596,8 +1597,17 @@ public class Utils
 		dbFactory.setNamespaceAware(true);
 		dbFactory.setExpandEntityReferences(false);
 		// dbFactory.setIgnoringComments(true);
+		// RH, 20210318, sn
+//		dbFactory.setXIncludeAware(false);	// defaults to false
+		// RH, 20210318, en
 		
 		try {
+			// RH, 20210318, sn
+			dbFactory.setAttribute(XMLConstants.FEATURE_SECURE_PROCESSING, true);
+			dbFactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_DTD, "");
+			// In future versions we might want to assign a schema but for now disallow
+			dbFactory.setAttribute(XMLConstants.ACCESS_EXTERNAL_SCHEMA, "");
+			// RH, 20210318, en
 			dbFactory.setFeature("http://apache.org/xml/features/disallow-doctype-decl", 
 		                   true);
 //			dbFactory.setFeature("http://apache.org/xml/features/external-general-entities", 
@@ -1606,7 +1616,6 @@ public class Utils
 //	                   false);
 			dbFactory.setFeature("http://apache.org/xml/features/nonvalidating/load-external-dtd", 
 	                   false);
-			
 		} 
 		catch (ParserConfigurationException e) {
 			if (oSysLog != null) {

@@ -81,6 +81,7 @@ import java.text.DateFormat;
 import java.util.Date;
 import java.util.logging.Level;
 
+import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
@@ -90,9 +91,11 @@ import org.apache.xml.serialize.XMLSerializer;
 import org.aselect.system.configmanager.IConfigHandler;
 import org.aselect.system.db.SQLDatabaseConnector;
 import org.aselect.system.error.Errors;
+import org.aselect.system.exception.ASelectCommunicationException;
 import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectDatabaseException;
 import org.aselect.system.logging.SystemLogger;
+import org.aselect.system.utils.Utils;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
@@ -135,7 +138,8 @@ public class XMLConfigHandler implements IConfigHandler
 	/**
 	 * The XML DOM Document that contains the configuration
 	 */
-	private Document _oDomDocument;
+//	private Document _oDomDocument;
+	protected  Document _oDomDocument;
 	// Do we need locking for _oDomDocument?
 	// Only if we want to perform concurrent save operations.
 	// Any read leaves a valid Document in _oDomDocument.
@@ -161,7 +165,8 @@ public class XMLConfigHandler implements IConfigHandler
 	/**
 	 * The SystemLogger used for logging
 	 */
-	private SystemLogger _oSystemLogger;
+//	private SystemLogger _oSystemLogger;
+	protected SystemLogger _oSystemLogger;
 
 	/**
 	 * SQL JDBC Database connection that is used by this class.
@@ -1227,12 +1232,20 @@ public class XMLConfigHandler implements IConfigHandler
 	 * @throws IOException
 	 *             If an error occurs during I/O
 	 */
-	private Document parseXML(File fConfig)
+//	private Document parseXML(File fConfig)
+	protected Document parseXML(File fConfig)
 	throws ParserConfigurationException, SAXException, IOException
 	{
 		// create DocumentBuilderFactory to parse config file.
-		DocumentBuilderFactory oDocumentBuilderFactory = DocumentBuilderFactory.newInstance();
-
+//		DocumentBuilderFactory oDocumentBuilderFactory = DocumentBuilderFactory.newInstance();	// RH, 20210318, o
+		// RH, 20210318, sn
+		DocumentBuilderFactory oDocumentBuilderFactory;
+		try {
+			oDocumentBuilderFactory = Utils.createDocumentBuilderFactory(_oSystemLogger);
+		} catch (ASelectCommunicationException e) {
+			throw new ParserConfigurationException(e.getMessage());
+		}	
+		// RH, 20210318, en
 		// Create parser
 		DocumentBuilder oDocumentBuilder = oDocumentBuilderFactory.newDocumentBuilder();
 
@@ -1269,8 +1282,15 @@ public class XMLConfigHandler implements IConfigHandler
 	throws ParserConfigurationException, SAXException, IOException
 	{
 		// create DocumentBuilderFactory to parse config file.
-		DocumentBuilderFactory oDocumentBuilderFactory = DocumentBuilderFactory.newInstance();
-
+//		DocumentBuilderFactory oDocumentBuilderFactory = DocumentBuilderFactory.newInstance();	// RH, 20210318, o
+		// RH, 20210318, sn
+		DocumentBuilderFactory oDocumentBuilderFactory;
+		try {
+			oDocumentBuilderFactory = Utils.createDocumentBuilderFactory(_oSystemLogger);
+		} catch (ASelectCommunicationException e) {
+			throw new ParserConfigurationException(e.getMessage());
+		}
+		// RH, 20210318, en
 		// Create parser
 		DocumentBuilder oDocumentBuilder = oDocumentBuilderFactory.newDocumentBuilder();
 
@@ -1482,5 +1502,13 @@ public class XMLConfigHandler implements IConfigHandler
 			}
 		}
 	}
+
+	// RH, 20200302, sn
+	@Override
+	public boolean isDirty(Object oSection) throws ASelectConfigException {
+		// For the file and sql handlers we always return false, we do not want them to reload
+		return false;
+	}
+	// RH, 20200302, en
 
 }

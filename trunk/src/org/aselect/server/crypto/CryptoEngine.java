@@ -730,7 +730,9 @@ public class CryptoEngine
 		PublicKey oPublicKey = null;
 	    byte[] cipherText = null;
 		if (sAlgorithm == null) {	// defaults to RSA
-			sAlgorithm = "RSA";
+//			sAlgorithm = "RSA";	// RH, 20210318, o
+			// now defaults to RSA/ECB/PKCS1Padding
+			sAlgorithm = "RSA/ECB/PKCS1Padding";	// RH, 20210318, n
 		}
 		try {
 			final Cipher cipher = Cipher.getInstance(sAlgorithm);
