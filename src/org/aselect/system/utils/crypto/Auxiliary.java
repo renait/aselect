@@ -596,7 +596,8 @@ public  final class Auxiliary
 			e.printStackTrace();
 			return null;
 		}
-		kpg.initialize(2014);
+//		kpg.initialize(2014);	// experimenting with different key lengths
+		kpg.initialize(4096);
 		KeyPair kp = kpg.genKeyPair();
 		kp.getPublic().getAlgorithm(); // should return "RSA"
 		kp.getPublic().getFormat(); // should return "X.509", NOT "PKCS#8" because that would be your secret private key

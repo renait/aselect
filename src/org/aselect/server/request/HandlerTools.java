@@ -1057,7 +1057,8 @@ public class HandlerTools
 			}
 			char[] passphrase = keyfilePw.toCharArray();
 
-			ctx = SSLContext.getInstance("TLS");
+//			ctx = SSLContext.getInstance("TLS");	// RH, 20210316, o
+			ctx = SSLContext.getInstance("TLSv1.2");	// RH, 20210316, n, we'll force v1.2
 			kmf = KeyManagerFactory.getInstance("SunX509");
 			ks = KeyStore.getInstance("JKS");
 
