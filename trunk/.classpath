@@ -1,50 +1,15 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <classpath>
 	<classpathentry kind="src" path="src"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/aselect-dependencies"/>
+	<classpathentry kind="con" path="org.eclipse.jst.j2ee.internal.web.container"/>
+	<classpathentry kind="con" path="org.eclipse.jst.j2ee.internal.module.container"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.USER_LIBRARY/opendaml-2.6.6"/>
+	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER/org.eclipse.jdt.internal.debug.ui.launcher.StandardVMType/JavaSE-1.8">
+		<attributes>
+			<attribute name="owner.project.facets" value="java"/>
+		</attributes>
+	</classpathentry>
 	<classpathentry kind="lib" path="lib-compile/j2ee.jar"/>
-	<classpathentry kind="lib" path="lib/commons-codec-1.3.jar"/>
-	<classpathentry kind="lib" path="lib/commons-dbcp-1.2.2.jar"/>
-	<classpathentry kind="lib" path="lib/commons-httpclient-3.1.jar"/>
-	<classpathentry kind="lib" path="lib/commons-lang-2.1.jar"/>
-	<classpathentry kind="lib" path="lib/commons-pool-1.4.jar"/>
-	<classpathentry kind="lib" path="lib/cryptix-jce-provider.jar"/>
-	<classpathentry kind="lib" path="lib/jargs-1.0.jar"/>
-	<classpathentry kind="lib" path="lib/log4j-1.2.15.jar"/>
-	<classpathentry kind="lib" path="lib/not-yet-commons-ssl-0.3.9.jar"/>
-	<classpathentry kind="lib" path="lib/opensaml-1.1.jar"/>
-	<classpathentry kind="lib" path="lib/slf4j-log4j12-1.5.0.jar"/>
-	<classpathentry kind="lib" path="lib/velocity-1.5.jar"/>
-	<classpathentry kind="lib" path="lib/opensaml-2.3.0.jar"/>
-	<classpathentry kind="lib" path="lib/xmltooling-1.2.1.jar"/>
-	<classpathentry kind="lib" path="lib/joda-time-1.6.jar"/>
-	<classpathentry kind="lib" path="lib/openws-1.3.0.jar"/>
-	<classpathentry kind="lib" path="lib/xmlsec-1.4.3.jar"/>
-	<classpathentry kind="lib" path="lib/xercesImpl-2.9.1.jar"/>
-	<classpathentry kind="lib" path="lib/avalon-framework-4.1.3.jar"/>
-	<classpathentry kind="lib" path="lib/bcprov-jdk15-1.43.jar"/>
-	<classpathentry kind="lib" path="lib/commons-logging-1.1.jar"/>
-	<classpathentry kind="lib" path="lib/jcip-annotations-1.0.jar"/>
-	<classpathentry kind="lib" path="lib/jcl-over-slf4j-1.5.8.jar"/>
-	<classpathentry kind="lib" path="lib/jul-to-slf4j-1.5.8.jar"/>
-	<classpathentry kind="lib" path="lib/log4j-over-slf4j-1.5.8.jar"/>
-	<classpathentry kind="lib" path="lib/logkit-1.0.1.jar"/>
-	<classpathentry kind="lib" path="lib/resolver-2.9.1.jar"/>
-	<classpathentry kind="lib" path="lib/serializer-2.9.1.jar"/>
-	<classpathentry kind="lib" path="lib/slf4j-api-1.5.8.jar"/>
-	<classpathentry kind="lib" path="lib/xalan-2.7.1.jar"/>
-	<classpathentry kind="lib" path="lib/xml-apis-2.9.1.jar"/>
-	<classpathentry kind="lib" path="lib/nekohtml-1.9.7.jar"/>
-	<classpathentry kind="lib" path="lib/openid4java-full-0.9.5.jar"/>
-	<classpathentry kind="lib" path="lib/jdom.jar"/>
-	<classpathentry kind="con" path="org.eclipse.jdt.launching.JRE_CONTAINER"/>
-	<classpathentry kind="lib" path="lib/net.bankid.merchant.library.jar"/>
-	<classpathentry kind="lib" path="lib/ezmorph-1.0.6.jar"/>
-	<classpathentry kind="lib" path="lib/json-lib-2.4-jdk15.jar"/>
-	<classpathentry kind="lib" path="lib/commons-beanutils-1.9.1.jar"/>
-	<classpathentry kind="lib" path="lib/socialauth-4.4.jar" sourcepath="/socialauth/src/socialauth"/>
-	<classpathentry kind="lib" path="lib/commons-collections-3.1.jar"/>
-	<classpathentry kind="lib" path="lib/jaxb-api.jar"/>
-	<classpathentry kind="lib" path="lib/jaxb-core.jar"/>
-	<classpathentry kind="lib" path="lib/jaxb-impl.jar"/>
 	<classpathentry kind="output" path="bin"/>
 </classpath>
