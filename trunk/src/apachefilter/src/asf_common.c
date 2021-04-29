@@ -1009,7 +1009,8 @@ int aselect_filter_check_app_uri(pool *pPool, PASELECT_FILTER_CONFIG pConfig, ch
     }
     TRACE4("aselect_filter_check_app_uri::Secure: index=%d len=%d Public: index=%d len=%d", iBestSec, lenBestSec, iBestPub, lenBestPub);
 //    if (iBestSec < 0 && iBestPub < 0) {   // RH, 20190715, o
-    if (iBestSec < 0 && iBestPub < 0 || (iBestSec >= 0 && pcForceAppid && iForcedSec < 0)) {   // RH, 20190715, n    // if there is a froce_app_id, there must be a match
+//    if (iBestSec < 0 && iBestPub < 0 || (iBestSec >= 0 && pcForceAppid && iForcedSec < 0)) {   // RH, 20190715, n    // if there is a froce_app_id, there must be a match	 // RH, 20210429, o, more lenient now
+    if (iBestSec < 0 && iBestPub < 0) {   // RH, 20210429, n
 		return -1;  // no match at all
     }
 
