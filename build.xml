@@ -270,7 +270,7 @@
     			<attribute name="Class-Path" value="org.aselect.system.jar cryptix-jce-provider.jar xercesImpl.jar xmlParserAPIs.jar 
     			 commons-dbcp-1.2.2.jar commons-pool-1.4.jar . "/>
     			-->
-    			<attribute name="Class-Path" value="org.aselect.system.jar mysql-connector-java-5.1.7-bin.jar sqljdbc4.jar  
+    			<attribute name="Class-Path" value="org.aselect.system.jar mysql-connector-java-5.1.7-bin.jar sqljdbc4.jar  mysql-connector-java-8.0.23.jar
     			 cryptix-jce-provider.jar json-lib-2.4-jdk15.jar commons-dbcp-1.2.2.jar commons-pool-1.4.jar . "/>
     			
     		</manifest>
