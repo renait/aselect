@@ -771,6 +771,10 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 
 		switch (iStep) {
 		case 0:
+			// RH, 20210504, sn
+			_htTGTContext.put("oboyn", sOBOyn);
+			_tgtManager.updateTGT(sTgt, _htTGTContext);
+			// RH, 20210504, en
 			if ("y".equalsIgnoreCase(sOBOyn)) {
 				try {
 					String sSelectForm;
@@ -790,7 +794,6 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 			else {	// no obo requested
 				_systemLogger.log(Level.FINEST, _sModule, sMethod, "No obo requested by user");
 			}
-			
 			break;
 		case 1:
 		case 2:
