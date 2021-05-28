@@ -752,34 +752,43 @@ public class TGTIssuer
 			// handle "On Behalf Of" if applicable
 			// RH, 20141013, sn
 			if ( ApplicationManager.getHandle().getApplication(sAppId).isOBOEnabled() ) {
-				int step = 0;
-				String sFirstStep = ApplicationManager.getHandle().getApplication(sAppId).getOBOParameters().get("firststep");
-				if (sFirstStep != null ) {
-					try {
-						step = Integer.parseInt(sFirstStep);
-					} catch (NumberFormatException nfe) {
-						step = 0;
-						_systemLogger.log(Level.WARNING, MODULE, sMethod, "OnBehalfOf contains non integer value for firststep:" + sFirstStep );
+				// RH, 20210504, sn
+				String oboyn = (String)htTGTContext.get("oboyn");
+				if (oboyn == null || oboyn.length() == 0) {	// User did not choose obo yet
+				// RH, 20210504, en
+					int step = 0;
+					String sFirstStep = ApplicationManager.getHandle().getApplication(sAppId).getOBOParameters().get("firststep");
+					if (sFirstStep != null ) {
+						try {
+							step = Integer.parseInt(sFirstStep);
+						} catch (NumberFormatException nfe) {
+							step = 0;
+							_systemLogger.log(Level.WARNING, MODULE, sMethod, "OnBehalfOf contains non integer value for firststep:" + sFirstStep );
+						}
 					}
+					_systemLogger.log(Level.FINER, MODULE, sMethod, "Using firststep:" + step );
+					// RH, 20141013, sn
+	
+					// RH, 20140204,  Present On Behalf Of selection to the user
+					// The user must present obo
+					String sSelectForm = org.aselect.server.utils.Utils.presentOnBehalfOf(servletRequest, _configManager,
+							htSessionContext, sRid, (String)htTGTContext.get("language"), step /*step 0 = do obo or not */);
+					
+					Tools.pauseSensorData(_configManager, _systemLogger, htSessionContext);
+					//_sessionManager.updateSession(sRid, htSessionContext); // Write session
+					// done by pauseSensorData(): _sessionManager.setUpdateSession(htSessionContext, _systemLogger);  // 20120403, Bauke: was updateSession()
+	
+					pwOut = servletResponse.getWriter();
+					pwOut.println(sSelectForm);
+					IAuthSPConditions authspconditions = getiAuthSPConditions();
+					if (authspconditions != null)
+						authspconditions.setOutputAvailable(false);	// We cannot communicate with the user after closing stream
+					return sTgt;
+				// RH, 20210426, sn
+				} else {
+					_systemLogger.log(Level.FINER, MODULE, sMethod, "OnBehalfOf enabled but user has already choosen");
 				}
-				_systemLogger.log(Level.FINER, MODULE, sMethod, "Using firststep:" + step );
-				// RH, 20141013, sn
-
-				// RH, 20140204,  Present On Behalf Of selection to the user
-				// The user must present obo
-				String sSelectForm = org.aselect.server.utils.Utils.presentOnBehalfOf(servletRequest, _configManager,
-						htSessionContext, sRid, (String)htTGTContext.get("language"), step /*step 0 = do obo or not */);
-				
-				Tools.pauseSensorData(_configManager, _systemLogger, htSessionContext);
-				//_sessionManager.updateSession(sRid, htSessionContext); // Write session
-				// done by pauseSensorData(): _sessionManager.setUpdateSession(htSessionContext, _systemLogger);  // 20120403, Bauke: was updateSession()
-
-				pwOut = servletResponse.getWriter();
-				pwOut.println(sSelectForm);
-				IAuthSPConditions authspconditions = getiAuthSPConditions();
-				if (authspconditions != null)
-					authspconditions.setOutputAvailable(false);	// We cannot communicate with the user after closing stream
-				return sTgt;
+				// RH, 20210426, en
 			}
 			
 			// 20100210, Bauke: Present the Organization selection to the user
