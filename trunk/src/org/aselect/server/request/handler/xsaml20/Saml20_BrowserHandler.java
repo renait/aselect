@@ -90,8 +90,9 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 	public String _sMyServerId; // The value of <server_id> in the <aselect> section
 	public String _sAppOrg; // The value of <organization> in the <aselect> section
 	public String _sASelectServerUrl; // The value of <server_url> in the <aselect> section
-	protected Issuer _oSamlIssuer = null;
-	
+//	protected Issuer _oSamlIssuer = null;
+
+	/*
 	public Issuer get_SamlIssuer() {
 		return _oSamlIssuer;
 	}
@@ -99,7 +100,8 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 	public void set_SamlIssuer(Issuer oSamlIssuer) {
 		_oSamlIssuer = oSamlIssuer;
 	}
-
+	*/
+	
 	private XMLObjectBuilderFactory _oBuilderFactory;
 
 	// Must be overridden:
@@ -327,7 +329,11 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 					+Auxiliary.obfuscate(XMLHelper.prettyPrintXML(samlMessage.getDOM()), Auxiliary.REGEX_PATTERNS));
 			
 			// Decide what part of the message we need, also sets _oSamlIssuer
-			samlMessage = extractSamlObject(samlMessage);
+//			samlMessage = extractSamlObject(samlMessage);
+			
+			String elementName = samlMessage.getElementQName().getLocalPart();
+			Issuer _oSamlIssuer = retrieveIssuer(elementName, samlMessage);
+
 			
 			// Check the signature. First we must detect which public key must be used
 			// The alias of the public key is equal to the appId and the
@@ -399,15 +405,15 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 	 * @return part of the message we need
 	 * @throws ASelectException
 	 */
-	protected SignableSAMLObject extractSamlObject(SignableSAMLObject samlMessage)
-	throws ASelectException
-	{
-		String sMethod = "extractSamlObject";
-		
-		String elementName = samlMessage.getElementQName().getLocalPart();
-		set_SamlIssuer(retrieveIssuer(elementName, samlMessage));
-		return samlMessage;
-	}
+//	protected SignableSAMLObject extractSamlObject(SignableSAMLObject samlMessage)
+//	throws ASelectException
+//	{
+//		String sMethod = "extractSamlObject";
+//		
+//		String elementName = samlMessage.getElementQName().getLocalPart();
+//		set_SamlIssuer(retrieveIssuer(elementName, samlMessage));
+//		return samlMessage;
+//	}
 
 
 	/**
@@ -532,6 +538,7 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 		if (htTGTContext != null) {
 			resourcegroup = (String)htTGTContext.get("federation_group"); 	// RH, 20190325, n
 			UserSsoSession sso = (UserSsoSession) htTGTContext.get("sso_session");
+			String tgt_name_id = (String)htTGTContext.get("name_id"); 	// RH, 20210504, n	// needed for persistent logout
 			List<ServiceProvider> spList = sso.getServiceProviders();
 
 			if (initiatingSP != null) // store in the Tgt-session
@@ -584,7 +591,10 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 						SLOTimer timer = SLOTimer.getHandle(_systemLogger);
 						// Store the session with the remaining SP's in it
 //						SLOTimerTask task = new SLOTimerTask(sNameID, originalLogoutRequest.getID(), sso, _sASelectServerUrl);	// RH, 20180619, o
-						SLOTimerTask task = new SLOTimerTask(htTGTContext.get("cookiestgt") != null ? (String)htTGTContext.get("cookiestgt") : sNameID, originalLogoutRequest.getID(), sso, _sASelectServerUrl);	// RH, 20180619, n
+//						SLOTimerTask task = new SLOTimerTask(htTGTContext.get("cookiestgt") != null ? (String)htTGTContext.get("cookiestgt") : sNameID, 
+//								originalLogoutRequest.getID(), sso, _sASelectServerUrl);	// RH, 20180619, n	// RH, 20210504, o
+						SLOTimerTask task = new SLOTimerTask(htTGTContext.get("cookiestgt") != null ? (String)htTGTContext.get("cookiestgt") : sNameID, 
+								originalLogoutRequest.getID(), sso, _sASelectServerUrl, tgt_name_id);	// RH, 20180619, n	// RH, 20210504, n
 						long now = new Date().getTime();
 						_systemLogger.log(Level.FINER, MODULE, sMethod, "Schedule timer +"+redirectLogoutTimeout*1000);
 						timer.schedule(task, new Date(now + redirectLogoutTimeout * 1000));
@@ -612,7 +622,8 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 					// Will come back at this same handler
 					_systemLogger.log(Audit.AUDIT, MODULE, sMethod, ">> Sending logoutrequest to: " + url);
 //					sender.sendLogoutRequest(httpRequest, httpResponse, sNameID, url, _sASelectServerUrl, sNameID,	// RH, 20180619, o
-					sender.sendLogoutRequest(httpRequest, httpResponse, htTGTContext.get("cookiestgt") != null ? (String)htTGTContext.get("cookiestgt") : sNameID , url, _sASelectServerUrl, sNameID,	// RH, 20180619, n
+//					sender.sendLogoutRequest(httpRequest, httpResponse, htTGTContext.get("cookiestgt") != null ? (String)htTGTContext.get("cookiestgt") : sNameID , url, _sASelectServerUrl, sNameID,	// RH, 20180619, n	// RH, 20210504, o
+					sender.sendLogoutRequest(httpRequest, httpResponse, htTGTContext.get("cookiestgt") != null ? (String)htTGTContext.get("cookiestgt") : sNameID , url, _sASelectServerUrl, tgt_name_id != null ? tgt_name_id: sNameID,	// RH, 20180619, n	// RH, 20210504, n
 							"urn:oasis:names:tc:SAML:2.0:logout:user", null);
 					return;
 					// stop further execution, we'll be back here to handle the rest
@@ -622,9 +633,10 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 					_systemLogger.log(Level.FINER, MODULE, sMethod, "TIMER logout for SP=" + serviceProvider);
 					SLOTimer timer = SLOTimer.getHandle(_systemLogger);
 //					SLOTimerTask task = new SLOTimerTask(sNameID, originalLogoutRequest.getID(), sso, _sASelectServerUrl);	// RH, 20180619, o
+//					SLOTimerTask task = new SLOTimerTask(htTGTContext.get("cookiestgt") != null ? (String)htTGTContext.get("cookiestgt") : sNameID,
+//							originalLogoutRequest.getID(), sso, _sASelectServerUrl);	// RH, 20180619, n	// RH, 20210504, o
 					SLOTimerTask task = new SLOTimerTask(htTGTContext.get("cookiestgt") != null ? (String)htTGTContext.get("cookiestgt") : sNameID,
-							originalLogoutRequest.getID(), sso, _sASelectServerUrl);	// RH, 20180619, n
-					
+							originalLogoutRequest.getID(), sso, _sASelectServerUrl, tgt_name_id);	// RH, 20180619, n	// RH, 20210504, n
 					
 					// RH, 20161220, so
 					// schedule it for now. No need to wait

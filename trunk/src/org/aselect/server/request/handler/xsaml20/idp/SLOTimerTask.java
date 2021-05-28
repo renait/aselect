@@ -44,7 +44,17 @@ public class SLOTimerTask extends TimerTask
 	private String requestId;
 	private String tgtId;
 	private boolean _bVerifySignature = false; // choose default = false
+	private String tgt_name_id;	// RH, 20210504, n
 
+	
+	
+	/**
+	 * Hide this contructor
+	 */
+	private SLOTimerTask() {
+		
+	}
+	
 	/**
 	 * The Constructor.
 	 * 
@@ -57,13 +67,14 @@ public class SLOTimerTask extends TimerTask
 	 * @param issuer
 	 *            the issuer
 	 */
-	public SLOTimerTask(String tgtId, String requestId, UserSsoSession sso, String issuer) {
+	public SLOTimerTask(String tgtId, String requestId, UserSsoSession sso, String issuer, String tgt_name_id) {
 		super();
 		String sMethod = "SLOTimerTask";
 		this.sso = sso;
 		this.requestId = requestId;
 		this.issuer = issuer;
 		this.tgtId = tgtId;
+		this.tgt_name_id = tgt_name_id;// RH, 20210504, n
 		_systemLogger = ASelectSystemLogger.getHandle();
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "user=" + sso.getUserId() + " requestId=" + requestId
 				+ " issuer=" + issuer);
@@ -155,8 +166,8 @@ public class SLOTimerTask extends TimerTask
 //				// "Federation initiated logout"	// RH, 20180918, o
 //				sender.sendSoapLogoutRequest(url, issuer, tgtId, "urn:oasis:names:tc:SAML:2.0:logout:admin", pkey, null); // was:
 				// "Federation initiated logout"	// RH, 20180918, n	// RH, 20181116, o
-				sender.sendSoapLogoutRequest(url, issuer, tgtId, "urn:oasis:names:tc:SAML:2.0:logout:admin", pkeys, null);	// RH, 20181116, n
-
+//				sender.sendSoapLogoutRequest(url, issuer, tgtId, "urn:oasis:names:tc:SAML:2.0:logout:admin", pkeys, null);	// RH, 20181116, n	// RH, 20210504, o
+				sender.sendSoapLogoutRequest(url, issuer, tgt_name_id != null ? tgt_name_id : tgtId, "urn:oasis:names:tc:SAML:2.0:logout:admin", pkeys, null);	// RH, 20181116, n	// RH, 20210504, n
 			}
 			catch (ASelectException e) {
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Send failed (but continue): " + e);
