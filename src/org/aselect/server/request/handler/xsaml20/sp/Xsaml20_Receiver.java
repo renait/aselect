@@ -159,7 +159,11 @@ public class Xsaml20_Receiver extends Saml20_BrowserHandler
 					sApplicationResource = authzDec.getResource();
 			}
 
-			Application appData = ApplicationManager.getHandle().getApplication(get_SamlIssuer().getValue());
+			String elementName = samlMessage.getElementQName().getLocalPart();
+			Issuer _oSamlIssuer = retrieveIssuer(elementName, samlMessage);
+
+//			Application appData = ApplicationManager.getHandle().getApplication(get_SamlIssuer().getValue());
+			Application appData = ApplicationManager.getHandle().getApplication(_oSamlIssuer.getValue());
 			HashMap<String,String> htValidResources = appData.getValidResources();
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "Resource="+sApplicationResource+" valid="+htValidResources);
 
@@ -244,9 +248,12 @@ public class Xsaml20_Receiver extends Saml20_BrowserHandler
 			// RH, 20150917, sn, oldTgt can be null
 			
 			// Create a ticket with attributes and set a cookie
+//			String sTgt = createContextAndIssueTGT(httpResponse, null, null, _sMyServerId, _sASelectOrganization,
+////									get_SamlIssuer().getValue(), null, htAttributes);	// RH, 20150917, o
+//									get_SamlIssuer().getValue(), oldTgt, htAttributes);	// RH, 20150917, n, oldTgt can be null
 			String sTgt = createContextAndIssueTGT(httpResponse, null, null, _sMyServerId, _sASelectOrganization,
-//									get_SamlIssuer().getValue(), null, htAttributes);	// RH, 20150917, o
-									get_SamlIssuer().getValue(), oldTgt, htAttributes);	// RH, 20150917, n, oldTgt can be null
+//					get_SamlIssuer().getValue(), null, htAttributes);	// RH, 20150917, o
+					_oSamlIssuer.getValue(), oldTgt, htAttributes);	// RH, 20150917, n, oldTgt can be null
 			// and redirect the user to the destination url
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "REDIRECT to "+sApplicationResource);
 			httpResponse.sendRedirect(sApplicationResource);
@@ -271,6 +278,8 @@ public class Xsaml20_Receiver extends Saml20_BrowserHandler
 	 * @return - the interesting part of the message
 	 * @throws ASelectException
 	 */
+	// Never used
+	/*
 	protected SignableSAMLObject extractSamlObject(SignableSAMLObject samlMessage)
 	throws ASelectException
 	{
@@ -285,7 +294,9 @@ public class Xsaml20_Receiver extends Saml20_BrowserHandler
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "Issuer="+get_SamlIssuer().getValue()+" ObjectId="+assertObj.getID()); 
 		return (SignableSAMLObject) assertObj;
 	}
-
+	*/
+	
+	
 	/**
 	 * Override ProtoRequestHandler version to use signing key from Application
 	 * 
