@@ -70,6 +70,7 @@ import org.opensaml.saml2.core.Issuer;
 import org.opensaml.saml2.core.NameID;
 import org.opensaml.saml2.core.NameIDType;
 import org.opensaml.saml2.core.RequestedAuthnContext;
+import org.opensaml.saml2.core.RequesterID;
 import org.opensaml.saml2.core.Response;
 import org.opensaml.saml2.core.Status;
 import org.opensaml.saml2.core.StatusCode;
@@ -356,6 +357,18 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 			String sSPRid = authnRequest.getID();
 			String sIssuer = authnRequest.getIssuer().getValue();
 			
+			// RH, 20210225, sn
+			List<String> forced_resourcegroup_keys = new ArrayList<>();
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "looking for Scoping RequesterIDs");
+			if (authnRequest.getScoping() != null && authnRequest.getScoping().getRequesterIDs() != null) {
+				List<RequesterID> reqList = authnRequest.getScoping().getRequesterIDs();
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Found Scoping RequesterIDs: " + reqList);
+				for ( RequesterID requesterid : reqList) {
+					forced_resourcegroup_keys.add(requesterid.getRequesterID());
+				}
+			}
+			// RH, 20210225, en
+			
 			//  RH, 20101101, get the requested binding, can be null
 			String sReqBinding = authnRequest.getProtocolBinding();
 			boolean bForcedAuthn = authnRequest.isForceAuthn();
@@ -396,6 +409,7 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "No session found for RID: " + sIDPRid);
 				throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 			}
+			
 			if (sRelayState != null) {
 				_htSessionContext.put("RelayState", sRelayState);
 			}
@@ -409,6 +423,11 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 			_htSessionContext.put("sp_issuer", sIssuer);
 			_htSessionContext.put("sp_assert_url", sAssertionConsumerServiceURL);
 			
+			// RH, 20210225, sn
+			if (!forced_resourcegroup_keys.isEmpty())
+				_htSessionContext.put("sp_forced_resourcegroup_keys", forced_resourcegroup_keys);
+			// RH, 20210225, en
+
 			// RH, 20180625, sn
 			String appEndEntityID = ApplicationManager.getHandle().getApplicationEndpointAudience(sAppId);
 			if ( appEndEntityID != null && appEndEntityID.length() > 0) {

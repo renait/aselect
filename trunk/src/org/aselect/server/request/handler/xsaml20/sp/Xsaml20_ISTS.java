@@ -15,6 +15,8 @@ import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
 import java.security.PrivateKey;
 import java.util.ArrayList;
+import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 import java.util.logging.Level;
 
@@ -109,6 +111,7 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 	private String _sFallbackUrl = null;
 	private String _sRedirectSyncTime = null;
 	private boolean bIdpSelectForm = false;
+	private HashMap<String, String> _resourceLookup = null;	// RH, 20210225, n
 
 	// Example configuration
 	//
@@ -162,6 +165,13 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 		_sFallbackUrl = ASelectConfigManager.getSimpleParam(oConfig, "fallback_url", false);
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "fallback_url="+_sFallbackUrl);
 		
+		// RH, 20210225, sn
+		_resourceLookup = new HashMap<String, String>();
+		_resourceLookup = ASelectConfigManager.getTableFromConfig(oConfig,  _resourceLookup, "resourcegroups",
+				"resourcegroup", "key",/*->*/"uri", false/* mandatory */, false/* unique values */);
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "_resourceLookup="+_resourceLookup);
+		// RH, 20210225, en
+		
 		// Find the resourcegroup
 		sam = _configManager.getSection(null, "sam");
 		agent = _configManager.getSection(sam, "agent");
@@ -180,6 +190,26 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 			metadataMgr.processResourceSection(_sResourceGroup, idpSection);	// RH, 20190321, n
 			idpSection = _configManager.getNextSection(idpSection);
 		}
+		//	RH, 20210302, sn
+		//	And do the same for the _resourceLookup
+		if (_resourceLookup != null) {
+			for (String resGroup : _resourceLookup.keySet()) {
+				try {
+					Object metaResourcegroup = _configManager.getSection(agent, "resourcegroup", "id=" + _resourceLookup.get(resGroup));
+					idpSection = _configManager.getSection(metaResourcegroup, "resource");
+					while (idpSection != null) {
+						metadataMgr.processResourceSection(_resourceLookup.get(resGroup), idpSection);
+						idpSection = _configManager.getNextSection(idpSection);
+					}
+				}		
+				catch (ASelectConfigException e) {
+					_systemLogger.log(Level.WARNING, MODULE, sMethod, "No resourcegroup: "+_resourceLookup.get(resGroup)+" configured");
+				}
+			}
+		} else {
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "No resourcegroups section found, continuing");
+		}
+		//	RH, 20210302, en
 		metadataMgr.logIdPs();
 		
 		// Get Assertion Consumer data from config
@@ -221,6 +251,7 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 		String sRid;
 		String sFederationUrl = null;
 		PrintWriter pwOut = null;
+		String _sResourceGroup = super._sResourceGroup;	// This is dirty. Fix that!	// RH, 20210225
 
 		String sMyUrl = _sServerUrl; // extractAselectServerUrl(request);
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "MyUrl=" + sMyUrl + " MyId="+getID()+ " path=" + servletRequest.getPathInfo());
@@ -278,6 +309,32 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 			_htSessionContext.put("user_state", "state_toidp");  // at least remove state_select
 			_oSessionManager.setUpdateSession(_htSessionContext, _systemLogger);  // 20120403, Bauke: was updateSession
 
+			// RH, 20210225, sn
+			List<String> forced_resourcegroup_keys = (List<String>) _htSessionContext.get("sp_forced_resourcegroup_keys");
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Found sessioncontext sp_forced_resourcegroup_keys: " + forced_resourcegroup_keys);
+			if (forced_resourcegroup_keys != null && _resourceLookup != null) {
+				// lookup (allowed) resourcegroups here
+				boolean found = false;
+				for (String forced_resourcegroup_key : forced_resourcegroup_keys) {
+					if (_resourceLookup.containsKey(forced_resourcegroup_key)) {
+						_sResourceGroup = _resourceLookup.get(forced_resourcegroup_key);
+						if (_sResourceGroup != null) {	// For now we just take the first one we find
+							found = true;
+							break;
+						}
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "sessioncontext forced_resourcegroup_key: " + forced_resourcegroup_key + " not found in: " + _resourceLookup);
+					}
+				}
+				if (found) {
+					_systemLogger.log(Level.FINE, MODULE, sMethod, "Pulled first matching resourcegroup from sessioncontext: " + _sResourceGroup);
+				} else {
+					_systemLogger.log(Level.WARNING, MODULE, sMethod, "forced_resourcegroup_key lookup failed, using default resourcegroup: " + _sResourceGroup);
+				}
+			} else {
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "No sp_forced_resourcegroup_keys in sessioncontext or no resourcegroups for lookup configured");
+			}
+			// RH, 20210225, en
+			
 			// 20110308, Bauke: new mechanism to get to the IdP using the SAM agent (allows redundant resources)
 			// User choice was made, or "federation_url" was set programmatically
 			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Getting active resource from resourcegroup=" + _sResourceGroup);
@@ -346,7 +403,8 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 						SingleSignOnService.DEFAULT_ELEMENT_LOCAL_NAME, singleSignOnServiceBindingConstantREDIRECT);
 			}
 			_systemLogger.log(Level.FINER, MODULE, sMethod, "Location retrieved=" + sDestination);
-			if ("".equals(sDestination))
+//			if ("".equals(sDestination))	// RH, 20210304, o
+			if (sDestination == null ||	"".equals(sDestination))	// RH, 20210304, n
 				throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 			
 //			PartnerData partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(sFederationUrl);	// RH, 20190322, o
