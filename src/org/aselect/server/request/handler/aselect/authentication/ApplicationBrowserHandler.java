@@ -3320,7 +3320,12 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 		_htSessionContext.put("authsp", sAuthsp);
 		_htSessionContext.put("social_login", sSocialLogin);
 		_htSessionContext.put("my_url", htLoginRequest.get("my_url"));
-
+		// RH, 20210601, sn
+		if (htLoginRequest.get("idin_bank_select") != null) {
+			_htSessionContext.put("idin_bank_select", htLoginRequest.get("idin_bank_select"));
+		}
+		// RH, 20210601, en
+		
 		// RH, should be set through AbstractBrowserRequestHandler
 		// but this seems to be the wrong one (AbstractBrowserRequestHandler sets the idp address on the idp)
 		_systemLogger.log(Level.INFO, _sModule, sMethod, "_htSessionContext client_ip was "
