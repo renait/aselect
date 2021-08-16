@@ -306,7 +306,6 @@ import org.aselect.server.attributes.AttributeGatherer;
 import org.aselect.server.authspprotocol.IAuthSPDirectLoginProtocolHandler;
 import org.aselect.server.authspprotocol.IAuthSPProtocolHandler;
 import org.aselect.server.authspprotocol.handler.AuthSPHandlerManager;
-import org.aselect.server.authspprotocol.handler.IdinAuthSPHandler;
 import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.server.config.Version;
 import org.aselect.server.cross.CrossASelectManager;
