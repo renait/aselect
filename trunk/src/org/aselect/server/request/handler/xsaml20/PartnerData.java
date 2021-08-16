@@ -65,7 +65,8 @@ public class PartnerData
 	private Testdata4Partner testdata4partner = null;
 	private Extensionsdata4Partner extensionsdata4partner = null;
 	
-	private Map<String,Metadata4Partner> metadataDVs = null;
+//	private Map<String,Metadata4Partner> metadataDVs = null;
+	private Map<String,DV> DVs = null;
 	
 
 	private Crypto crypto = null;	// RH, 20180917, n
@@ -354,8 +355,56 @@ public class PartnerData
 //	public synchronized void setCrypto(Crypto crypto) {
 //		this.crypto = crypto;
 //	}
-	
 
+	// RH, 20210420, sn
+	public synchronized Crypto loadCrypto(String sWorkingDir, String sKeyStoreName, String sAlias, String sPassword) throws ASelectException {
+		String sMethod = "loadCrypto";
+		
+		StringBuffer sbKeystoreLocation = new StringBuffer(sWorkingDir);
+		Crypto crypto = null;
+		
+		try {
+
+			sbKeystoreLocation.append(File.separator);
+			sbKeystoreLocation.append("keystores");
+			sbKeystoreLocation.append(File.separator);
+			sbKeystoreLocation.append("partners");
+			sbKeystoreLocation.append(File.separator);
+			sbKeystoreLocation.append(sKeyStoreName);
+			KeyStore ksASelect = KeyStore.getInstance("JKS");
+			ksASelect.load(new FileInputStream(sbKeystoreLocation.toString()), null);
+
+			// convert String to char[]
+			char[] caPassword = sPassword.toCharArray();
+			PrivateKey oPrivateKey = (PrivateKey) ksASelect.getKey(sAlias, caPassword);
+
+			java.security.cert.X509Certificate x509Cert = (java.security.cert.X509Certificate) ksASelect
+					.getCertificate(sAlias);
+
+			byte[] baCert = x509Cert.getEncoded();
+			MessageDigest mdDigest = MessageDigest.getInstance("SHA1");
+			mdDigest.update(baCert);
+			String sCertFingerPrint = Utils.byteArrayToHexString(mdDigest.digest());
+
+			crypto = new Crypto(x509Cert, oPrivateKey, sCertFingerPrint);
+//			crypto.put("signing_cert", x509Cert);
+//			crypto.put("private_key", oPrivateKey);
+//			crypto.put("cert_id", sCertFingerPrint);
+		}
+		catch (Exception e) {
+			throw new ASelectException(Errors.ERROR_ASELECT_INTERNAL_ERROR, e);
+		}
+		return crypto;
+
+	}
+	// RH, 20210420, en
+
+	public synchronized void loadSpecificCrypto(String sWorkingDir, String sKeyStoreName, String sAlias, String sPassword) throws ASelectException {
+		String sMethod = "loadSpecificCrypto";
+		crypto = loadCrypto(sWorkingDir, sKeyStoreName, sAlias, sPassword);
+	}
+
+/*
 	public synchronized void loadSpecificCrypto(String sWorkingDir, String sKeyStoreName, String sAlias, String sPassword) throws ASelectException {
 		String sMethod = "loadSpecificCrypto";
 		
@@ -395,7 +444,42 @@ public class PartnerData
 
 	}
 	// RH, 20180917, en
+*/
+	
+	
+	// RH, 20210420, sn
+	// Simple wrapper for DV info
+	public class DV
+	{
+		@Override
+		public String toString() {
+			return "DV:" + new ReflectionToStringBuilder( this, new StandardToStringStyle()).toString();
+		}
 
+		private Crypto oCrypto = null;
+		private Metadata4Partner oMetadata = null;
+
+		private DV()
+		{
+			// hide this constructor
+		}
+
+		public DV(Crypto crypto, Metadata4Partner metadata)
+		{
+			this.oCrypto = crypto;
+			this.oMetadata = metadata;
+		}
+
+		public synchronized Crypto getCrypto() {
+			return this.oCrypto;
+		}
+
+		public synchronized Metadata4Partner getMetadata() {
+			return this.oMetadata;
+		}
+	}
+	// RH, 20210420, en
+	
 	// RH, 20181102, sn
 	// Polymorf file locations
 	public synchronized String getId_keylocation() {
@@ -472,27 +556,58 @@ public class PartnerData
 		return metadata4partner;
 	}
 
-	/**
-	 * @return the metadataDVs
-	 */
-	public synchronized Map<String, Metadata4Partner> getMetadataDVs() {
-		if (metadataDVs == null) {
-			metadataDVs = new HashMap<String, Metadata4Partner>();
-		}
-		return metadataDVs;
-	}
 
+	// RH, 20210420, so
+//	/**
+//	 * @return the metadataDVs
+//	 */
+//	public synchronized Map<String, Metadata4Partner> getMetadataDVs() {
+//		if (metadataDVs == null) {
+//			metadataDVs = new HashMap<String, Metadata4Partner>();
+//		}
+//		return metadataDVs;
+//	}
+	// RH, 20210420, eo
+
+	// RH, 20210420, sn
 	/**
-	 * @return the metadataDV for this entityID
-	 * @param entityID
-	 * @return (new) metadataDV
+	 * @return the DVs
 	 */
-	public synchronized Metadata4Partner getMetadataDV(String entityID) {
-		if (!getMetadataDVs().containsKey(entityID)) {
-			getMetadataDVs().put(entityID, new Metadata4Partner());
+	public synchronized Map<String, DV> getDVs() {
+		if (DVs == null) {
+			DVs = new HashMap<String, DV>();
 		}
-		return getMetadataDVs().get(entityID);
+		return DVs;
 	}
+	// RH, 20210420, en
+
+	//	RH, 20210420, so
+//	/**
+//	 * @return the metadataDV for this entityID
+//	 * @param entityID
+//	 * @return (new) metadataDV
+//	 */
+//	public synchronized Metadata4Partner getMetadataDV(String entityID) {
+//		if (!getMetadataDVs().containsKey(entityID)) {
+//			getMetadataDVs().put(entityID, new Metadata4Partner());
+//		}
+//		return getMetadataDVs().get(entityID);
+//	}
+	//	RH, 20210420, eo
+
+	//	RH, 20210420, sn
+	/**
+	 * @return the DV for this entityID
+	 * @param entityID
+	 * @return (new) DV
+	 */
+	public synchronized DV getDV(String entityID) {
+		if (!getDVs().containsKey(entityID)) {
+			getDVs().put(entityID, new DV());
+		}
+		return getDVs().get(entityID);
+	}
+	//	RH, 20210420, en
 
 	public synchronized SecurityLevelEntry[] getSecurityLevels() {
 		return securityLevels;
