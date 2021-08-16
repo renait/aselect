@@ -991,7 +991,12 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 
 		TGTIssuer oTGTIssuer = new TGTIssuer(_sMyServerId);
 		String sLang = (String)_htTGTContext.get("language");
-		oTGTIssuer.sendTgtRedirect(sAppUrl, sTgt, null, servletResponse, sLang);
+//		oTGTIssuer.sendTgtRedirect(sAppUrl, sTgt, null, servletResponse, sLang);		// RH, 20210812, o
+		// RH, 20210812, sn
+		// Some handlers require the rid. so lets put it there
+		String sRid = (String)_htTGTContext.get("rid");
+		oTGTIssuer.sendTgtRedirect(sAppUrl, sTgt, sRid, servletResponse, sLang);
+		// RH, 20210812, en
 	}
 	
 	
@@ -1489,7 +1494,9 @@ public class ApplicationBrowserHandler extends AbstractBrowserRequestHandler
 								ServiceProvider sp = new ServiceProvider(spIssuer);
 								ssoSession.addServiceProvider(sp);
 //								_systemLogger.log(Level.INFO, _sModule, sMethod, "UPD SSO session " + ssoSession);	// RH, 20190129, o
-								_systemLogger.log(Level.INFO, _sModule, sMethod, "UPD SSO session " + Auxiliary.obfuscate(ssoSession));	// RH, 20190129, n
+//								_systemLogger.log(Level.INFO, _sModule, sMethod, "UPD SSO session " + Auxiliary.obfuscate(ssoSession));	// RH, 20190129, n	// RH, 20210713, o
+								// obfuscation of Object does nothing, so no obfuscation occurs, therefore make it String
+								_systemLogger.log(Level.INFO, _sModule, sMethod, "UPD SSO session " + Auxiliary.obfuscate(ssoSession.toString()));	// RH, 20190129, n	// RH, 20210713, n
 								_htTGTContext.put("sso_session", ssoSession);
 							}
 
