@@ -14,6 +14,7 @@ package org.aselect.server.request.handler.xsaml20.idp;
 import java.io.IOException;
 import java.io.PrintWriter;
 import java.io.UnsupportedEncodingException;
+import java.security.PublicKey;
 import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.HashMap;
@@ -21,6 +22,7 @@ import java.util.List;
 import java.util.Set;
 import java.util.Vector;
 import java.util.logging.Level;
+import java.util.regex.Matcher;
 import java.util.regex.Pattern;
 
 import javax.print.attribute.standard.NumberOfDocuments;
@@ -49,6 +51,7 @@ import org.aselect.system.utils.Tools;
 import org.aselect.system.utils.Utils;
 import org.aselect.system.utils.crypto.Auxiliary;
 import org.joda.time.DateTime;
+import org.opensaml.common.SAMLObject;
 import org.opensaml.common.SAMLObjectBuilder;
 import org.opensaml.common.SAMLVersion;
 import org.opensaml.common.SignableSAMLObject;
@@ -66,6 +69,8 @@ import org.opensaml.saml2.core.AuthnContextDecl;
 import org.opensaml.saml2.core.AuthnContextDeclRef;
 import org.opensaml.saml2.core.AuthnRequest;
 import org.opensaml.saml2.core.AuthnStatement;
+import org.opensaml.saml2.core.EncryptedAttribute;
+import org.opensaml.saml2.core.EncryptedID;
 import org.opensaml.saml2.core.Issuer;
 import org.opensaml.saml2.core.NameID;
 import org.opensaml.saml2.core.NameIDType;
@@ -79,13 +84,18 @@ import org.opensaml.saml2.core.Subject;
 import org.opensaml.saml2.core.SubjectConfirmation;
 import org.opensaml.saml2.core.SubjectConfirmationData;
 import org.opensaml.saml2.core.SubjectLocality;
+import org.opensaml.saml2.core.impl.AttributeBuilder;
+import org.opensaml.saml2.core.impl.EncryptedIDBuilder;
 import org.opensaml.saml2.metadata.AssertionConsumerService;
 import org.opensaml.xml.Configuration;
 import org.opensaml.xml.Namespace;
+import org.opensaml.xml.XMLObject;
 import org.opensaml.xml.XMLObjectBuilder;
 import org.opensaml.xml.XMLObjectBuilderFactory;
 import org.opensaml.xml.io.MarshallingException;
+import org.opensaml.xml.schema.XSAny;
 import org.opensaml.xml.schema.XSString;
+import org.opensaml.xml.security.credential.UsageType;
 import org.opensaml.xml.util.XMLConstants;
 import org.opensaml.xml.util.XMLHelper;
 
@@ -1197,7 +1207,8 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 					}
 				}
 			}
-			
+			List <PublicKey> pubKeys = null;
+
 			Set keys = htAllAttributes.keySet();
 			for (Object s : keys) {
 				String sKey = (String)s;
@@ -1222,7 +1233,29 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 
 //				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Setting Attr "+sKey+"="+aValues);	// RH, 20190129, o
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Setting Attr "+sKey+"="+Auxiliary.obfuscate(aValues));	// RH, 20190129, n
-
+				// RH, 20210712, sn
+				// Should we do some encryption
+				// Get the pubKeys only once
+				if (pubKeys == null && 
+						(isEncryptAttribute(sKey, localsettings.get(LOCALS_NAME_APP_ID))
+								|| isEncryptAttributeValue(sKey, localsettings.get(LOCALS_NAME_APP_ID)) )) {	// we will only retrieve the puKeys once
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Retieving pubKeys for: " + localsettings.get(LOCALS_NAME_APP_ID));
+									// for now use resource = null
+					// RH, 20210812, sn
+					// First try to locate encryption certificate
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Trying 'use' encryption first");
+					pubKeys = retrievePublicKeys(null, localsettings.get(LOCALS_NAME_APP_ID), UsageType.ENCRYPTION);
+					// if none found fall back to signing certificate
+					if (pubKeys == null || pubKeys.size() == 0) {
+						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Now trying 'use' signing as fallback");
+						pubKeys = retrievePublicKeys(null, localsettings.get(LOCALS_NAME_APP_ID));
+					}
+					// RH, 20210812, en
+//					pubKeys = retrievePublicKeys(null, localsettings.get(LOCALS_NAME_APP_ID));	// RH, 20210812, o
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Retieved pupKeys: " + pubKeys);
+				}
+				//
+				// RH, 20210712, en
 				Attribute theAttribute = attributeBuilder.buildObject();
 				for ( Object oValue : aValues) {
 					String sValue = null;
@@ -1259,15 +1292,39 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 //						// RH, 20200616, en
 						theAttributeValue = (XSString)stringBuilder.buildObject(AttributeValue.DEFAULT_ELEMENT_NAME, XSString.TYPE_NAME);
 						theAttributeValue.setValue(sValue);
-						theAttribute.getAttributeValues().add(theAttributeValue);
+						// RH, 20210715, sn
+						// Should we encrypt theAttributeValue
+						if (isEncryptAttributeValue(sKey, localsettings.get(LOCALS_NAME_APP_ID))) {
+							XMLObjectBuilder<XSAny> xsAnyBuilder = builderFactory.getBuilder(XSAny.TYPE_NAME);
+							_systemLogger.log(Level.FINEST, MODULE, sMethod, "xsAnyBuilder: " +xsAnyBuilder);
+							XSAny anyAttributeValue = xsAnyBuilder.buildObject(AttributeValue.DEFAULT_ELEMENT_NAME);
+							_systemLogger.log(Level.FINEST, MODULE, sMethod, "anyAttributeValue: " +anyAttributeValue);
+							XMLObject encryptedAttributeValue =  SamlTools.encryptSamlObjectValue( theAttributeValue, pubKeys.get(0));
+							_systemLogger.log(Level.FINEST, MODULE, sMethod, "encryptedAttributeValue: " +encryptedAttributeValue);
+							anyAttributeValue.getUnknownXMLObjects().add(encryptedAttributeValue);
+							theAttribute.getAttributeValues().add(anyAttributeValue);
+						} else {
+							theAttribute.getAttributeValues().add(theAttributeValue);
+						}
+						//
+						// RH, 20210715, en
+//						theAttribute.getAttributeValues().add(theAttributeValue);	// RH, 20210715, o
 					// RH, 20200616, sn
 					} else {
 						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Empty attribute value found, skipping empty value for key: "+sKey);
 					}
 //					// RH, 20200616, en
 				}
-				
-				attributeStatement.getAttributes().add(theAttribute); // add this attribute
+				// Or should we encrypt the entire attibute
+				// For test we'll try to encrypt the entire attribute
+				if (isEncryptAttribute(sKey, localsettings.get(LOCALS_NAME_APP_ID))) {
+//					theAttribute = SamlTools.encryptSamlObject(theAttribute, pubKeys.get(0));	// Just take the first for now
+					attributeStatement.getEncryptedAttributes().add((EncryptedAttribute) SamlTools.encryptSamlObject(theAttribute, pubKeys.get(0)));
+				} else {
+					attributeStatement.getAttributes().add(theAttribute); // add the plain attribute
+				}
+				//
+//				attributeStatement.getAttributes().add(theAttribute); // add this attribute	// RH, 202210713, o
 			}
 			
 			// ---- AuthenticationContext
@@ -1614,6 +1671,56 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 		}
 		return response;
 	}
+
+	// RH, 20210712, sn
+	private boolean isEncryptAttributeValue(String sKey, String appid) {
+		String sMethod = "isEncryptAttributeValue";
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Looking for application: " + appid);
+
+		try {
+			HashMap<Pattern, Boolean> encryptAttributes = ApplicationManager.getHandle().getEncryptAtributes(appid);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Found patterns: " + encryptAttributes);
+			if (encryptAttributes != null) {
+				for (Pattern pattern : encryptAttributes.keySet()) {
+					Matcher m = pattern.matcher(sKey);
+					if (m.matches() && encryptAttributes.get(pattern)) {
+						return true;
+					}
+				}
+			} else {
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "No attribute values to be encrypted, continuing");
+			}
+		} catch (ASelectException e) {
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Application not found: " + appid);
+		}
+		return false;
+	}
+
+
+	private boolean isEncryptAttribute(String sKey, String appid) {
+		String sMethod = "isEncryptAttribute";
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Looking for application: " + appid);
+
+		try {
+			HashMap<Pattern, Boolean> encryptAttributes = ApplicationManager.getHandle().getEncryptAtributes(appid);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Found patterns: " + encryptAttributes);
+			if (encryptAttributes != null) {
+				for (Pattern pattern : encryptAttributes.keySet()) {
+					Matcher m = pattern.matcher(sKey);
+					if (m.matches()  && !encryptAttributes.get(pattern)) {
+						return true;
+					}
+				}
+			} else {
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "No attributes to be encrypted, continuing");
+			}
+		} catch (ASelectException e) {
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Application not found: " + appid);
+		}
+		return false;
+	}
+	// RH, 20210712, en
+
 
 	public synchronized String getPostTemplate()
 	{

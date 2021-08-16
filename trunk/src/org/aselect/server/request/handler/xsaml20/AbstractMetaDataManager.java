@@ -831,7 +831,7 @@ public abstract class AbstractMetaDataManager
 			UsageType useType = keydescriptor.getUse();
 //			if (!useType.name().equalsIgnoreCase("SIGNING")) {
 //			if (useType != UsageType.SIGNING) {
-			if (useType != UsageType.SIGNING && useType != UsageType.UNSPECIFIED) {	// we'll allow UNSPECIFIED as SIGNING
+			if (useType != UsageType.SIGNING) {	// First try to find SIGNING
 
 //				_systemLogger.log(Level.FINE, MODULE, sMethod, "Use type: " + useType + " != SIGNING");	// RH, 20160512, o
 //				_systemLogger.log(Level.FINE, MODULE, sMethod, "Use type: " + useType + " != SIGNING, trying next if present");	// RH, 20160512, n	// RH, 20181120, o
@@ -841,24 +841,118 @@ public abstract class AbstractMetaDataManager
 //				return null;	// RH, 20160512, o
 				continue;	// RH, 20160512, n
 			}
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Allowing keydescriptor with 'use': "  + useType);
 
-			org.opensaml.xml.signature.KeyInfo keyinfo = keydescriptor.getKeyInfo();
+//			org.opensaml.xml.signature.KeyInfo keyinfo = keydescriptor.getKeyInfo();
 //			X509Data x509Data = keyinfo.getX509Datas().get(0);
+//			List<X509Data> x509Datas = keyinfo.getX509Datas();
+//			pubKeys = addPubkey(entityId, pubKeys, keyinfo);
+			pubKeys = addPubkey2List(entityId, pubKeys, keydescriptor);
+		}
+		if (pubKeys.size() == 0) {
+			for (KeyDescriptor keydescriptor : keyDescriptors) {
+				UsageType useType = keydescriptor.getUse();
+				if (useType != UsageType.UNSPECIFIED) {	// we'll allow UNSPECIFIED as SIGNING as a fallback
+					_systemLogger.log(Level.FINE, MODULE, sMethod, "Invalid UsageType found: " + useType + ", ignored");	// RH, 20160512, n	// 20181120, n
+					continue;	// RH, 20160512, n
+				}
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Allowing keydescriptor with 'use': "  + useType);
+				pubKeys = addPubkey2List(entityId, pubKeys, keydescriptor);
+			}
+		}
+//		return null;	// RH, 20181119, o
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "Number of pubKeys found: "  + pubKeys.size());
+		return pubKeys;	// RH, 20181119, n
+	}
+
+	// RH, 20210812, sn
+	/**
+	 * Retrieve a List of the signing keys from SSODescriptors for the given entity id from the metadata cache.
+	 * 
+	 * @param entityId
+	 *            the entity id
+	 * @return List<PublicKey>, is null on errors.
+	 */
+	// We could/should combine this method with getSigningKeyFromMetadata() but that will require a huge refactor for the method name
+	public List<PublicKey> getEncryptionKeyFromMetadata(String resourceGroup, String entityId)
+	{
+		String sMethod = "getEncryptionKeyFromMetadata";
+		List<PublicKey> pubKeys = new ArrayList<PublicKey>();
+
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "myRole="+getMyRole()+" entityId=" + entityId);
+		try {
+			ensureMetadataPresence(resourceGroup, entityId);
+		}
+		catch (ASelectException e) {
+			return null;
+		}
+
+		SSODescriptor descriptor = SSODescriptors.get(new AbstractMap.SimpleEntry<String, String>(resourceGroup, makeEntityKey(entityId, null)));
+		if (descriptor == null) {
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "ResourceGroup:" + resourceGroup + " Entity id:" + entityId + " not in SSODescriptors: "+SSODescriptors);
+			return null;
+		}
+		
+		List<KeyDescriptor> keyDescriptors = descriptor.getKeyDescriptors();
+		for (KeyDescriptor keydescriptor : keyDescriptors) {
+			UsageType useType = keydescriptor.getUse();
+			if (useType != UsageType.ENCRYPTION) {	// First try to find ENCRYPTION
+				_systemLogger.log(Level.FINE, MODULE, sMethod, "Invalid UsageType found: " + useType + ", ignored");
+				continue;
+			}
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Allowing keydescriptor with 'use': "  + useType);
+
+//			org.opensaml.xml.signature.KeyInfo keyinfo = keydescriptor.getKeyInfo();
+//			pubKeys = addPubkey(entityId, pubKeys, keyinfo);
+			pubKeys = addPubkey2List(entityId, pubKeys, keydescriptor);
+		}
+		if (pubKeys.size() == 0) {
+			for (KeyDescriptor keydescriptor : keyDescriptors) {
+				UsageType useType = keydescriptor.getUse();
+				if (useType != UsageType.UNSPECIFIED) {	// we'll allow UNSPECIFIED as ENCRYPTION as a fallback
+					_systemLogger.log(Level.FINE, MODULE, sMethod, "Invalid UsageType found: " + useType + ", ignored");
+					continue;
+				}
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Allowing keydescriptor with 'use': "  + useType);
+	
+				pubKeys = addPubkey2List(entityId, pubKeys, keydescriptor);
+			}
+		}
+		
+		_systemLogger.log(Level.INFO, MODULE, sMethod, "Number of pubKeys found: "  + pubKeys.size());
+		return pubKeys;
+	}
+
+	
+	
+	/**
+	 * @param entityId
+	 * @param pubKeys, must NOT be null
+	 * @param keyinfo, must NOT be null
+	 */
+//	protected List<PublicKey> addPubkey(String entityId, List<PublicKey> pubKeys, org.opensaml.xml.signature.KeyInfo keyinfo) {
+	protected List<PublicKey> addPubkey2List(String entityId, List<PublicKey> pubKeys, KeyDescriptor keydescriptor) {
+		
+		String sMethod = "addPubkey";
+
+		org.opensaml.xml.signature.KeyInfo keyinfo = keydescriptor.getKeyInfo();
+		if (keyinfo != null) {
 			List<X509Data> x509Datas = keyinfo.getX509Datas();
+	
 			if (x509Datas != null && !x509Datas.isEmpty()) {
 				for (X509Data x509Data : x509Datas) {
 	
 					List<X509Certificate> certs = x509Data.getX509Certificates();
 					if (certs != null && !certs.isEmpty()) {
 						for (X509Certificate cert : certs) {
-//						X509Certificate cert = certs.get(0);
+	//						X509Certificate cert = certs.get(0);
 							try {
 								java.security.cert.X509Certificate javaCert = SamlTools.getCertificate(cert);
 								if (javaCert != null) {
 									_systemLogger.log(Level.FINER, MODULE, sMethod, "Cert: "
 											+ javaCert.getSubjectX500Principal().getName() + " - Issuer="
 											+ javaCert.getIssuerX500Principal().getName());
-//									return javaCert.getPublicKey();
+	//									return javaCert.getPublicKey();
 									pubKeys.add(javaCert.getPublicKey());
 								}
 								else {
@@ -881,12 +975,16 @@ public abstract class AbstractMetaDataManager
 				_systemLogger.log(Level.WARNING, MODULE, sMethod,
 						"Cannot retrieve X509Data from metadata for entity id : " + entityId + " , continuing next KeyDescriptor");
 			}
+		} else {
+			_systemLogger.log(Level.WARNING, MODULE, sMethod,
+					"KeyDescriptor without KeyInfo for entity id : " + entityId + " , continuing next KeyDescriptor");
 		}
-//		return null;	// RH, 20181119, o
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "Number of pubKeys found: "  + pubKeys.size());
-		return pubKeys;	// RH, 20181119, n
+		return pubKeys;
 	}
+	// RH, 20210812, en
 
+	
+	
 	// 20110406, Bauke: added
 	/**
 	 * Gets the attribute from metadata.

@@ -329,7 +329,8 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 					+Auxiliary.obfuscate(XMLHelper.prettyPrintXML(samlMessage.getDOM()), Auxiliary.REGEX_PATTERNS));
 			
 			// Decide what part of the message we need, also sets _oSamlIssuer
-//			samlMessage = extractSamlObject(samlMessage);
+			samlMessage = extractSamlObject(samlMessage);
+
 			
 			String elementName = samlMessage.getElementQName().getLocalPart();
 			Issuer _oSamlIssuer = retrieveIssuer(elementName, samlMessage);
@@ -339,9 +340,12 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 			// The alias of the public key is equal to the appId and the
 			// appId is retrieved by the Issuer, which is the server_url
 			if (_oSamlIssuer == null || "".equals(_oSamlIssuer.getValue())) {
-				_systemLogger.log(Level.SEVERE, MODULE, sMethod, "SAMLMessage has no Issuer");
+//				_systemLogger.log(Level.SEVERE, MODULE, sMethod, "SAMLMessage has no Issuer");	// RH, 20210805, o
+				_systemLogger.log(Level.SEVERE, MODULE, sMethod, "SAMLMessage has no Issuer!" +" elementName="+elementName);	// RH, 20210805, n
 				throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
-			}
+			} else {	// RH, 20210805, sn
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Issuer="+_oSamlIssuer.getValue()+" elementName="+elementName); 
+			}	// RH, 20210805, en
 			String sEntityId = _oSamlIssuer.getValue();
 			
 			if (!is_bVerifySignature()) {
@@ -365,7 +369,7 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 	
 //					PublicKey publicKey = retrievePublicSigningKey(sEntityId);	// RH, 20181119, o
 //					List<PublicKey> publicKeys = retrievePublicSigningKey(sEntityId);	// RH, 20181119, n	// RH, 20190325, o
-					List<PublicKey> publicKeys = retrievePublicSigningKey(_sResourceGroup, sEntityId);	// RH, 20181119, n	// RH, 20190325, n
+					List<PublicKey> publicKeys = retrievePublicKeys(_sResourceGroup, sEntityId);	// RH, 20181119, n	// RH, 20190325, n
 					if (publicKeys == null || publicKeys.isEmpty()) {	// RH, 20181119, n
 						_systemLogger.log(Level.WARNING, MODULE, sMethod, "PublicKey for entityId: "+sEntityId+" not found.");
 						throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
@@ -405,15 +409,15 @@ public abstract class Saml20_BrowserHandler extends Saml20_BaseHandler
 	 * @return part of the message we need
 	 * @throws ASelectException
 	 */
-//	protected SignableSAMLObject extractSamlObject(SignableSAMLObject samlMessage)
-//	throws ASelectException
-//	{
-//		String sMethod = "extractSamlObject";
-//		
-//		String elementName = samlMessage.getElementQName().getLocalPart();
-//		set_SamlIssuer(retrieveIssuer(elementName, samlMessage));
-//		return samlMessage;
-//	}
+	protected SignableSAMLObject extractSamlObject(SignableSAMLObject samlMessage)
+	throws ASelectException
+	{
+		String sMethod = "extractSamlObject";
+		
+		String elementName = samlMessage.getElementQName().getLocalPart();
+//		set_SamlIssuer(retrieveIssuer(elementName, samlMessage));	// RH, 20210805, o
+		return samlMessage;
+	}
 
 
 	/**

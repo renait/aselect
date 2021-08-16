@@ -278,8 +278,6 @@ public class Xsaml20_Receiver extends Saml20_BrowserHandler
 	 * @return - the interesting part of the message
 	 * @throws ASelectException
 	 */
-	// Never used
-	/*
 	protected SignableSAMLObject extractSamlObject(SignableSAMLObject samlMessage)
 	throws ASelectException
 	{
@@ -289,12 +287,12 @@ public class Xsaml20_Receiver extends Saml20_BrowserHandler
 		Response response = (Response)samlMessage;
 		Assertion assertObj = response.getAssertions().get(0);  // pointer in samlMessage
 		//HandlerTools.marshallAssertion(assertObj, true);  // for debugging
-		
-		set_SamlIssuer(assertObj.getIssuer());
-		_systemLogger.log(Level.INFO, MODULE, sMethod, "Issuer="+get_SamlIssuer().getValue()+" ObjectId="+assertObj.getID()); 
+		// RH, 20210805, so
+//		set_SamlIssuer(assertObj.getIssuer());
+//		_systemLogger.log(Level.INFO, MODULE, sMethod, "Issuer="+get_SamlIssuer().getValue()+" ObjectId="+assertObj.getID()); 
+		// RH, 20210805, eo
 		return (SignableSAMLObject) assertObj;
 	}
-	*/
 	
 	
 	/**
@@ -316,10 +314,10 @@ public class Xsaml20_Receiver extends Saml20_BrowserHandler
 
 	// RH, 20200918, sn
 	@Override
-	public List <PublicKey> retrievePublicSigningKey(String resourceGroup, String sEntityId)
+	public List <PublicKey> retrievePublicKeys(String resourceGroup, String sEntityId)
 	throws ASelectException
 	{
-		String sMethod = "retrievePublicSigningKey";
+		String sMethod = "retrievePublicKeys";
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "Get Public key for for: "+sEntityId);
 		return retrievePublicSigningKey(sEntityId);
 	}

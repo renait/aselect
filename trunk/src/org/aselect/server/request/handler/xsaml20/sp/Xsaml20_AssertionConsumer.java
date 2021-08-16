@@ -116,7 +116,7 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 	private String _sFederationUrl;
 	private String _sRedirectUrl; // We use as Issuer in the send SAML message
 	//private String _sRequestIssuer; // But it can be set explicitly
-	private boolean signingRequired = false;
+	private boolean signingRequired = false;	// not used?
 	// Get from aselect.xml <applications require_signing="false | true">
 	private boolean localityAddressRequired = false; // Do we need to verify localityAddress in the AuthnStatement
 	
@@ -128,7 +128,6 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 	private boolean useBackchannelClientcertificate = false;
 
 	// 20120712, Bauke: Store TGT in class variable to save on reads
-	protected HashMap _htTGTContext = null;
 
 	private boolean verifyArtifactResponseSignature = false;
 
@@ -278,7 +277,8 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 				_systemLogger.log(Level.INFO, MODULE, sMethod, "Artifact Resolution at " + sASelectServerUrl);
 	
 				if (sASelectServerUrl == null) {
-					_systemLogger.log(Level.INFO, MODULE, sMethod, "Artifact NOT found");
+//					_systemLogger.log(Level.INFO, MODULE, sMethod, "Artifact NOT found");	// RH, 20210701, o
+					_systemLogger.log(Level.INFO, MODULE, sMethod, "Artifact Resolution Location NOT found for: " + _sResourceGroup + " / " + sFederationUrl);	// RH, 20210701, n
 					throw new ASelectException(Errors.ERROR_ASELECT_NOT_FOUND);
 				}
 	
@@ -1544,8 +1544,7 @@ public class Xsaml20_AssertionConsumer extends Saml20_BaseHandler
 		if (sTgt == null)
 			return null;
 
-		// 20120712, Bauke: Store TGT in class variable to save on reads
-		_htTGTContext = _tgtManager.getTGT(sTgt);
+		HashMap	_htTGTContext = _tgtManager.getTGT(sTgt);
 		if (_htTGTContext == null)
 			return null;
 
