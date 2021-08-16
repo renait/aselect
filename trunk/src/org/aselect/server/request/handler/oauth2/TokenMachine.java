@@ -9,14 +9,10 @@ import java.util.Base64;
 import java.util.HashMap;
 import java.util.Set;
 import java.util.Vector;
-import java.util.logging.Level;
 
 import org.aselect.server.crypto.CryptoEngine;
-import org.aselect.server.request.handler.xsaml20.SamlHistoryManager;
-import org.aselect.system.exception.ASelectStorageException;
 import org.aselect.system.utils.BASE64Encoder;
 import org.aselect.system.utils.Utils;
-import org.aselect.system.utils.crypto.Auxiliary;
 import org.jose4j.jws.AlgorithmIdentifiers;
 import org.jose4j.jws.JsonWebSignature;
 import org.jose4j.jwt.JwtClaims;
