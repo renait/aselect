@@ -89,8 +89,8 @@ public class Xsaml20_AttributeRequestHandler extends Saml20_BaseHandler
 	private final static String MODULE = "tp.Xsaml20_AttributeRequestHandler";
 	// private XMLObjectBuilderFactory _oBuilderFactory;
 
-	private String encoding = null; // encoding stype we want to receive in the response
-	private String samlrequest = null; // samltype we want returned (e.g. "attributestatement")
+/*	private String encoding = null; // encoding stype we want to receive in the response	*/
+/*	private String samlrequest = null; // samltype we want returned (e.g. "attributestatement")	*/
 	// private String createtgt = null; // "true" or "false"
 	private String urlencoding = null; // "true" or "false"
 
@@ -134,14 +134,16 @@ public class Xsaml20_AttributeRequestHandler extends Saml20_BaseHandler
 		
 		_systemLogger.log(Level.FINEST, MODULE, sMethod, "==== Path=" + sPathInfo + " TokenRequestQuery: "
 				+ servletRequest.getQueryString());
-		samlrequest = servletRequest.getParameter(PARM_NAME_SAMLREQUEST);
+//		samlrequest = servletRequest.getParameter(PARM_NAME_SAMLREQUEST);	// RH, 20210413, o
+		String samlrequest = servletRequest.getParameter(PARM_NAME_SAMLREQUEST);	// RH, 20210413, n
 		if (samlrequest == null) {
 			_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Request: " + servletRequest.getQueryString()
 					+ " is not recognized");
 			throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 		}
 		// Check if we support the requested encoding
-		encoding = servletRequest.getParameter(PARM_NAME_ENCODING);
+//		encoding = servletRequest.getParameter(PARM_NAME_ENCODING);	// RH, 20210413, o
+		String encoding = servletRequest.getParameter(PARM_NAME_ENCODING);	// RH, 20210413, n
 		if (encoding != null && !PARM_VALUE_ENCODING_BASE64.equalsIgnoreCase(encoding)) {
 			_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Requested encoding: " + encoding + " not supported");
 			throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
@@ -151,7 +153,8 @@ public class Xsaml20_AttributeRequestHandler extends Saml20_BaseHandler
 		try {
 			pwOut = Utils.prepareForHtmlOutput(servletRequest, servletResponse);
 			// RM_61_05
-			handleAttributeRequest(servletRequest, servletResponse, pwOut);
+//			handleAttributeRequest(servletRequest, servletResponse, pwOut);	// RH, 20210413, o
+			handleAttributeRequest(servletRequest, servletResponse, pwOut, samlrequest);	// RH, 20210413, n
 		}
 		catch (IOException e) {
 			_systemLogger.log(Level.SEVERE, MODULE, sMethod, e.getMessage());
@@ -175,7 +178,8 @@ public class Xsaml20_AttributeRequestHandler extends Saml20_BaseHandler
 	 * @throws ASelectException
 	 *             the a select exception
 	 */
-	protected void handleAttributeRequest(HttpServletRequest request, HttpServletResponse response, PrintWriter pwOut)
+//	protected void handleAttributeRequest(HttpServletRequest request, HttpServletResponse response, PrintWriter pwOut)	// RH, 20210413, o
+	protected void handleAttributeRequest(HttpServletRequest request, HttpServletResponse response, PrintWriter pwOut, String samlrequest)	// RH, 20210413, n
 	throws IOException, ASelectException
 	{
 		String sMethod = "handleAttributeRequest";

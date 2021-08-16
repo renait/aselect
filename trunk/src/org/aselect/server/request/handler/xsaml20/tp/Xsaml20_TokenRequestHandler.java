@@ -64,10 +64,10 @@ public class Xsaml20_TokenRequestHandler extends Saml20_BaseHandler
 	private final static String MODULE = "tp.Xsaml20_TokenRequestHandler";
 	private XMLObjectBuilderFactory _oBuilderFactory;
 
-	private String encoding = null; // encoding stype we want to receive in the response
-	private String samlrequest = null; // samltype we want returned (e.g. "attributestatement")
-	private String createtgt = null; // "true" or "false"
-	private String urlencoding = null; // "true" or "false"
+/*	private String encoding = null; // encoding stype we want to receive in the response	*/
+/*	private String samlrequest = null; // samltype we want returned (e.g. "attributestatement")	*/
+/*	private String createtgt = null; // "true" or "false"	*/
+/*	private String urlencoding = null; // "true" or "false"	*/
 
 	/* (non-Javadoc)
 	 * @see org.aselect.server.request.handler.xsaml20.Saml20_BaseHandler#init(javax.servlet.ServletConfig, java.lang.Object)
@@ -106,24 +106,29 @@ public class Xsaml20_TokenRequestHandler extends Saml20_BaseHandler
 		String sPathInfo = request.getPathInfo();
 		_systemLogger.log(Level.FINEST, MODULE, sMethod, "==== Path=" + sPathInfo + " TokenRequestQuery: "
 				+ request.getQueryString());
-		samlrequest = request.getParameter(PARM_NAME_SAMLREQUEST);
+//		samlrequest = request.getParameter(PARM_NAME_SAMLREQUEST);	// RH, 20210413, o
+		String samlrequest = request.getParameter(PARM_NAME_SAMLREQUEST);	// RH, 20210413, n
 		if (samlrequest == null) {
 			_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Request: " + request.getQueryString()
 					+ " is not recognized");
 			throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 		}
 		// Check if we support the requested encoding
-		encoding = request.getParameter(PARM_NAME_ENCODING);
+//		encoding = request.getParameter(PARM_NAME_ENCODING);	// RH, 20210413, o
+		String encoding = request.getParameter(PARM_NAME_ENCODING);	// RH, 20210413, n
 		if (encoding != null && !PARM_VALUE_ENCODING_BASE64.equalsIgnoreCase(encoding)) {
 			_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Requested encoding: " + encoding + " not supported");
 			throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 		}
-		createtgt = request.getParameter(PARM_NAME_CREATETGT);
-		urlencoding = request.getParameter(PARM_NAME_URLENCODING);
+//		createtgt = request.getParameter(PARM_NAME_CREATETGT);	// RH, 20210413, o
+		String createtgt = request.getParameter(PARM_NAME_CREATETGT);	// RH, 20210413, n
+//		urlencoding = request.getParameter(PARM_NAME_URLENCODING);	// RH, 20210413, o
+		String urlencoding = request.getParameter(PARM_NAME_URLENCODING);	// RH, 20210413, n
 
 		try {
 			// RM_62_03
-			handleTokenRequest(request, response);
+//			handleTokenRequest(request, response);	// RH, 20210413, o
+			handleTokenRequest(request, response, samlrequest, createtgt, urlencoding);	// RH, 20210413, n
 		}
 		catch (IOException e) {
 			_systemLogger.log(Level.SEVERE, MODULE, sMethod, e.getMessage());
@@ -146,7 +151,9 @@ public class Xsaml20_TokenRequestHandler extends Saml20_BaseHandler
 	 * @throws ASelectException
 	 *             the a select exception
 	 */
-	protected void handleTokenRequest(HttpServletRequest servletRequest, HttpServletResponse servletResponse)
+//	protected void handleTokenRequest(HttpServletRequest servletRequest, HttpServletResponse servletResponse)	// RH, 20210413, o
+	protected void handleTokenRequest(HttpServletRequest servletRequest, HttpServletResponse servletResponse, 
+			String samlrequest, String createtgt, String urlencoding)	// RH, 20210413, n
 	throws IOException, ASelectException
 	{
 		String sMethod = "handleTokenRequest";
