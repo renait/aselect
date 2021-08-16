@@ -268,26 +268,57 @@ public class MetaDataManagerSp extends AbstractMetaDataManager
 			loadPartnerMetadata(metadataSection, sId, idpData, specialSettings, metadata4partner);
 			// End Set specific metadata for this partner
 
-			// start load metadata_dvs
-			Object metadataDVsSection = Utils.getSimpleSection(_configManager, _systemLogger, idpSection, "metadata_dvs", false);
+			// start load dvs
+			Object metadataDVsSection = Utils.getSimpleSection(_configManager, _systemLogger, idpSection, "dvs", false);
 			if (metadataDVsSection != null) {
-				Object metadataDVSection = Utils.getSimpleSection(_configManager, _systemLogger, metadataDVsSection, "metadata", false);
+				Object metadataDVSection = Utils.getSimpleSection(_configManager, _systemLogger, metadataDVsSection, "dv", false);
 				if (metadataDVSection != null) {
 					while (metadataDVSection != null) {
 						String entityID =  Utils.getSimpleParam(_configManager, _systemLogger, metadataDVSection, "id", true);
-						Metadata4Partner metadata4dv = idpData.getMetadataDV(entityID);
-						loadPartnerMetadata(metadataDVSection, entityID, idpData, specialSettings, metadata4dv);
-						_systemLogger.log(Level.CONFIG, MODULE, sMethod, "Loaded metadataDV for : "+ entityID);
+						String specialSettingsDV = Utils.getSimpleParam(_configManager, _systemLogger, metadataDVSection, "special_settings", false);
+						PartnerData.Crypto crypto = null;
+						Metadata4Partner metadata4dv = null;
+						Object metadataDVmetadataSection = Utils.getSimpleSection(_configManager, _systemLogger, metadataDVSection, "metadata", false);
+						if (metadataDVmetadataSection != null) {
+							metadata4dv = idpData.new  Metadata4Partner();
+							loadPartnerMetadata(metadataDVmetadataSection, entityID, idpData, specialSettingsDV, metadata4dv);
+							_systemLogger.log(Level.CONFIG, MODULE, sMethod, "Loaded DV metadata for : "+ entityID);
+						} else {
+							_systemLogger.log(Level.SEVERE, MODULE, sMethod, "metadata section missing for dv / resource: "+ entityID + " / " + sId);
+							throw new ASelectConfigException(Errors.ERROR_ASELECT_CONFIG_ERROR);
+						}
+						Object metadataDVcryptoSection = Utils.getSimpleSection(_configManager, _systemLogger, metadataDVSection, "crypto", false);
+						if (metadataDVcryptoSection != null) {
+							String keystoreNameDV = Utils.getParamFromSection(_configManager, _systemLogger, metadataDVcryptoSection, "keystore", "name", false);
+							if (keystoreNameDV != null) {
+								 String keystorePw = Utils.getParamFromSection(_configManager, _systemLogger, metadataDVcryptoSection, "keystore", "password", false);
+								 String keystoreAlias = Utils.getParamFromSection(_configManager, _systemLogger, metadataDVcryptoSection, "keystore", "alias", false);
+								 
+								 try {
+									 crypto = idpData.loadCrypto(workingDir, keystoreNameDV, keystoreAlias, keystorePw);
+								 } catch (ASelectException e) {
+										_systemLogger.log(Level.SEVERE, MODULE, sMethod, "Could not load partner private key from: "+keystoreName+", alias="+keystoreAlias);
+										throw new ASelectConfigException(Errors.ERROR_ASELECT_CONFIG_ERROR, e);
+								 }								 
+							}	// maybe load defaultprivatekey for every partner without keystorelocation ?
+							
+							
+							_systemLogger.log(Level.CONFIG, MODULE, sMethod, "Loaded DV crypto for : "+ entityID);
+						} else {
+							_systemLogger.log(Level.INFO, MODULE, sMethod, "crypto section missing for dv / resource: "+ entityID + " / " + sId);
+						}
+						PartnerData.DV dv = idpData.new DV(crypto, metadata4dv);
+						idpData.getDVs().put(entityID, dv);
 						metadataDVSection = _configManager.getNextSection(metadataDVSection);
 					}
 				} else {
-					_systemLogger.log(Level.SEVERE, MODULE, sMethod, "metadata section missing for metadata_dvs in resource: "+ sId);
+					_systemLogger.log(Level.SEVERE, MODULE, sMethod, "dv section missing for dvs in resource: "+ sId);
 					throw new ASelectConfigException(Errors.ERROR_ASELECT_CONFIG_ERROR);
 				}
 			} else {
-				_systemLogger.log(Level.CONFIG, MODULE, sMethod, "no metadata_dvs section for resource: "+ sId + ", continuing");
+				_systemLogger.log(Level.CONFIG, MODULE, sMethod, "no dvs section for resource: "+ sId + ", continuing");
 			}
-			// end load metadata_dvs
+			// end load dvs
 			
 
 			//  Start Set PEPS/STORK extensions data for this partner
