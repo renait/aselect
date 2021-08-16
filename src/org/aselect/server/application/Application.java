@@ -148,6 +148,10 @@ public class Application
 	private HashMap<String, String> _htOauth2_default_scopes = null;
 	// RH, 20200430, en
 	
+	// RH, 20210716, sn
+	private HashMap<Pattern, Boolean> _htEncryptAttributes = null;
+	// RH, 20210716, en
+
 	/**
 	 * Constructor which contains the default parameters for an Application <br>
 	 * <br>
@@ -921,4 +925,18 @@ public class Application
 		this._htAdditionalRegex = _htAdditionalRegex;
 	}
 
+	/**
+	 * @return the _htEncryptAttributes
+	 */
+	public HashMap<Pattern, Boolean> getEncryptAttributes() {
+		return _htEncryptAttributes;
+	}
+
+	/**
+	 * @param _htEncryptAttributes the _htEncryptAttributes to set
+	 */
+	public void setEncryptAttributes(HashMap<Pattern, Boolean> _htEncryptAttributes) {
+		this._htEncryptAttributes = _htEncryptAttributes;
+	}
+	
 }

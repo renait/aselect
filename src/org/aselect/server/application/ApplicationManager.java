@@ -1806,5 +1806,11 @@ public class ApplicationManager
 		this._htAppsPerSSOGroup = _htAppsPerSSOGroup;
 	}
 
+	public HashMap<Pattern, Boolean> getEncryptAtributes(String sAppId)
+	throws ASelectException
+	{
+		Application oApplication = getApplication(sAppId);
+		return (oApplication==null)? null: oApplication.getEncryptAttributes();
+	}
 	
 }
