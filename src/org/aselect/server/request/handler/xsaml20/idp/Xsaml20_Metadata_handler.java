@@ -83,7 +83,8 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 	 * @see org.aselect.server.request.handler.xsaml20.Saml20_Metadata#aselectReader()
 	 */
 	@Override
-	protected void aselectReader()
+//	protected void aselectReader()
+	protected void aselectReader(String groupid)
 	throws ASelectException
 	{
 		String sMethod = "aselectReader";
@@ -92,7 +93,8 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 		Object oRequest = null;
 		Object oHandlers = null;
 		Object oHandler = null;
-		super.aselectReader();
+//		super.aselectReader();
+		super.aselectReader(groupid);
 
 //		setSingleSignOnServiceTarget("saml20_sso"); // Preliminary default	// RH, 20190311, o
 		// RH, 20190311, sn
@@ -119,7 +121,7 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 					if (!sId.contains("saml20_")) {	// RH, 20190311, n
 						continue;
 					}
-					String groupid = getRequestedGroupId();
+//					String groupid = getRequestedGroupId();
 					if (groupid != null) {
 						String sGroup = null;
 						try {
@@ -238,7 +240,9 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 	 */
 	@Override
 //	protected String createMetaDataXML(String sLocalIssuer)
-	protected String createMetaDataXML(String sRemoteID)
+//	protected String createMetaDataXML(String sRemoteID)
+	protected String createMetaDataXML(String sRemoteID, String resourceGroup)
+	
 	throws ASelectException
 	{
 		String sMethod = "createMetaDataXML";

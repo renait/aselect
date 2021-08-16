@@ -101,7 +101,7 @@ public class Saml20_Metadata extends ProtoRequestHandler
 	
 	private boolean addkeyname2descriptors = DEFAULT_ADDKEYNAME2DESCRIPTORS;	// RH, 20161007, n
 	
-	private String requestedGroupId = null;	// RH, 20190311, n
+//	private String requestedGroupId = null;	// RH, 20190311, n
 	private DateTime epoch = null;	// RH, 20200124, n
 
 	protected XMLObjectBuilderFactory _oBuilderFactory;
@@ -296,7 +296,9 @@ public class Saml20_Metadata extends ProtoRequestHandler
 	 * @throws ASelectException
 	 *             the a select exception
 	 */
-	protected void aselectReader()
+//	protected void aselectReader()
+	protected void aselectReader(String groupid)
+	
 	throws ASelectException
 	{
 		// setSingleLogoutServiceTarget(getRedirectURL()); // We use redirect_url for now
@@ -321,9 +323,12 @@ public class Saml20_Metadata extends ProtoRequestHandler
 		
 		// 20100429, Bauke: the caller can replace the default EntityID by the specified partner's <issuer>
 		String remoteID = servletRequest.getParameter("id");
-		
+
+		String groupID = servletRequest.getParameter("groupid");	// RH, 20210412, n
+
 		// remoteID can be null
-		String mdxml = createMetaDataXML(remoteID);	// RH, 20110111, n
+//		String mdxml = createMetaDataXML(remoteID);	// RH, 20110111, n	// RH, 20210412, o 
+		String mdxml = createMetaDataXML(remoteID, groupID);	// RH, 20110111, n	// RH, 20210412, n
 
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "metadatXML file for entityID " + getEntityIdIdp() + " " + mdxml);
 		PrintWriter pwOut = null;
@@ -348,7 +353,8 @@ public class Saml20_Metadata extends ProtoRequestHandler
 	 *             the a select exception
 	 */
 //	protected String createMetaDataXML(String localIssuer)
-	protected String createMetaDataXML(String remoteID)
+//	protected String createMetaDataXML(String remoteID)
+	protected String createMetaDataXML(String remoteID, String groupID)
 	throws ASelectException
 	{
 		String sMethod = "createMetaDataXML";
@@ -369,8 +375,9 @@ public class Saml20_Metadata extends ProtoRequestHandler
 			// all kind of things get set that we don't know off
 			String groupID = request.getParameter("groupid");	// RH, 20190304, n
 			_systemLogger.log(Level.FINER, MODULE, sMethod, "Requested 'groupid':" + groupID);
-			setRequestedGroupId(groupID);
-			aselectReader(); // among other things this sets the publicKeyAlias
+//			setRequestedGroupId(groupID);	// RH, 20210412, o
+//			aselectReader(); // among other things this sets the publicKeyAlias
+			aselectReader(groupID); // among other things this sets the publicKeyAlias
 			readMetaDataPublicKeyCert(getWorkingDir()); // This sets the signing certificate using the publicKeyAlias
 			handleMetaDataRequest(request, response);
 		}
@@ -1012,11 +1019,11 @@ public class Saml20_Metadata extends ProtoRequestHandler
 		this.addkeyname2descriptors = addkeyname2descriptors;
 	}
 
-	protected synchronized String getRequestedGroupId() {
-		return requestedGroupId;
-	}
-
-	protected synchronized void setRequestedGroupId(String groupId) {
-		this.requestedGroupId = groupId;
-	}
+//	protected synchronized String getRequestedGroupId() {
+//		return requestedGroupId;
+//	}
+//
+//	protected synchronized void setRequestedGroupId(String groupId) {
+//		this.requestedGroupId = groupId;
+//	}
 }

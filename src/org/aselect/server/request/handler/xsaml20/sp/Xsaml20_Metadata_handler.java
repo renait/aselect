@@ -110,12 +110,14 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 	 * @see org.aselect.server.request.handler.xsaml20.Saml20_Metadata#aselectReader()
 	 */
 	@Override
-	protected void aselectReader()
+//	protected void aselectReader()
+	protected void aselectReader(String groupid)
 	throws ASelectException
 	{
 		String sMethod = "aselectReader";
 
-		super.aselectReader();
+//		super.aselectReader();
+		super.aselectReader(groupid);
 		// RH, 20190319, sn
 		// cleaunup old values
 		setAssertionConsumerTarget(null);
@@ -139,7 +141,7 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 					if (!sId.contains("saml20_")) {	// RH, 20190319, n
 						continue;
 					}
-					String groupid = getRequestedGroupId();
+//					String groupid = getRequestedGroupId();
 					if (groupid != null) {
 						String sGroup = null;
 						try {
@@ -229,7 +231,8 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 	 */
 	@Override
 //	protected String createMetaDataXML(String sLocalIssuer)
-	protected String createMetaDataXML(String remoteID)
+//	protected String createMetaDataXML(String remoteID)
+	protected String createMetaDataXML(String remoteID, String resourceGroup)
 	throws ASelectException
 	{
 		String sMethod = "createMetaDataXML";
@@ -243,7 +246,7 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 		String sLocalIssuer = null;
 		if (remoteID != null) {
 			// find "id" in the partner's section
-			String resourceGroup = getRequestedGroupId();	// RH, 20190322, n
+//			String resourceGroup = getRequestedGroupId();	// RH, 20190322, n	// RH, 20210412, o
 //			partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(remoteID);	// RH, 20190322, o
 			partnerData = MetaDataManagerSp.getHandle().getPartnerDataEntry(resourceGroup, remoteID);	// RH, 20190322, o
 		}
@@ -255,27 +258,54 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 		
 		Metadata4Partner metadata4partner = partnerData.getMetadata4partner();
 		Crypto crypto4partner = partnerData.getCrypto();
-		EntityDescriptor entityDescriptor = createEntityDescriptor(tStamp, /*partnerData,*/ sLocalIssuer, metadata4partner, crypto4partner);
-		
+		// RH, 20210421, sn
+		boolean signEntityDescriptor = !(partnerData.getDVs() != null && partnerData.getDVs().size() > 0);
+		boolean setValidityEntityDescriptor = !(partnerData.getDVs() != null && partnerData.getDVs().size() > 0);
+		EntityDescriptor entityDescriptor = createEntityDescriptor(tStamp, /*partnerData,*/ sLocalIssuer, metadata4partner, crypto4partner,
+				signEntityDescriptor, setValidityEntityDescriptor);
+		// RH, 20210421, en
+//		EntityDescriptor entityDescriptor = createEntityDescriptor(tStamp, /*partnerData,*/ sLocalIssuer, metadata4partner, crypto4partner);	// RH, 20210421, o
+
+		// RH, 20210421, sn		
 		EntitiesDescriptor entitiesDescriptor = null;
-		_systemLogger.log(Level.FINEST, MODULE, sMethod, "partnerData  getMetadataDVs():" + partnerData.getMetadataDVs());
-		if (partnerData.getMetadataDVs() != null && partnerData.getMetadataDVs().size() > 0) {
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "partnerData  getDVs():" + partnerData.getDVs());
+		if (partnerData.getDVs() != null && partnerData.getDVs().size() > 0) {
 			// Create the EntitiesDescriptor
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "Adding DVs");
 			SAMLObjectBuilder<EntitiesDescriptor> entitiesDescriptorBuilder = (SAMLObjectBuilder<EntitiesDescriptor>) _oBuilderFactory
 					.getBuilder(EntitiesDescriptor.DEFAULT_ELEMENT_NAME);
 
 			entitiesDescriptor = entitiesDescriptorBuilder.buildObject();
+			entitiesDescriptor.setID(SamlTools.generateIdentifier(_systemLogger, MODULE));
+			if (getEpoch() != null)	tStamp = getEpoch();
+			if (getValidUntil() != null)
+				entitiesDescriptor.setValidUntil(tStamp.plus(getValidUntil().longValue()));
+			if (getCacheDuration() != null)
+				entitiesDescriptor.setCacheDuration(getCacheDuration());
+
 			entitiesDescriptor.getEntityDescriptors().add(entityDescriptor);
 			// add DVs
-			Set<String> dvs = partnerData.getMetadataDVs().keySet();
+			Set<String> dvs = partnerData.getDVs().keySet();
 			for (String dv : dvs) {
-				Metadata4Partner dvmeta =  partnerData.getMetadataDVs().get(dv);
-				
-				EntityDescriptor entityDescriptorDV = createEntityDescriptor(tStamp, /*partnerData,*/ sLocalIssuer, dvmeta, crypto4partner);
+				Metadata4Partner meta4dv =  partnerData.getDVs().get(dv).getMetadata();
+				// RH, 20210420, sn
+				Crypto crypto4dv =  partnerData.getDVs().get(dv).getCrypto();
+				// Get the Crypto for the dv here
+				EntityDescriptor entityDescriptorDV = createEntityDescriptor(tStamp, dv, meta4dv, crypto4dv, false, false);	// RH, 20210420, n
+				// RH, 20210420, en
+//				EntityDescriptor entityDescriptorDV = createEntityDescriptor(tStamp, /*partnerData,*/ sLocalIssuer, dvmeta, crypto4partner);	// RH, 20210420, o
 				entitiesDescriptor.getEntityDescriptors().add(entityDescriptorDV);
 			}
+			// Still to do the signing here
+			boolean usesha256 = metadata4partner.getSpecialsettings().contains("sha256");
+			boolean addkeyname = Boolean.parseBoolean(metadata4partner.getAddkeyname());
+			boolean addcertificate = Boolean.parseBoolean(metadata4partner.getAddcertificate());
+			
+			entitiesDescriptor = (EntitiesDescriptor) SamlTools.signSamlObject(entitiesDescriptor,  usesha256 ? "sha256": "sha1",
+					addkeyname, addcertificate, crypto4partner);	// RH, 20180918, n
+
 		}
+		// RH, 20210421, en		
 		
 		// Marshall to the Node
 		MarshallerFactory factory = org.opensaml.xml.Configuration.getMarshallerFactory();
@@ -309,7 +339,7 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 	 * @throws ASelectException
 	 */
 	protected EntityDescriptor createEntityDescriptor(DateTime tStamp, /*PartnerData partnerData,*/
-			String sLocalIssuer, Metadata4Partner metadata4partner, Crypto crypto) throws ASelectException {
+			String sLocalIssuer, Metadata4Partner metadata4partner, Crypto crypto, boolean sign, boolean setValidity) throws ASelectException {
 		
 		String sMethod = "createEntityDescriptor";
 
@@ -362,11 +392,14 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 		entityDescriptor.setEntityID((sLocalIssuer != null)? sLocalIssuer: getEntityIdIdp());
 		entityDescriptor.setID(SamlTools.generateIdentifier(_systemLogger, MODULE));
 
-		if (getEpoch() != null)	tStamp = getEpoch();	// RH, 20200124, n
-		if (getValidUntil() != null)
-			entityDescriptor.setValidUntil(tStamp.plus(getValidUntil().longValue()));
-		if (getCacheDuration() != null)
-			entityDescriptor.setCacheDuration(getCacheDuration());
+		if (setValidity) {	// RH, 20210421, n
+			_systemLogger.log(Level.INFO, MODULE, sMethod, "Setting validity on entityDescriptor");	// RH, 20210421, n
+			if (getEpoch() != null)	tStamp = getEpoch();	// RH, 20200124, n
+			if (getValidUntil() != null)
+				entityDescriptor.setValidUntil(tStamp.plus(getValidUntil().longValue()));
+			if (getCacheDuration() != null)
+				entityDescriptor.setCacheDuration(getCacheDuration());
+		}	// RH, 20210421, n
 		
 		//	RH, 20140320, sn
 //		if (partnerData != null && partnerData.getMetadata4partner().getNamespaceInfo().size() > 0) {	// Get namespaceinfo + additional attributes to publish from partnerdata
@@ -517,7 +550,7 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 					// RH, 20121228, n, For assertionconsumer service we allow to define alternate location
 					String forcedLocation = hHandler.getLocation();	// returns null if not set
 
-					_systemLogger.log(Level.INFO, MODULE, sMethod, getAssertionConsumerTarget());
+					_systemLogger.log(Level.INFO, MODULE, sMethod, "Found AssertionConsumer target in handler:" + getAssertionConsumerTarget());
 //					if (getAssertionConsumerTarget() != null) {	// RH, 20121228, o
 					if ( (getAssertionConsumerTarget() != null) || (forcedLocation != null) ) {	// RH, 20121228, n
 						SAMLObjectBuilder<AssertionConsumerService> assResolutionSeviceBuilder = (SAMLObjectBuilder<AssertionConsumerService>) _oBuilderFactory
@@ -543,6 +576,8 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 							assResolutionService.setIndex(hHandler.getIndex().intValue());
 						}
 						ssoDescriptor.getAssertionConsumerServices().add(assResolutionService);
+					} else {
+						_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not set location, maybe 'location' missing in metadata or handler missing 'resourcegroup'");
 					}
 				}
 				
@@ -562,14 +597,19 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 						_systemLogger.log(Level.INFO, MODULE, sMethod, getSpSloSoapLocation());
 						sBInding = SAMLConstants.SAML2_SOAP11_BINDING_URI;
 						sLocation = getSpSloSoapLocation();
+					} else {
+						_systemLogger.log(Level.WARNING, MODULE, sMethod, "No 'binding' found in metadata for handler: " + hHandler.getType());
 					}
-					if (sBInding != null && sLocation != null) {
+
+					_systemLogger.log(Level.INFO, MODULE, sMethod, "Found SingleLogoutService target in handler:" + sLocation);
+//					if (sBInding != null && sLocation != null) {	// RH, 20210128, o
+					if (sLocation != null || forcedLocation != null) {	// RH, 20210128, n
 						SAMLObjectBuilder<SingleLogoutService> sloHttpServiceBuilder = (SAMLObjectBuilder<SingleLogoutService>) _oBuilderFactory
 								.getBuilder(SingleLogoutService.DEFAULT_ELEMENT_NAME);
 						SingleLogoutService sloHttpService = sloHttpServiceBuilder.buildObject();
 						sloHttpService.setBinding(sBInding);
 						if (forcedLocation != null) {	// RH, 20120703, sn
-							sloHttpService.setLocation(forcedLocation);							;
+							sloHttpService.setLocation(forcedLocation);
 						} else 	// RH, 20120703, en
 							sloHttpService.setLocation(getRedirectURL() + sLocation);
 						
@@ -579,6 +619,8 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 								sloHttpService.setResponseLocation(getRedirectURL() + sLocation);
 						}
 						ssoDescriptor.getSingleLogoutServices().add(sloHttpService);
+					} else {
+						_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not set location, maybe 'location' missing in metadata or handler missing 'resourcegroup'");
 					}
 				}
 				// RH, 20200220, sn
@@ -587,7 +629,7 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 					String sBInding = null;
 					String forcedLocation = hHandler.getLocation();	// returns null if not set
 
-					_systemLogger.log(Level.INFO, MODULE, sMethod, getSpArtifactResolverTarget());
+					_systemLogger.log(Level.INFO, MODULE, sMethod, "Found ArtifactResolutionService taget in handler: " + getSpArtifactResolverTarget());
 					if ( (getSpArtifactResolverTarget() != null) || (forcedLocation != null) ) {
 						SAMLObjectBuilder<ArtifactResolutionService> artResolutionSeviceBuilder = (SAMLObjectBuilder<ArtifactResolutionService>) _oBuilderFactory
 								.getBuilder(ArtifactResolutionService.DEFAULT_ELEMENT_NAME);
@@ -615,6 +657,8 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 							artResolutionService.setIndex(hHandler.getIndex().intValue());
 						}
 						ssoDescriptor.getArtifactResolutionServices().add(artResolutionService);
+					} else {
+						_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not set location, maybe 'location' missing in metadata or handler missing 'resourcegroup'");
 					}
 				}
 				//////////////////////////////////////////////
@@ -912,11 +956,13 @@ public class Xsaml20_Metadata_handler extends Saml20_Metadata
 
 //		entityDescriptor = (EntityDescriptor) SamlTools.signSamlObject(entityDescriptor);		// RH, 20110113, o
 		// RH, 20110113, sn
+		if (sign) {	// RH, 20210421, n
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "Signing entityDescriptor");
 //		entityDescriptor = (EntityDescriptor) SamlTools.signSamlObject(entityDescriptor,  usesha256 ? "sha256": "sha1",
 //						addkeyname, addcertificate);	// RH, 20180918, o
 		entityDescriptor = (EntityDescriptor) SamlTools.signSamlObject(entityDescriptor,  usesha256 ? "sha256": "sha1",
 				addkeyname, addcertificate, specificCrypto);	// RH, 20180918, n
+		}	// RH, 20210421, n
 		// RH, 20110113, en
 
 		// The Session Sync descriptor (PDPDescriptor?) would go here
