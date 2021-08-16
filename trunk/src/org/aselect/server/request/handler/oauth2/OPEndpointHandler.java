@@ -86,14 +86,11 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 	protected static final boolean DEFAULT_ALLOW_REFRESH_TOKEN = false;
 	protected static final boolean DEFAULT_ALLOW_PASSWORD_CREDENTIALS = false;
 	
-//	private static HashMap<String, String> _client_ids = null;
 	private HashMap<String, String> _client_ids = null;
 	
 	private String oauthEndpointUrl =  null;
 
-//	private String _sMyServerID = null;
 	private String defaultUID = null;
-//	private String aselectServerURL = null;
 	private boolean verifyRedirectURI = true;
 	private boolean verifyClientID = true;
 
@@ -103,7 +100,6 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 	private String secretKey = null;
 	private	String loginrequest = null;
 
-//	private static HashMap<String, String> _forced_app_ids = null;	// RH 20181129, n
 	private HashMap<String, String> _forced_app_ids = null;	// RH 20181129, n
 	private	String _forced_app_parameter = null;
 
@@ -339,8 +335,6 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 		// we should verify the redirect_uri against the saved_redirect_uri here, if there is a saved_redirect_uri
 
 		String appidacr = "0"; // We have not authenticated the client yet 
-//		if (grant_type != null && code != null) {	// Token request
-//		if (grant_type != null && (code != null || refresh_token != null)) {	// (Refresh) Token request
 		if (grant_type != null && (code != null || refresh_token != null || (username != null && password!= null))) {	// (Refresh) Token request
 			
 			// Token request, should be POST
@@ -354,7 +348,6 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 		   		PrintWriter outwriter = null;
 				try {
 					outwriter = Utils.prepareForHtmlOutput(servletRequest , servletResponse, "application/json" );
-					//
 					Utils.setDisableCachingHttpHeaders(servletRequest , servletResponse);	// RH, 20190606
 //		   			int  return_status = 400; // default, already set by TokenMachine contructor
 	
@@ -363,12 +356,9 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 			   			// retrieve code from HistoryManager and delete from history
 						SamlHistoryManager history = SamlHistoryManager.getHandle();
 						try {
-//							String access_token = (String)history.get(AUTH_CODE_PREFIX + code);
 							String encoded_access_token = (String)history.get(AUTH_CODE_PREFIX + code);
-//							_systemLogger.log(Level.FINEST, MODULE, sMethod, "Retrieved access token: " + Auxiliary.obfuscate(access_token));
 							_systemLogger.log(Level.FINEST, MODULE, sMethod, "Retrieved access token: " + Auxiliary.obfuscate(encoded_access_token));
 	
-//							String access_token = extractAccessToken(access_token);
 							String access_token = extractAccessToken(encoded_access_token);
 				   		
 						BASE64Decoder b64dec = new BASE64Decoder();
@@ -379,16 +369,18 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 						HashMap tgt = TGTManager.getHandle().getTGT(sTGT);
 						String sAppId = (String)tgt.get("app_id");
 						String saved_redirect_uri = (String)tgt.get("oauthsessionredirect_uri");
-						if (saved_redirect_uri == null) {	// we did recieve a redirect_url upon authentication so use registered one
-							saved_redirect_uri = ApplicationManager.getHandle().getApplication(sAppId).getOauth_redirect_uri().keySet().iterator().next().toString();
-						}
+						// RH, 20210409, so
+//						if (saved_redirect_uri == null) {	// we did not receive a redirect_url upon authentication so use registered one
+//							saved_redirect_uri = ApplicationManager.getHandle().getApplication(sAppId).getOauth_redirect_uri().keySet().iterator().next().toString();
+//						}
+						// RH, 20210409, eo
 						
-						if (saved_redirect_uri != null && !saved_redirect_uri.equals(redirect_uri)) {
-							// 3.1.2.4.  Invalid Endpoint and 4.1.2.1.  Error Response
-							// MUST NOT automatically redirect
-								_systemLogger.log(Level.WARNING, MODULE, sMethod, "redirect_uri does not match, MUST NOT automatically redirect user to: " + redirect_uri);
-								throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
-						}
+//						if (saved_redirect_uri != null && !saved_redirect_uri.equals(redirect_uri)) {	// RH, 20210409, o
+						if (saved_redirect_uri == null || saved_redirect_uri.equals(redirect_uri)) {	// RH, 20210409, n
+							// RH, 20210409, so
+		//						_systemLogger.log(Level.WARNING, MODULE, sMethod, "redirect_uri does not match, MUST NOT automatically redirect user to: " + redirect_uri);
+//								throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
+								// RH, 20210409, eo
 	
 						if (ApplicationManager.getHandle().getApplication(sAppId).getOauth_client_credentials_user() != null 
 								&& ApplicationManager.getHandle().getApplication(sAppId).getOauth_client_credentials_pwhash() != null) { // verify auth_header
@@ -408,9 +400,7 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 								else {
 									_systemLogger.log(Level.WARNING, MODULE, sMethod,
 											"No auth header and client_id not valid");
-									//	return_parameters.put("error", "invalid_client");
 									tokenMachine.setParameter("error", "invalid_client");
-									//	return_status = 400; // default
 									tokenMachine.setStatus(400);
 								}
 							}
@@ -436,8 +426,6 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 				   			tokenMachine.setParameter("issuer", getIssuer());
 				   			tokenMachine.setParameter("appidacr", appidacr);
 				   			
-//							return_status = supplyReturnParameters(code, return_parameters, history, access_token, tgt, appidacr);
-//							int status = supplyReturnParameters(code, tokenMachine, history, access_token, tgt, appidacr);
 							int status = supplyReturnParameters(code, tokenMachine, history, encoded_access_token, tgt, appidacr);
 							tokenMachine.setStatus(status);
 				   			try {
@@ -448,18 +436,21 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 				   			}
 					   			
 				   		} else {
-				   			//	return_parameters.put("error", "client_authentication_failed" );
 				   			tokenMachine.setParameter("error", "client_authentication_failed" );
-				   			//	return_status = 401;
 				   			tokenMachine.setStatus(401);
-							//	servletResponse.setHeader("WWW-Authenticate", "Bearer realm=\"" + _sMyServerID + "\"" + " , " + "error=" + "\"" + return_parameters.get("error") + "\"");
-//							servletResponse.setHeader("WWW-Authenticate", "Bearer realm=\"" + _sMyServerID + "\"" + " , " + "error=" + "\"" + tokenMachine.getParameter("error") + "\"");
 							servletResponse.setHeader("WWW-Authenticate", "Bearer realm=\"" + getMyServerID() + "\"" + " , " + "error=" + "\"" + tokenMachine.getParameter("error") + "\"");
 				   			
 				   		}
+						// RH, 20210409, sn
+					   	} else {
+							_systemLogger.log(Level.WARNING, MODULE, sMethod, "redirect_uri: " + redirect_uri +  ", does not match: " + saved_redirect_uri);
+							tokenMachine.setParameter("error", "invalid_request");
+							//	return_status = 400; // default
+							tokenMachine.setStatus(400);
+					   	}
+						// RH, 20210409, en
 						} catch (ASelectStorageException ase){
 							_systemLogger.log(Level.FINE, MODULE, sMethod, "Could not retrieve authentication code from temp storage: " + ase.getMessage());
-				   			//	return_parameters.put("error", "invalid_request" );
 				   			tokenMachine.setParameter("error", "invalid_request" );
 				   			//	return_status = 400; // default
 				   			tokenMachine.setStatus(400);
@@ -488,9 +479,6 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 				   				// scope requested might be less than saved_scope
 								String saved_scope = (String)previous_token.get("oauthsessionscope");
 								String saved_client_id = (String)previous_token.get("oauthsessionclient_id");
-//								ArrayList<String> saved_resp_types = (ArrayList<String>)previous_token.get("oauthsessionresp_types");	// not sure if we support this
-
-					        	// maybe generate fake rid or reuse the old one for verify credentials
 					        	String extractedRid = (String)previous_token.get("rid");
 					        	
 					        	String app_id = (String)previous_token.get("app_id");
@@ -514,7 +502,6 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 										else {
 											_systemLogger.log(Level.WARNING, MODULE, sMethod,
 													"No auth header and client_id not valid");
-											//	return_parameters.put("error", "invalid_client");
 											tokenMachine.setParameter("error", "invalid_client");
 											//	return_status = 400; // default
 											tokenMachine.setStatus(400);
@@ -610,28 +597,22 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 	
 							        } else {
 										_systemLogger.log(Level.WARNING, MODULE, sMethod, "Verify credentials returned error code");
-							   			//	return_parameters.put("error", "invalid_grant" );
 							   			tokenMachine.setParameter("error", "Token not or no longer valid" );
 							   			//	return_status = 400; // default
 							   			tokenMachine.setStatus(400);
 							        }
 						   		} else {
-						   			//	return_parameters.put("error", "client_authentication_failed" );
-//						   			tokenMachine.setParameter("error", "client_authentication_failed" );
 									_systemLogger.log(Level.WARNING, MODULE, sMethod, "Client auth header not validated");
 
 						   			tokenMachine.setParameter("error", "invalid_client" );
 						   			//	return_status = 401;
 						   			tokenMachine.setStatus(401);
-									//	servletResponse.setHeader("WWW-Authenticate", "Bearer realm=\"" + _sMyServerID + "\"" + " , " + "error=" + "\"" + return_parameters.get("error") + "\"");
-	//								servletResponse.setHeader("WWW-Authenticate", "Bearer realm=\"" + _sMyServerID + "\"" + " , " + "error=" + "\"" + tokenMachine.getParameter("error") + "\"");
 									servletResponse.setHeader("WWW-Authenticate", "Bearer realm=\"" + getMyServerID() + "\"" + " , " + "error=" + "\"" + tokenMachine.getParameter("error") + "\"");
 						   			
 						   		}
 
 				   			} else {
 								_systemLogger.log(Level.WARNING, MODULE, sMethod, "Previus token not found in peristent storage");
-					   			//	return_parameters.put("error", "invalid_grant" );
 					   			tokenMachine.setParameter("error", "invalid_request" );
 					   			//	return_status = 400; // default
 					   			tokenMachine.setStatus(400);
@@ -639,13 +620,10 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 				   			}
 				   		} else {
 							_systemLogger.log(Level.WARNING, MODULE, sMethod, "Refresh Token requested but not allowed");
-				   			//	return_parameters.put("error", "invalid_grant" );
 				   			tokenMachine.setParameter("error", "invalid_request" );
 				   			//	return_status = 400; // default
 				   			tokenMachine.setStatus(400);
 				   		}
-//			   		} else if ("client_credentials".equals(grant_type)) {	// Client Credentials Grant, not implemented yet
-//			   			
 			   		} else if ("password".equals(grant_type)) { //	Resource Owner Password Credentials Grant
 				   		if (isAllow_password_credentials()) {
 
@@ -676,8 +654,6 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 			       		Set<String> requestedScopes = deserializeScopes(requestedScope);	// may return null
 			       		Set<String> purifiedScopes = purifyScopes(requestedScopes, app_id);	// this handles default scopes as well
 			       		String scope = serializeScopes(purifiedScopes);
-//						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Received client_id/redirect_uri/scope/state: " + 
-//								client_id + "/" + redirect_uri + "/" + scope + "/" + state);
 						_systemLogger.log(Level.FINEST, MODULE, sMethod, "Using _forced_app_parameter/client_id/redirect_uri/scope/forced_app_id_hint" +
 								(_forced_app_parameter != null ? ("/" + _forced_app_parameter) : "") + ": " + 
 								client_id + "/" + redirect_uri + "/" + scope + (forced_app_id_hint != null ? ("/" + forced_app_id_hint) : ""));
@@ -700,7 +676,6 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 								else {
 									_systemLogger.log(Level.WARNING, MODULE, sMethod,
 											"No auth header and client_id not valid");
-									//	return_parameters.put("error", "invalid_client");
 									tokenMachine.setParameter("error", "invalid_client");
 									//	return_status = 400; // default
 									tokenMachine.setStatus(400);
@@ -732,8 +707,6 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 								} catch (Exception e) {
 									_systemLogger.log(Level.WARNING, MODULE, sMethod, "Configuration error in requestor init: " + e.getMessage());
 								}
-//								response_patient_id = (String) webservice_result.get("identifier");	// should be parameter
-//								response_client_may_pass = (password_verify_result != null && !password_verify_result.isEmpty());	// should be parameter
 								response_client_may_pass = (password_verify_result != null && password_verify_result.get("full_dn") != null && ((String)(password_verify_result.get("full_dn"))).length()>0);	// should be parameter
 							} else {
 								_systemLogger.log(Level.WARNING, MODULE, sMethod, "Configuration error, no 'password_credentials_verify_requestorid' defined");
@@ -759,7 +732,8 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 					    			ridResponse = extractResponse(ridAselectServer, ridResponse, in);
 						    		extractedRid = extractRid(ridResponse);
 						    		
-									_htSessionContext = _oSessionManager.getSessionContext(extractedRid);
+//									_htSessionContext = _oSessionManager.getSessionContext(extractedRid);	// RH, 20210413, o
+									HashMap _htSessionContext = _oSessionManager.getSessionContext(extractedRid);	// RH, 20210413, n
 									if (_htSessionContext != null) {
 										// fill minimum set of tgt values
 										_htSessionContext.put("oauthsessionscope", scope);
@@ -817,8 +791,6 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 								    			tokenMachine.setParameter("client_id", client_id);
 									   			tokenMachine.setParameter("appidacr", appidacr);
 		
-		//							    		access_token = tokenMachine.createAccessToken(extractedAselect_credentials);
-		//							    		access_token = tokenMachine.createAccessToken(extractedAselect_credentials, hmExtractedAttributes, ASelectConfigManager.getHandle().getDefaultPrivateKey());
 									    		access_token = tokenMachine.createAccessToken(new_extractedAselect_credentials, hmExtractedAttributes, ASelectConfigManager.getHandle().getDefaultPrivateKey());
 								    		}
 											catch (UnsupportedEncodingException e) {
@@ -859,7 +831,6 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 		
 								        } else {
 											_systemLogger.log(Level.WARNING, MODULE, sMethod, "Verify credentials returned error code");
-								   			//	return_parameters.put("error", "invalid_grant" );
 								   			tokenMachine.setParameter("error", "invalid_grant" );
 								   			//	return_status = 400; // default
 								   			tokenMachine.setStatus(400);
@@ -880,7 +851,8 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 						   			tokenMachine.setStatus(400);
 
 					    		} finally {
-					    			_oSessionManager.deleteSession(extractedRid, _htSessionContext);
+//					    			_oSessionManager.deleteSession(extractedRid, _htSessionContext);	// RH, 20210413, o
+					    			_oSessionManager.deleteSession(extractedRid, null);	// RH, 20210413, n
 					    			if (in != null)
 										try {
 											in.close();
@@ -892,28 +864,23 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 								
 							} else {
 								_systemLogger.log(Level.WARNING, MODULE, sMethod, "Password Credentials Grant invalid credentials supplied");
-					   			//	return_parameters.put("error", "invalid_grant" );
 					   			tokenMachine.setParameter("error", "invalid_grant" );
 					   			//	return_status = 400; // default
 					   			tokenMachine.setStatus(400);
 							}
 				   			
 				   		} else {
-				   			//	return_parameters.put("error", "client_authentication_failed" );
 							_systemLogger.log(Level.WARNING, MODULE, sMethod, "Client auth header not validated");
 
 				   			tokenMachine.setParameter("error", "invalid_client" );
 				   			//	return_status = 401;
 				   			tokenMachine.setStatus(401);
-							//	servletResponse.setHeader("WWW-Authenticate", "Bearer realm=\"" + _sMyServerID + "\"" + " , " + "error=" + "\"" + return_parameters.get("error") + "\"");
-//								servletResponse.setHeader("WWW-Authenticate", "Bearer realm=\"" + _sMyServerID + "\"" + " , " + "error=" + "\"" + tokenMachine.getParameter("error") + "\"");
 							servletResponse.setHeader("WWW-Authenticate", "Bearer realm=\"" + getMyServerID() + "\"" + " , " + "error=" + "\"" + tokenMachine.getParameter("error") + "\"");
 				   			
 				   		}
 				   			
 				   		} else {
 							_systemLogger.log(Level.WARNING, MODULE, sMethod, "Password Credentials Grant requested but not allowed");
-				   			//	return_parameters.put("error", "invalid_grant" );
 				   			tokenMachine.setParameter("error", "invalid_request" );
 				   			//	return_status = 400; // default
 				   			tokenMachine.setStatus(400);
@@ -923,18 +890,13 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 				   	
 				   	else {	// handle empty code
 		   				// return error 
-//						_systemLogger.log(Level.FINE, MODULE, sMethod, "Empty code parameter received");
-//						_systemLogger.log(Level.FINE, MODULE, sMethod, "Empty code and refresh_token parameter received");
 						_systemLogger.log(Level.FINE, MODULE, sMethod, "Empty code or invalid grant_type received");
-			   			//	return_parameters.put("error", "invalid_grant" );
 			   			tokenMachine.setParameter("error", "invalid_grant" );
 			   			//	return_status = 400; // default
 			   			tokenMachine.setStatus(400);
 			   		}
-//			   		servletResponse.setStatus(return_status);
 			   		servletResponse.setStatus(tokenMachine.getStatus());
 			   		// return all JSON
-		   			//	String out = ((JSONObject) JSONSerializer.toJSON( return_parameters )).toString(0); 
 		   			String out = tokenMachine.toJSONString();
 					_systemLogger.log(Level.FINEST, MODULE, sMethod, "Writing to client: " + out);
 					outwriter.println(out);
@@ -949,13 +911,6 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 			
 			} else {	// not a POST
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Token request should be POST");
-				// Maybe change throw to responding with error
-	//   			return_parameters.put("error", "invalid_grant" );
-	//   			return_status = 400; // default
-	//			if (outwriter != null) {
-	//				outwriter.close();
-	//			}
-	
 				throw new ASelectException("Token request should be POST");
 			}
 		} else {	// Not a token request
@@ -1018,8 +973,6 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 
 	       		String forced_app_id = findForcedAppidHint(servletRequest);
 
-//				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Received client_id/redirect_uri/scope/state: " + 
-//						client_id + "/" + redirect_uri + "/" + scope + "/" + state);
 				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Received client_id/redirect_uri/scope/state" +
 						(_forced_app_parameter != null ? ("/" + _forced_app_parameter) : "") + ": " + 
 						client_id + "/" + redirect_uri + "/" + scopesRequested + "/" + state + (forced_app_id != null ? ("/" + forced_app_id) : ""));
@@ -1124,7 +1077,6 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 					try {
 					        	String error = "server_error";
 			        			error_redirect = redirectURI.toString() + (redirectURI.toString().contains("?") ? "&" : "?") + "error=" + error 
-//						+ ( ( state != null ) ? ("&state=" + state) : "");
 							+ ( ( state != null ) ? ("&state=" + URLEncoder.encode(state, "UTF-8")) : "");
 						servletResponse.sendRedirect(error_redirect);
 		    			if (in != null)
@@ -1144,7 +1096,8 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 	
 	    		String extractedRid = extractRid(ridResponse);
 	
-				_htSessionContext = _oSessionManager.getSessionContext(extractedRid);
+//				_htSessionContext = _oSessionManager.getSessionContext(extractedRid);	// RH, 20210413, o
+				HashMap _htSessionContext = _oSessionManager.getSessionContext(extractedRid);	// RH, 20210413, n
 				if (_htSessionContext == null) {
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, "No session found for RID: " + extractedRid);
 					String error_redirect = null;
@@ -1251,7 +1204,6 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 					try {
 					        	String error = "invalid_request";
 					        	
-//					        			error_redirect = getOauth2_redirect_uri() + (getOauth2_redirect_uri().contains("?") ? "&" : "?") + "error=" + error ;
 //					        			error_redirect = saved_redirect_uri + (saved_redirect_uri.contains("?") ? "&" : "?") + "error=" + error ;	// RH, 20190906, o
 					        			error_redirect =  "error=" + error ;	// RH, 20190906, n
 //						servletResponse.sendRedirect(error_redirect);	// RH, 20190905, o
@@ -1326,7 +1278,6 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 
 //				String finalResult  = verify_credentials(servletRequest, extractedAselect_credentials, sAppId);	// RH, 20200306, o
 				String finalResult  = verify_credentials(servletRequest, extractedAselect_credentials, sAppId, extractedRid);	// RH, 20200306, n
-//				_systemLogger.log(Level.FINEST, MODULE, sMethod, "finalResult after verify_credentials: " + finalResult);
 				
 	    		String extractedAttributes = finalResult.replaceFirst(".*attributes=([^&]*).*$", "$1");
 	    		// RH, 20181108, sn
@@ -1354,7 +1305,6 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 					String error_redirect = null;
 					try {
 					        	String error = "server_error";
-//					        			error_redirect = getOauth2_redirect_uri() + (getOauth2_redirect_uri().contains("?") ? "&" : "?") + "error=" + error ;
 //					        			error_redirect = saved_redirect_uri + (saved_redirect_uri.contains("?") ? "&" : "?") + "error=" + error ;	// RH, 20190906, o
 					        			error_redirect = "error=" + error ;	// RH, 20190906, n
 //						servletResponse.sendRedirect(error_redirect);	// RH, 20190905, o
@@ -1370,9 +1320,7 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 				String saved_client_id = (String)htTGTContext.get("oauthsessionclient_id");
 				String saved_nonce = (String)htTGTContext.get("oauthsessionnonce");
 				
-//				String saved_appidacr = (String)htTGTContext.get("oauthsessionappidacr");
 				// saved_uri already verified
-//				String saved_redirect_uri = (String)htTGTContext.get("oauthsessionredirect_uri");
 				if (saved_redirect_uri == null) {	// we did receive a redirect_url upon authentication so use registered one
 					saved_redirect_uri = ApplicationManager.getHandle().getApplication(sAppId).getOauth_redirect_uri().keySet().iterator().next().toString();
 				}
@@ -1401,7 +1349,6 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 		    			tokenMachine.setParameter("client_id", saved_client_id);
 		    			tokenMachine.setParameter("appidacr", appidacr);
 
-//			    		access_token = tokenMachine.createAccessToken(extractedAselect_credentials);
 			    		access_token = tokenMachine.createAccessToken(extractedAselect_credentials, hmExtractedAttributes, ASelectConfigManager.getHandle().getDefaultPrivateKey());
 					}
 					catch (UnsupportedEncodingException e) {
@@ -1420,7 +1367,6 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 				        	return_url.append(sep).append("error=" + error);
 				        	sep = "&";
 				        	if (saved_state != null) {
-//				        		return_url.append(sep).append("state=" + saved_state);
 				        		return_url.append(sep).append("state=" + URLEncoder.encode(saved_state, "UTF-8"));
 				        	}
 //							servletResponse.sendRedirect(return_url.toString());	// RH, 20190905, o
@@ -1439,7 +1385,6 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 				        	return_url.append(sep).append("error=" + error);
 				        	sep = "&";
 				        	if (saved_state != null) {
-//				        		return_url.append(sep).append("state=" + saved_state);
 				        		return_url.append(sep).append("state=" + URLEncoder.encode(saved_state, "UTF-8"));
 				        	}
 	//						servletResponse.sendRedirect(return_url.toString());	// RH, 20190905, o
@@ -1455,13 +1400,11 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 					SamlHistoryManager history = SamlHistoryManager.getHandle();
 					history.put(AUTH_CODE_PREFIX+ generated_authorization_code, access_token);
 					// if scope contains openid, also generate the id_token
-					//	id_token = null;
 					String id_token = null;
 					if (saved_scope != null && saved_scope.contains("openid")) {
 						//	generate the id_token using extractedAttributes
 						try {
 //							id_token = createIDToken(hmExtractedAttributes, (String)(hmExtractedAttributes.get("uid")), _sMyServerID, saved_client_id, saved_nonce, appidacr );	// RH, 20181114, o
-		//					id_token = tokenMachine.createIDToken(hmExtractedAttributes, (String)(hmExtractedAttributes.get("uid")), _sMyServerID, 
 							id_token = tokenMachine.createIDToken(hmExtractedAttributes, (String)(hmExtractedAttributes.get("uid")), getIssuer(), 
 																		saved_client_id, saved_nonce, appidacr, ASelectConfigManager.getHandle().getDefaultPrivateKey(), 
 //									saved_resp_types.contains("id_token") ? generated_authorization_code : null );	// RH, 20181114, n	// RH, 20181129, o
@@ -1525,7 +1468,6 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 					return_url.append(sep).append("error=" + error );
 					sep = "&";
 					if (saved_state != null) {
-//						return_url.append(sep).append("state=" + saved_state);
 						try {
 							return_url.append(sep).append("state=" + URLEncoder.encode(saved_state, "UTF-8"));
 						} catch (UnsupportedEncodingException e) {
@@ -1663,7 +1605,6 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 	 */
 	protected String findAppid(String client_id, String forced_app_id_hint) {
 		String sAppId = getClientIds().get(client_id);
-//    	   		String sForcedAppId = null;
 		if (forced_app_id_hint != null) {
 			// RH, 20190523, sn
 			if (get_forced_app_ids() != null && get_forced_app_ids().size() > 0 ) {
@@ -1729,7 +1670,6 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 	 * @return HTTP return code
 	 * @throws ASelectStorageException
 	 */
-//	protected int supplyReturnParameters(String code, HashMap<String, String> return_parameters,
 	protected int supplyReturnParameters(String code, ITokenMachine tokenMachine,
 			SamlHistoryManager history, String access_token, HashMap tgt, String appidacr) throws ASelectStorageException {
 		
@@ -1784,9 +1724,6 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 			}
 		}
 		
-//		return_parameters.put("access_token", access_token );
-//		return_parameters.put("token_type", "bearer" );
-//		return_parameters.put("expires_in", DEFAULT_EXPIRES_IN );
 		tokenMachine.setParameter("access_token", access_token );
 		tokenMachine.setParameter("token_type", "bearer" );
 		tokenMachine.setParameter("expires_in", DEFAULT_EXPIRES_IN );
@@ -1917,7 +1854,6 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 	private boolean client_id_valid(String client_id)
 	{
 		if (isVerifyClientID()) {
-//			return getOauth2_client_id().equals(client_id);
 			return getClientIds().keySet().contains(client_id);
 		} else return true;
 	}
@@ -2221,7 +2157,6 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 		if (RESPONSE_MODE_FORM_POST.equals(response_mode)) {
 			String sTemplate = getPostTemplate();
 			if (sTemplate != null) {
-//				HashMap<String, String> queryparameters = Tools.getUrlAttributes(querystring, _systemLogger);	// does URLDecoding
 				HashMap<String, String> queryparameters = Utils.convertCGIMessage(querystring, false);
 				Set<String> parmnames = queryparameters.keySet();
 				String sInputLines = ""; 

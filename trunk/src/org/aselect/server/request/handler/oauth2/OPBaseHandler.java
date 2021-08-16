@@ -31,7 +31,7 @@ import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectException;
 
 /**
- * OAUTH2 Authorization BaseHandler. <br>
+ * OAUTH2 Authorization AbstractHandler. <br>
  * <br>
  * <b>Description:</b><br>
  * This class serves as an OAuth2 request handler 

@@ -93,37 +93,20 @@ public class OPEndpointHandler extends org.aselect.server.request.handler.oauth2
 			SamlHistoryManager history, String access_token, HashMap tgt, String appidacr) throws ASelectStorageException {
 		
 		String sMethod = "supplyReturnParameters";
-		int return_status;
+//		int return_status;	// RH, 20210409, o
 
 //		String new_access_token = null;
 
 		HashMap claims = new HashMap();
-		String saved_redirect_uri = (String)tgt.get("oauthsessionredirect_uri");
-		// not in use
-//		if (saved_redirect_uri != null) {
-//			claims.put("smart_style_url", saved_redirect_uri);
-//			//	return_parameters.put("smart_style_url", saved_redirect_uri);
-//			tokenMachine.setParameter("smart_style_url", saved_redirect_uri);
-//		}
+//		String saved_redirect_uri = (String)tgt.get("oauthsessionredirect_uri");	// RH, 20210409, o
 		String patient = (String)tgt.get("patient");
 //		String patient = (String)tgt.get("identifier");
 		// better would be to make this a configuration parameter
-//		String patient = (String)tgt.get("oauthsession_patient");
-		// followiing line for testing only
-//		if (patient == null) patient = "f3ecf690-e035-498d-9e8c-1ef1e4db34b7";	// patient from sql call
 
 		if (patient != null) {
 			claims.put("patient", patient);
-//			return_parameters.put("patient", patient);
 			tokenMachine.setParameter("patient", patient);
 		}
-		
-		// not in use
-//		String encounter = "4632e61b-9b34-4ad7-a431-f008f35b4dd3";	// don't know yet where to get encounter from
-// 		claims.put("encounter", encounter);
-////		return_parameters.put("encounter", encounter);
-// 		tokenMachine.setParameter("encounter", encounter);
-
 		
 		claims.put("token_type", "bearer");
 		tokenMachine.setParameter("token_type", "bearer");
@@ -146,7 +129,6 @@ public class OPEndpointHandler extends org.aselect.server.request.handler.oauth2
 				String id_token = (String)history.get(ID_TOKEN_PREFIX + code);
 				if (id_token != null) {
 					// we should generate new id_token with proper appidacr
-					//	return_parameters.put("id_token", id_token );
 					tokenMachine.setParameter("id_token", id_token );
 					claims.put("id_token", id_token);
 					try {
@@ -175,7 +157,6 @@ public class OPEndpointHandler extends org.aselect.server.request.handler.oauth2
 				if (createOK) {
 					String extractedrefresh_credentials = CryptoEngine.getHandle().encryptTGT(baRandomBytes);
 			 		String refresh_token = tokenMachine.createRefreshToken(extractedrefresh_credentials, tgt, ASelectConfigManager.getHandle().getDefaultPrivateKey());
-					//	return_parameters.put("refresh_token", refresh_token);
 					tokenMachine.setParameter("refresh_token", refresh_token);
 				} else {
 					_systemLogger.log(Level.WARNING, MODULE, sMethod, "Problem with persistent storage while storing refresh_token");
@@ -191,15 +172,9 @@ public class OPEndpointHandler extends org.aselect.server.request.handler.oauth2
 		
 		String new_scope = saved_scope;
 		tokenMachine.setParameter("scope", new_scope);
-		//	return_parameters.put("expires_in", String.valueOf(3600 / 60));	// still to make variable, should be int
-//		tokenMachine.setParameter("expires_in", String.valueOf(3600 / 60));	// still to make variable, should be int
-		tokenMachine.setParameter("expires_in", new Integer(3600).intValue());
+		tokenMachine.setParameter("expires_in", new Integer(3600).intValue());	// still to make variable, should be int
 		
-		//	return_parameters.put("access_token", new_access_token );
 		tokenMachine.setParameter("access_token", access_token );
-//		return_parameters.put("token_type", "bearer" );
-//		return_parameters.put("expires_in", DEFAULT_EXPIRES_IN );
-//		return_status = 200; // all well
 		tokenMachine.setStatus(200); // all well
 		return tokenMachine.getStatus();
 	}
