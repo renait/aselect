@@ -64,6 +64,7 @@ import org.opensaml.common.SignableSAMLObject;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.xml.sax.InputSource;
+import org.opensaml.xml.security.credential.UsageType;
 import org.opensaml.xml.validation.ValidationException;
 
 //
@@ -1231,7 +1232,7 @@ public abstract class ProtoRequestHandler extends AbstractRequestHandler
 		
 //		PublicKey pkey = retrievePublicSigningKey(sIssuer);	// RH, 20181116, o
 //		List <PublicKey> pkeys = retrievePublicSigningKey(sIssuer);	// RH, 20181116, n	// RH, 20190322, o
-		List <PublicKey> pkeys = retrievePublicSigningKey(resourceGroup, sIssuer);	// RH, 20181116, n	// RH, 20190322, n
+		List <PublicKey> pkeys = retrievePublicKeys(resourceGroup, sIssuer);	// RH, 20181116, n	// RH, 20190322, n
 		if (pkeys == null || pkeys.isEmpty()) {	// RH, 20181116, n
 			_systemLogger.log(Level.SEVERE, MODULE, sMethod, "No valid public key in metadata for "+sIssuer);
 			throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
@@ -1245,6 +1246,18 @@ public abstract class ProtoRequestHandler extends AbstractRequestHandler
 			throw new ASelectException(Errors.ERROR_ASELECT_SERVER_INVALID_REQUEST);
 		}
 	}
+
+	/**
+	 * NOTE: IDP is used, metadata is taken from the <applications> section
+	 * @param sEntityId
+	 * @return
+	 * @throws ASelectException
+	 */
+	public List <PublicKey> retrievePublicKeys(String resourceGroup, String sEntityId)	// RH, 20210812, n
+	throws ASelectException
+	{
+		return retrievePublicKeys(resourceGroup, sEntityId, UsageType.SIGNING);
+	}
 	
 	/**
 	 * NOTE: IDP is used, metadata is taken from the <applications> section
@@ -1254,7 +1267,7 @@ public abstract class ProtoRequestHandler extends AbstractRequestHandler
 	 */
 //	public PublicKey retrievePublicSigningKey(String sEntityId)	// RH, 20181116, o
 //	public List <PublicKey> retrievePublicSigningKey(String sEntityId)	// RH, 20181116, n	// RH, 20190322, o
-	public List <PublicKey> retrievePublicSigningKey(String resourceGroup, String sEntityId)	// RH, 20181116, n	// RH, 20190322, n
+	public List <PublicKey> retrievePublicKeys(String resourceGroup, String sEntityId, UsageType usageType)	// RH, 20181116, n	// RH, 20190322, n
 	throws ASelectException
 	{
 		String sMethod = "retrievePublicSigningKey";
@@ -1262,7 +1275,15 @@ public abstract class ProtoRequestHandler extends AbstractRequestHandler
 		MetaDataManagerIdp metadataManager = MetaDataManagerIdp.getHandle();
 //		PublicKey publicKey = metadataManager.getSigningKeyFromMetadata(sEntityId);	// RH, 20181116, o
 //		List <PublicKey> publicKeys = metadataManager.getSigningKeyFromMetadata(sEntityId);	// RH, 20181116, n	// RH, 20190322, o
-		List <PublicKey> publicKeys = metadataManager.getSigningKeyFromMetadata(resourceGroup, sEntityId);	// RH, 20181116, n	// RH, 20190322, o
+//		List <PublicKey> publicKeys = metadataManager.getSigningKeyFromMetadata(resourceGroup, sEntityId);	// RH, 20181116, n	// RH, 20190322, o	// 20210812, o
+		// RH, 20210812, sn
+		List <PublicKey> publicKeys = null;
+		if (usageType == UsageType.ENCRYPTION) {
+			publicKeys = metadataManager.getEncryptionKeyFromMetadata(resourceGroup, sEntityId);
+		} else {	// like we used to do
+			publicKeys = metadataManager.getSigningKeyFromMetadata(resourceGroup, sEntityId);
+		}
+		// RH, 20210812, en
 //		return publicKey;	// RH, 20181116, o
 		return publicKeys;	// RH, 20181116, n
 	}

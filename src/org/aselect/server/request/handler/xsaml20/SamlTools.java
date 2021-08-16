@@ -45,11 +45,13 @@ import org.opensaml.common.SAMLVersion;
 import org.opensaml.common.SignableSAMLObject;
 import org.opensaml.common.impl.SAMLObjectContentReference;
 import org.opensaml.saml2.core.Assertion;
+import org.opensaml.saml2.core.Attribute;
 import org.opensaml.saml2.core.AudienceRestriction;
 import org.opensaml.saml2.core.AuthnRequest;
 import org.opensaml.saml2.core.AuthnStatement;
 import org.opensaml.saml2.core.Conditions;
 import org.opensaml.saml2.core.EncryptedElementType;
+import org.opensaml.saml2.core.EncryptedID;
 import org.opensaml.saml2.core.Issuer;
 import org.opensaml.saml2.core.LogoutRequest;
 import org.opensaml.saml2.core.LogoutResponse;
@@ -61,6 +63,8 @@ import org.opensaml.saml2.core.StatusCode;
 import org.opensaml.saml2.core.SubjectConfirmationData;
 import org.opensaml.saml2.encryption.Decrypter;
 import org.opensaml.saml2.encryption.EncryptedElementTypeEncryptedKeyResolver;
+import org.opensaml.saml2.encryption.Encrypter;
+import org.opensaml.saml2.encryption.Encrypter.KeyPlacement;
 import org.opensaml.security.SAMLSignatureProfileValidator;
 import org.opensaml.ws.message.decoder.MessageDecodingException;
 import org.opensaml.ws.message.encoder.MessageEncodingException;
@@ -69,8 +73,12 @@ import org.opensaml.xml.XMLObject;
 import org.opensaml.xml.XMLObjectBuilderFactory;
 import org.opensaml.xml.encryption.ChainingEncryptedKeyResolver;
 import org.opensaml.xml.encryption.DecryptionException;
+import org.opensaml.xml.encryption.EncryptedData;
 import org.opensaml.xml.encryption.EncryptionConstants;
+import org.opensaml.xml.encryption.EncryptionException;
+import org.opensaml.xml.encryption.EncryptionParameters;
 import org.opensaml.xml.encryption.InlineEncryptedKeyResolver;
+import org.opensaml.xml.encryption.KeyEncryptionParameters;
 import org.opensaml.xml.encryption.SimpleRetrievalMethodEncryptedKeyResolver;
 import org.opensaml.xml.io.Marshaller;
 import org.opensaml.xml.io.MarshallerFactory;
@@ -80,7 +88,9 @@ import org.opensaml.xml.io.UnmarshallingException;
 import org.opensaml.xml.security.credential.BasicCredential;
 import org.opensaml.xml.security.credential.CollectionCredentialResolver;
 import org.opensaml.xml.security.credential.Credential;
+import org.opensaml.xml.security.credential.UsageType;
 import org.opensaml.xml.security.keyinfo.KeyInfoCredentialResolver;
+import org.opensaml.xml.security.keyinfo.KeyInfoGeneratorFactory;
 import org.opensaml.xml.security.keyinfo.KeyInfoHelper;
 import org.opensaml.xml.security.keyinfo.KeyInfoProvider;
 import org.opensaml.xml.security.keyinfo.LocalKeyInfoCredentialResolver;
@@ -949,6 +959,258 @@ public class SamlTools
 		return (SAMLObject) samlObject;
 	}
 	
+// RH, 20210713, sn
+	public static EncryptedElementType encryptSamlObject(SAMLObject obj, PublicKey pubkey)
+//	public static EncryptedElementType encryptSamlObject(XMLObject obj, PublicKey pubkey)
+	 
+	{
+		String sMethod = "encryptSamlObject";
+		//
+		// One-time init code here
+		//
+		ASelectSystemLogger _systemLogger = ASelectSystemLogger.getHandle();
+
+//		ASelectConfigManager _oASelectConfigManager = ASelectConfigManager.getHandle();
+
+		BasicCredential credential = new BasicCredential();
+		credential.setUsageType(UsageType.ENCRYPTION);
+		credential.setPublicKey(pubkey);
+
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Using public key with format:" + pubkey.getFormat());
+
+/*
+		// Collection of local credentials, where each contains
+		// a private key that corresponds to a public key that may
+		// have been used by other parties for encryption
+//		List<Credential> localCredentials = getLocalCredentials();
+		// if we're gono take the init code out of the method we'll have better use the synchronized version
+//		List<Credential> localCredentials = new getLocalCredentials();
+		List<Credential> localCredentials = Collections.synchronizedList(new ArrayList<Credential>());
+		synchronized (localCredentials) {
+			localCredentials.add(credential);
+		}
+
+		CollectionCredentialResolver localCredResolver = new CollectionCredentialResolver(localCredentials);
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created CollectionCredentialResolver");
+		         
+		// Support EncryptedKey/KeyInfo containing decryption key hints via
+		// KeyValue/RSAKeyValue and X509Data/X509Certificate
+		List<KeyInfoProvider> kiProviders = new ArrayList<KeyInfoProvider>();
+		kiProviders.add( new RSAKeyValueProvider() );
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Added RSAKeyValueProvider to KeyInfoProvider List");
+		kiProviders.add( new InlineX509DataProvider() );
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Added InlineX509DataProvider to KeyInfoProvider List");
+		         
+		// Resolves local credentials by using information in the EncryptedKey/KeyInfo to query the supplied
+		// local credential resolver.
+		KeyInfoCredentialResolver kekResolver = new LocalKeyInfoCredentialResolver(kiProviders, localCredResolver);
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created KeyInfoCredentialResolver");
+		         
+		// Supports resolution of EncryptedKeys by 3 common placement mechanisms
+		ChainingEncryptedKeyResolver encryptedKeyResolver = new ChainingEncryptedKeyResolver();
+		encryptedKeyResolver.getResolverChain().add( new InlineEncryptedKeyResolver() );
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Added InlineEncryptedKeyResolver to ChainingEncryptedKeyResolver");
+		encryptedKeyResolver.getResolverChain().add( new EncryptedElementTypeEncryptedKeyResolver() );
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Added EncryptedElementTypeEncryptedKeyResolver to ChainingEncryptedKeyResolver");
+		encryptedKeyResolver.getResolverChain().add( new SimpleRetrievalMethodEncryptedKeyResolver() );
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Added SimpleRetrievalMethodEncryptedKeyResolver to ChainingEncryptedKeyResolver");
+*/
+		
+		EncryptionParameters encParams = new EncryptionParameters();
+//		encParams.setAlgorithm(EncryptionConstants.ALGO_ID_BLOCKCIPHER_AES128);
+		encParams.setAlgorithm(EncryptionConstants.ALGO_ID_BLOCKCIPHER_AES256);
+
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "encParams.getAlgorithm():" + encParams.getAlgorithm());
+
+		KeyEncryptionParameters kekParams = new KeyEncryptionParameters();
+		kekParams.setEncryptionCredential(credential);
+		kekParams.setAlgorithm(EncryptionConstants.ALGO_ID_KEYTRANSPORT_RSAOAEP);
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "kekParams.getAlgorithm:" + kekParams.getAlgorithm());
+		KeyInfoGeneratorFactory kigf =
+		    Configuration.getGlobalSecurityConfiguration()
+		    .getKeyInfoGeneratorManager().getDefaultManager()
+		    .getFactory(credential);
+
+		kekParams.setKeyInfoGenerator(kigf.newInstance());
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, "kekParams.getKeyInfoGenerator():" + kekParams.getKeyInfoGenerator());
+		         
+		Encrypter samlEncrypter =
+		    new Encrypter(encParams, kekParams);
+//		org.opensaml.xml.encryption.Encrypter samlEncrypter =
+//			    new org.opensaml.xml.encryption.Encrypter();
+		
+//		samlEncrypter.setKeyPlacement(KeyPlacement.PEER);	// default
+//		samlEncrypter.setKeyPlacement(KeyPlacement.INLINE);
+//		_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created Encrypter with KeyPlacement: " + samlEncrypter.getKeyPlacement());
+	
+		/* ........................... */
+		    
+		// Begin message processing code
+		        
+		
+//		EncryptedID encryptedEntityID = obj;
+//		SAMLObject samlObject = null;
+		XMLObject samlObject = null;
+//		EncryptedID encrID =  null;
+		try {
+//		     samlObject = decrypter.decrypt(encryptedEntityID);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Trying to encrypt: " + obj);
+		     samlObject = samlEncrypter.encrypt((Attribute)obj);	// works
+//		     samlObject = samlEncrypter.encryptElement(obj, encParams, kekParams);	// Does NOT place key as PEER
+//		     XMLObjectBuilderFactory builderFactory = Configuration.getBuilderFactory();
+//
+//		     SAMLObjectBuilder<EncryptedID> encryptedIDBuilder = (SAMLObjectBuilder<EncryptedID>) builderFactory.getBuilder(EncryptedID.DEFAULT_ELEMENT_NAME);
+//
+//		     encrID = encryptedIDBuilder.buildObject();
+//		     encrID.setEncryptedData((EncryptedData) samlObject);
+
+		     
+//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "SamlObject decrypted");
+//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "XMLObject encrypted: " + XMLHelper.prettyPrintXML(samlObject.getDOM()));
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "XMLObject encrypted: " + samlObject);
+			 if (! (samlObject instanceof EncryptedElementType)) {
+				 samlObject = null;
+				 throw new EncryptionException("Encrypted XMLObject was not an instance of EncryptedElementType");
+		        }
+//			 if (! (encrID instanceof EncryptedElementType)) {
+//				 encrID = null;
+//				 throw new EncryptionException("Encrypted XMLObject was not an instance of EncryptedElementType");
+//		        }
+		} catch (EncryptionException e) {
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Failed to encrypt SamlObject: " + e.getMessage());
+		}
+		return (EncryptedElementType) samlObject;
+//		return (EncryptedElementType) encrID;
+		
+	}
+// RH, 20210713, en	
+	
+	
+	// RH, 20210713, sn
+//		public static EncryptedElementType encryptSamlObject(SAMLObject obj, PublicKey pubkey)
+		public static EncryptedElementType encryptSamlObjectValue(XMLObject obj, PublicKey pubkey)
+		 
+		{
+			String sMethod = "encryptSamlObjectValue";
+			//
+			// One-time init code here
+			//
+			ASelectSystemLogger _systemLogger = ASelectSystemLogger.getHandle();
+
+//			ASelectConfigManager _oASelectConfigManager = ASelectConfigManager.getHandle();
+
+			EncryptedID encrID = null;
+			BasicCredential credential = new BasicCredential();
+			credential.setUsageType(UsageType.ENCRYPTION);
+			credential.setPublicKey(pubkey);
+
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Using public key with format:" + pubkey.getFormat());
+
+	/*
+			// Collection of local credentials, where each contains
+			// a private key that corresponds to a public key that may
+			// have been used by other parties for encryption
+//			List<Credential> localCredentials = getLocalCredentials();
+			// if we're gono take the init code out of the method we'll have better use the synchronized version
+//			List<Credential> localCredentials = new getLocalCredentials();
+			List<Credential> localCredentials = Collections.synchronizedList(new ArrayList<Credential>());
+			synchronized (localCredentials) {
+				localCredentials.add(credential);
+			}
+
+			CollectionCredentialResolver localCredResolver = new CollectionCredentialResolver(localCredentials);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created CollectionCredentialResolver");
+			         
+			// Support EncryptedKey/KeyInfo containing decryption key hints via
+			// KeyValue/RSAKeyValue and X509Data/X509Certificate
+			List<KeyInfoProvider> kiProviders = new ArrayList<KeyInfoProvider>();
+			kiProviders.add( new RSAKeyValueProvider() );
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Added RSAKeyValueProvider to KeyInfoProvider List");
+			kiProviders.add( new InlineX509DataProvider() );
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Added InlineX509DataProvider to KeyInfoProvider List");
+			         
+			// Resolves local credentials by using information in the EncryptedKey/KeyInfo to query the supplied
+			// local credential resolver.
+			KeyInfoCredentialResolver kekResolver = new LocalKeyInfoCredentialResolver(kiProviders, localCredResolver);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created KeyInfoCredentialResolver");
+			         
+			// Supports resolution of EncryptedKeys by 3 common placement mechanisms
+			ChainingEncryptedKeyResolver encryptedKeyResolver = new ChainingEncryptedKeyResolver();
+			encryptedKeyResolver.getResolverChain().add( new InlineEncryptedKeyResolver() );
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Added InlineEncryptedKeyResolver to ChainingEncryptedKeyResolver");
+			encryptedKeyResolver.getResolverChain().add( new EncryptedElementTypeEncryptedKeyResolver() );
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Added EncryptedElementTypeEncryptedKeyResolver to ChainingEncryptedKeyResolver");
+			encryptedKeyResolver.getResolverChain().add( new SimpleRetrievalMethodEncryptedKeyResolver() );
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Added SimpleRetrievalMethodEncryptedKeyResolver to ChainingEncryptedKeyResolver");
+	*/
+			
+			EncryptionParameters encParams = new EncryptionParameters();
+//			encParams.setAlgorithm(EncryptionConstants.ALGO_ID_BLOCKCIPHER_AES128);
+			encParams.setAlgorithm(EncryptionConstants.ALGO_ID_BLOCKCIPHER_AES256);
+
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "encParams.getAlgorithm():" + encParams.getAlgorithm());
+
+			KeyEncryptionParameters kekParams = new KeyEncryptionParameters();
+			kekParams.setEncryptionCredential(credential);
+			kekParams.setAlgorithm(EncryptionConstants.ALGO_ID_KEYTRANSPORT_RSAOAEP);
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "kekParams.getAlgorithm:" + kekParams.getAlgorithm());
+			KeyInfoGeneratorFactory kigf =
+			    Configuration.getGlobalSecurityConfiguration()
+			    .getKeyInfoGeneratorManager().getDefaultManager()
+			    .getFactory(credential);
+
+			kekParams.setKeyInfoGenerator(kigf.newInstance());
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "kekParams.getKeyInfoGenerator():" + kekParams.getKeyInfoGenerator());
+			         
+//			Encrypter samlEncrypter =
+//			    new Encrypter(encParams, kekParams);
+			org.opensaml.xml.encryption.Encrypter samlEncrypter =
+				    new org.opensaml.xml.encryption.Encrypter();
+			
+//			samlEncrypter.setKeyPlacement(KeyPlacement.PEER);	// default
+//			samlEncrypter.setKeyPlacement(KeyPlacement.INLINE);
+//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "Created Encrypter with KeyPlacement: " + samlEncrypter.getKeyPlacement());
+		
+			/* ........................... */
+			    
+			// Begin message processing code
+			        
+			
+//			EncryptedID encryptedEntityID = obj;
+//			SAMLObject samlObject = null;
+			XMLObject samlObject = null;
+//			EncryptedID encrID =  null;
+			try {
+//			     samlObject = decrypter.decrypt(encryptedEntityID);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Trying to encrypt: " + obj);
+//			     samlObject = samlEncrypter.encrypt((Attribute)obj);	// works
+			     samlObject = samlEncrypter.encryptElement(obj, encParams, kekParams);	// Does NOT place key as PEER
+
+			     XMLObjectBuilderFactory builderFactory = Configuration.getBuilderFactory();
+			     SAMLObjectBuilder<EncryptedID> encryptedIDBuilder = (SAMLObjectBuilder<EncryptedID>) builderFactory.getBuilder(EncryptedID.DEFAULT_ELEMENT_NAME);
+			     encrID = encryptedIDBuilder.buildObject();
+			     encrID.setEncryptedData((EncryptedData) samlObject);
+
+			     
+//				_systemLogger.log(Level.FINEST, MODULE, sMethod, "SamlObject decrypted");
+//				_systemLogger.log(Level.FINEST, MODULE, sMethod, "XMLObject encrypted: " + XMLHelper.prettyPrintXML(samlObject.getDOM()));
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "XMLObject encrypted: " + samlObject);
+//				 if (! (samlObject instanceof EncryptedElementType)) {
+//					 samlObject = null;
+//					 throw new EncryptionException("Encrypted XMLObject was not an instance of EncryptedElementType");
+//			        }
+				 if (! (encrID instanceof EncryptedElementType)) {
+					 encrID = null;
+					 throw new EncryptionException("Encrypted XMLObject was not an instance of EncryptedElementType");
+			        }
+			} catch (EncryptionException e) {
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "Failed to encrypt XMLObject: " + e.getMessage());
+			}
+//			return (EncryptedElementType) samlObject;
+			return (EncryptedElementType) encrID;
+			
+		}
+	// RH, 20210713, en	
 	
 
 	/**
