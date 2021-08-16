@@ -480,7 +480,8 @@ public class AuthorizationHandler extends ProtoRequestHandler
     		String extractedRid = ridResponse.replaceFirst(".*rid=([^&]*).*$", "$1");
 			_systemLogger.log(Level.FINER, MODULE, sMethod, "rid retrieved: " + extractedRid);
 
-			_htSessionContext = _oSessionManager.getSessionContext(extractedRid);
+//			_htSessionContext = _oSessionManager.getSessionContext(extractedRid);	// RH, 20210413, o
+			HashMap _htSessionContext = _oSessionManager.getSessionContext(extractedRid);	// RH, 20210413, n
 			if (_htSessionContext == null) {
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "No session found for RID: " + extractedRid);
 				String error_redirect = null;
