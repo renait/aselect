@@ -417,6 +417,29 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 
 			String sApplicationId = (String)_htSessionContext.get("app_id");
 			String sApplicationLevel = getApplicationLevel(sApplicationId);
+
+			// IK, 20210709, sn
+			// IK, 20210715, sn
+
+			// boolean useRequestedLevel = getUseRequestedLevel(sApplicationId);
+
+			// IK, 20210715, en
+
+			String reqLevel = (String) _htSessionContext.get("requested_level");
+			if (reqLevel == null || "".equals(reqLevel)) {
+				reqLevel = sApplicationLevel;
+			}
+			int intlevel = (int) _htSessionContext.get("level");
+			// IK, 20210709. en
+
+			// IK, 20210713, sn
+			// To-do magic routine
+
+			String finalLevel = calculateFinalLevel(reqLevel, sApplicationLevel,
+					ApplicationManager.getHandle().isUseRequestedLevel(sApplicationId));
+
+			// IK, 20210713, en
+
 			
 			// RH, 20180810, sn
 			boolean useNewLoa = (specialSettings != null && specialSettings.contains("use_newloa"));
@@ -844,6 +867,14 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 			_oSessionManager.finalSessionProcessing(_htSessionContext, true/*update session*/);
 		}
 		return new RequestState(null);
+	}
+
+	private String calculateFinalLevel(String reqLevel, String sApplicationLevel, boolean useReqLevel) {
+		// IK, Magic algorithm to choose reqLevel or sApplicationLevel
+		if (useReqLevel && Integer.parseInt(reqLevel) > Integer.parseInt(sApplicationLevel)) {
+			return reqLevel;
+		}
+		return sApplicationLevel;
 	}
 
 	// RH, 20200616, sn

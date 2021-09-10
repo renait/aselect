@@ -498,7 +498,8 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 
 			// 20090110, Bauke changed requested_betrouwbaarheidsniveau to required_level
 			_htSessionContext.put("required_level", sBetrouwbaarheidsNiveau);
-			_htSessionContext.put("level", Integer.parseInt(sBetrouwbaarheidsNiveau)); // 20090111, Bauke added, NOTE: it's an Integer
+			_htSessionContext.put("requested_level", sBetrouwbaarheidsNiveau);
+				_htSessionContext.put("level", Integer.parseInt(sBetrouwbaarheidsNiveau)); // 20090111, Bauke added, NOTE: it's an Integer
 			
 			// 20110722, Bauke conditional setting, should come from configuration however
 //			if (Integer.parseInt(sBetrouwbaarheidsNiveau) <= 10)	// RH, 20141113, o

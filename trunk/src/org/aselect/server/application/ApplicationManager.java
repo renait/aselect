@@ -182,6 +182,11 @@ public class ApplicationManager
 	private boolean _bApplicationsConfigured = false;
 
 	private Object _oApplicationsConfigSection = null;
+	
+	// IK, 20210730, sn
+	private boolean bUseRequestedLevel = false;
+	private boolean bReturnRequestedLevel = false;
+	// IK, 20210730, en
 
 	
 	
@@ -316,6 +321,27 @@ public class ApplicationManager
 				String sDoUrlEncode = ASelectConfigManager.getSimpleParam(oApplication, "use_url_encoding", false);
 				if (sDoUrlEncode != null)
 					bDoUrlEncode = new Boolean(sDoUrlEncode).booleanValue();
+				
+				//IK, 20210728, sn
+				boolean bUseRequestedLevel = false;
+				String sUseRequestedLevel = ASelectConfigManager.getSimpleParam(oApplication, "use_requested_level", false);
+				if (sUseRequestedLevel != null) {
+					bUseRequestedLevel = new Boolean(sUseRequestedLevel).booleanValue();					
+				}
+				
+				boolean bReturnRequestedLevel = false;
+				String sReturnRequestedLevel = ASelectConfigManager.getSimpleParam(oApplication, "return_requested_level", false);
+				if (sReturnRequestedLevel != null) {
+					bReturnRequestedLevel = new Boolean(sReturnRequestedLevel).booleanValue();					
+				}
+				//IK, 20210728, en
+				
+				
+				
+				
+				
+
+				
 				// RH, 20100909, sn
 				String sAppRequireSigning = ASelectConfigManager.getSimpleParam(oApplication, "require_signing", false);
 				// RH, 20100909, en
@@ -480,6 +506,11 @@ public class ApplicationManager
 				application.setLevelName(sLevelName);
 				application.setDoUrlEncode(bDoUrlEncode);
 
+				//IK, 20210728, sn
+				application.setUseRequestedLevel(bUseRequestedLevel);
+				application.setReturnRequestedLevel(bReturnRequestedLevel);
+				//IK, 20210728, en
+
 				// RH, 20100909, so
 //				if (_bRequireSigning) {
 //					application.setSigningKey(loadPublicKeyFromKeystore(sAppId));
@@ -615,6 +646,43 @@ public class ApplicationManager
 	{
 		return _bRequireSigning;
 	}
+	// IK, 20210730, sn
+	public boolean isUseRequestedLevel(String sAppId)
+			throws ASelectException
+			{
+				if (sAppId == null) {
+					return bUseRequestedLevel;
+					
+				}
+				else {
+					Application oApplication = getApplication(sAppId);
+					return oApplication.isUseRequestedLevel();
+				}
+			}
+	
+	public boolean isUseRequestedLevel()	// for backward compatibility, for signing this is still used
+	{
+		return bUseRequestedLevel;
+	}
+	
+	public boolean isReturnRequestedLevel(String sAppId)
+			throws ASelectException
+			{
+				if (sAppId == null) {
+					return bReturnRequestedLevel;
+					
+				}
+				else {
+					Application oApplication = getApplication(sAppId);
+					return oApplication.isReturnRequestedLevel();
+				}
+			}
+	
+	public boolean isReturnRequestedLevel()	// for backward compatibility, for signing this is still used
+	{
+		return bReturnRequestedLevel;
+	}
+	// IK, 20210730, en
 
 	/**
 	 * Returns the required level for an application. <br>
