@@ -445,10 +445,17 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 			boolean useNewLoa = (specialSettings != null && specialSettings.contains("use_newloa"));
 			String sAuthnContextClassRefURI = null;
 			if (useNewLoa) {
-				sAuthnContextClassRefURI = SecurityLevel.convertLevelToAuthnContextClassRefURI(sApplicationLevel, useLoa, SecurityLevel.getNewLoaLevels(), _systemLogger);
-				
+				// sAuthnContextClassRefURI =
+				// SecurityLevel.convertLevelToAuthnContextClassRefURI(sApplicationLevel,
+				// useLoa, SecurityLevel.getNewLoaLevels(), _systemLogger);
+				sAuthnContextClassRefURI = SecurityLevel.convertLevelToAuthnContextClassRefURI(finalLevel, useLoa,
+						SecurityLevel.getNewLoaLevels(), _systemLogger);
 			} else {
-				sAuthnContextClassRefURI = SecurityLevel.convertLevelToAuthnContextClassRefURI(sApplicationLevel, useLoa, SecurityLevel.getDefaultLevels(), _systemLogger);
+				// sAuthnContextClassRefURI =
+				// SecurityLevel.convertLevelToAuthnContextClassRefURI(sApplicationLevel,
+				// useLoa, SecurityLevel.getDefaultLevels(), _systemLogger);
+				sAuthnContextClassRefURI = SecurityLevel.convertLevelToAuthnContextClassRefURI(finalLevel, useLoa,
+						SecurityLevel.getDefaultLevels(), _systemLogger);
 			}
 			// RH, 20180810, en
 			
