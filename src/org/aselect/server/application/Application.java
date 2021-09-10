@@ -79,6 +79,12 @@ public class Application
 	private PublicKey _oSigningKey;
 	private Vector _vSSOGroups;
 
+	//IK, 20210728, sn
+	private boolean _bUseRequestedLevel;
+	private boolean _bReturnRequestedLevel;
+	
+	//IK, 20210728, en
+
 	private String _shared_secret;
 	private String _forced_uid;
 	private String _forced_authsp;
@@ -925,6 +931,22 @@ public class Application
 		this._htAdditionalRegex = _htAdditionalRegex;
 	}
 
+	public boolean isUseRequestedLevel() {
+		return _bUseRequestedLevel;
+	}
+
+	public void setUseRequestedLevel(boolean _bUseRequestedLevel) {
+		this._bUseRequestedLevel = _bUseRequestedLevel;
+	}
+
+	public boolean isReturnRequestedLevel() {
+		return _bReturnRequestedLevel;
+	}
+
+	public void setReturnRequestedLevel(boolean _bReturnRequestedLevel) {
+		this._bReturnRequestedLevel = _bReturnRequestedLevel;
+	}
+
 	/**
 	 * @return the _htEncryptAttributes
 	 */
@@ -938,5 +960,4 @@ public class Application
 	public void setEncryptAttributes(HashMap<Pattern, Boolean> _htEncryptAttributes) {
 		this._htEncryptAttributes = _htEncryptAttributes;
 	}
-	
 }
