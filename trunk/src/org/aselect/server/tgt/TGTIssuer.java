@@ -241,7 +241,11 @@ public class TGTIssuer
 			Utils.copyHashmapValue("authsp_level", htTGTContext, htRemoteAttributes);
 			Utils.copyHashmapValue("sel_level", htTGTContext, htRemoteAttributes);
 			Utils.copyHashmapValue("social_login", htTGTContext, htRemoteAttributes);  // 20140219, Bauke: new
-			Utils.copyHashmapValue("forced_passive", htTGTContext, htRemoteAttributes);  // RH, 20140925, n
+			Utils.copyHashmapValue("forced_passive", htTGTContext, htRemoteAttributes); // RH, 20140925, n
+			
+			Utils.copyHashmapValue("requested_level", htTGTContext, htRemoteAttributes); // 20210914, BW n
+			
+			
 			
 			htTGTContext.put("uid", sUserId);
 			htTGTContext.put("organization", sUserOrganization);
@@ -308,6 +312,9 @@ public class TGTIssuer
 			Utils.copyHashmapValue("oauthsessionaud", htTGTContext, htSessionContext);
 			Utils.copyHashmapValue("oauthsessionprompts", htTGTContext, htSessionContext);
 			// RH, 20160627, en
+			
+			
+			
 			
 			// copy parameters2forward to tgt, 	// htTGTContext != null
 			if (_configManager.getParameters2forward() != null && !_configManager.getParameters2forward().isEmpty()) {	// avoid unnecessary work
@@ -623,6 +630,7 @@ public class TGTIssuer
 			Utils.copyHashmapValue("sel_uid", htTGTContext, htSessionContext);
 			// 20090811, Bauke: save authsp_type for use by the Saml20 session sync
 			Utils.copyHashmapValue("authsp_type", htTGTContext, htSessionContext);
+			Utils.copyHashmapValue("requested_level", htTGTContext, htSessionContext); // 20210914 BW n
 			Utils.copyHashmapValue("social_login", htTGTContext, htSessionContext);  // 20140219, Bauke: new			
 			Utils.copyHashmapValue("forced_passive", htTGTContext, htSessionContext);  // RH, 20140925, n
 

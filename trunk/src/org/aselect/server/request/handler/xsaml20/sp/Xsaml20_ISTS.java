@@ -415,31 +415,20 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 			// Use Level of Assurance (for ETD) instead of PASSWORDPROTECTEDTRANSPORT_URI and his friends
 			boolean useLoa = (specialSettings != null && specialSettings.contains("use_loa"));
 
+						
 			String sApplicationId = (String)_htSessionContext.get("app_id");
 			String sApplicationLevel = getApplicationLevel(sApplicationId);
-
-			// IK, 20210709, sn
-			// IK, 20210715, sn
-
-			// boolean useRequestedLevel = getUseRequestedLevel(sApplicationId);
-
-			// IK, 20210715, en
-
-			String reqLevel = (String) _htSessionContext.get("requested_level");
-			if (reqLevel == null || "".equals(reqLevel)) {
-				reqLevel = sApplicationLevel;
-			}
-			int intlevel = (int) _htSessionContext.get("level");
-			// IK, 20210709. en
-
-			// IK, 20210713, sn
-			// To-do magic routine
-
-			String finalLevel = calculateFinalLevel(reqLevel, sApplicationLevel,
-					ApplicationManager.getHandle().isUseRequestedLevel(sApplicationId));
-
-			// IK, 20210713, en
-
+				
+			// IK, 20210709, sn, // BW, 20210916, sn
+			boolean useRequestedLevel = ApplicationManager.getHandle().isUseRequestedLevel(sApplicationId);
+			String finalLevel = sApplicationLevel;
+				
+			if(useRequestedLevel) {
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "use_requested_level parameter: " + useRequestedLevel);
+				String reqLevel = (String) _htSessionContext.get("requested_level");
+				finalLevel = calculateFinalLevel(reqLevel, sApplicationLevel);
+			} // IK, 20210713, en, // BW, 20210916, en
+						
 			
 			// RH, 20180810, sn
 			boolean useNewLoa = (specialSettings != null && specialSettings.contains("use_newloa"));
@@ -876,14 +865,28 @@ public class Xsaml20_ISTS extends Saml20_BaseHandler
 		return new RequestState(null);
 	}
 
-	private String calculateFinalLevel(String reqLevel, String sApplicationLevel, boolean useReqLevel) {
-		// IK, Magic algorithm to choose reqLevel or sApplicationLevel
-		if (useReqLevel && Integer.parseInt(reqLevel) > Integer.parseInt(sApplicationLevel)) {
-			return reqLevel;
+	/*
+	 * Return the required_level if larger than application level
+	 */
+	private String calculateFinalLevel(String reqLevel, String sApplicationLevel) {
+		
+		String sMethod = "calculateFinalLevel";
+			
+		if(reqLevel == null || "".equals(reqLevel)) {
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "requested_level is NULL and is replaced by ApplicationLevel: " + sApplicationLevel);
+			return sApplicationLevel;
 		}
-		return sApplicationLevel;
+		
+		int requiredLevelInt = Integer.parseInt(reqLevel);	
+		int applicationLevelInt = Integer.parseInt(sApplicationLevel);
+				
+		String sMessage = requiredLevelInt > applicationLevelInt
+				? "returning the required_level" : "returning the ApplicationLevel (required_level is less than ApplicationLevel)";		
+		_systemLogger.log(Level.FINEST, MODULE, sMethod, sMessage);
+		
+		return requiredLevelInt > applicationLevelInt? reqLevel : sApplicationLevel;
 	}
-
+	
 	// RH, 20200616, sn
 	public Extensions createClusterExtensions(String sApplicationLevel, String sApplicationId, PartnerData partnerData)
 			throws JAXBException, PropertyException, ParserConfigurationException, UnmarshallingException, ASelectException
