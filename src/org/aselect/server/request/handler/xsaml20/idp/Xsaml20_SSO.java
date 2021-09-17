@@ -1104,20 +1104,51 @@ public class Xsaml20_SSO extends Saml20_BrowserHandler
 		boolean isSuccessResponse = (htTGTContext != null);
 		Assertion assertion = null;
 		_systemLogger.log(Level.INFO, MODULE, sMethod, "====");
-
+		
+		
 		DateTime tStamp = new DateTime(); // We will use one timestamp
 
 		XMLObjectBuilderFactory builderFactory = Configuration.getBuilderFactory();
 		XMLObjectBuilder stringBuilder = builderFactory.getBuilder(XSString.TYPE_NAME);
 
 		String sSPRid = null;
-		if (htSessionContext != null)
+		
+		if (htSessionContext != null) {
 			sSPRid = (String) htSessionContext.get("sp_rid");
-
+		} else {
+			_systemLogger.log(Level.FINEST, MODULE, sMethod, "htSessionContext is null."); //BW
+		}
+		
+		
 		if (htTGTContext != null) {
-
+			
 			sSPRid = (String) htTGTContext.get("sp_rid");
-			String sSelectedLevel = (String) htTGTContext.get("sel_level");
+			String sSelectedLevel = null;
+						
+			// 20210914, BW sn 	
+			String applicationId = (String) htTGTContext.get("app_id");
+		
+			boolean returnRequestedLevel = ApplicationManager.getHandle().isReturnRequestedLevel(applicationId);
+						
+			if(returnRequestedLevel) {
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "return_requested_level parameter: " + returnRequestedLevel);
+				String requestedLevel = (String) htTGTContext.get("requested_level");
+				// set sSelectedLevel to requestedLevel
+				if(requestedLevel != null) {
+					
+					// return level moet hoger zijn dan de applicatie level, anders applicatie level terug
+					
+					
+					
+					sSelectedLevel = requestedLevel;
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "sSelectedLevel overwritten with requested_level: " + sSelectedLevel);
+				} else {
+					_systemLogger.log(Level.FINEST, MODULE, sMethod, "sSelectedLevel not overwritten, requested_level == null");
+				}				
+			} // 20210915, BW en 
+			
+			// String sSelectedLevel = (String) htTGTContext.get("sel_level");
+			if (sSelectedLevel == null) sSelectedLevel = (String) htTGTContext.get("sel_level");
 			if (sSelectedLevel == null) sSelectedLevel = (String) htTGTContext.get("authsp_level");
 			if (sSelectedLevel == null) sSelectedLevel = (String) htTGTContext.get("betrouwbaarheidsniveau");  // To be removed
 			String sUid = (String) htTGTContext.get("uid");
