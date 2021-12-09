@@ -73,21 +73,26 @@ import java.util.Map;
 import java.util.logging.Level;
 
 import javax.net.ssl.SSLSocketFactory;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
-import org.apache.xerces.dom.DocumentImpl;
-import org.apache.xerces.parsers.DOMParser;
+//import org.apache.xerces.dom.DocumentImpl;
+//import org.apache.xerces.parsers.DOMParser;
 import org.aselect.system.communication.client.ISecureClientCommunicator;
 import org.aselect.system.communication.server.soap12.SOAPConstants;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectCommunicationException;
 import org.aselect.system.logging.SystemLogger;
 import org.aselect.system.utils.Tools;
+import org.aselect.system.utils.Utils;
 import org.aselect.system.utils.crypto.Auxiliary;
+import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
 import org.w3c.dom.NodeList;
 import org.xml.sax.InputSource;
-import org.xml.sax.helpers.DefaultHandler;
+//import org.xml.sax.helpers.DefaultHandler;
 
 
 /**
@@ -475,14 +480,35 @@ public class SOAP12Communicator implements ISecureClientCommunicator	// RH, 2020
 		Element elBody = null;
 		if (!sMessage.equals("")) {
 			try {
-				// create new DOM parser
-				DOMParser oParser = new DOMParser();
-				// set error handler to default empty handler
-				oParser.setErrorHandler(new DefaultHandler());
-				// parse message as String to DOM object
-				oParser.parse(new InputSource(new StringReader(sMessage)));
-				// get root XML tag
-				DocumentImpl oDoc = (DocumentImpl) oParser.getDocument();
+				// RH, 20210930, so
+//				// create new DOM parser
+//				DOMParser oParser = new DOMParser();
+//				// set error handler to default empty handler
+//				oParser.setErrorHandler(new DefaultHandler());
+//				// parse message as String to DOM object
+//				oParser.parse(new InputSource(new StringReader(sMessage)));
+//				// get root XML tag
+//				DocumentImpl oDoc = (DocumentImpl) oParser.getDocument();
+				// RH, 20210930, eo
+				
+				// RH, 20210318, sn
+				DocumentBuilderFactory oDocumentBuilderFactory;
+				DocumentBuilder oDocumentBuilder;
+				try {
+					oDocumentBuilderFactory = Utils.createDocumentBuilderFactory(_systemLogger);
+					// Create parser
+					oDocumentBuilder = oDocumentBuilderFactory.newDocumentBuilder();
+				} catch (ASelectCommunicationException e) {
+					throw new ASelectCommunicationException(e.getMessage());
+				} catch (ParserConfigurationException e) {
+					throw new ASelectCommunicationException(e.getMessage());
+				}	
+				
+
+				// parse
+				Document oDoc = oDocumentBuilder.parse(new InputSource(new StringReader(sMessage)));
+				// RH, 20210318, en
+
 				// get body element
 				NodeList nlNodes = oDoc.getDocumentElement().getElementsByTagNameNS(URI_SOAP12_ENV, "Body");
 

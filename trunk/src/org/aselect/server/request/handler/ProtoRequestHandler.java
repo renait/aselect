@@ -35,8 +35,11 @@ import java.util.logging.Level;
 import javax.servlet.ServletConfig;
 import javax.servlet.http.HttpServletRequest;
 import javax.servlet.http.HttpServletResponse;
+import javax.xml.parsers.DocumentBuilder;
+import javax.xml.parsers.DocumentBuilderFactory;
+import javax.xml.parsers.ParserConfigurationException;
 
-import org.apache.xerces.parsers.DOMParser;
+//import org.apache.xerces.parsers.DOMParser;
 import org.apache.xml.security.signature.XMLSignature;
 import org.aselect.server.attributes.AttributeGatherer;
 import org.aselect.server.config.ASelectConfigManager;
@@ -918,6 +921,21 @@ public abstract class ProtoRequestHandler extends AbstractRequestHandler
 		return "<input type=\"hidden\" name=\"" + sName + "\" value=\"" + sValue + "\"/>\n";
 	}
 
+	// RH, 20211006, sn
+	/**
+	 * 
+	 * @param sName
+	 * @param sValue
+	 * @param sType
+	 * @return
+	 */
+	public String buildHtmlInput(String sName, String sValue, String sType)
+	{
+		return "<input" + (sType == null ? "" : " type=\"" + sType + "\"")  + " name=\"" + sName + "\"" +
+				(sValue == null ? "" : " value=\"" + sValue + "\"") + " />\n";
+	}
+	// RH, 20211006, en
+
 	
 	/**
 	 * 
@@ -1428,19 +1446,37 @@ public abstract class ProtoRequestHandler extends AbstractRequestHandler
 	throws ASelectCommunicationException
 	{
 		Element elBody = null;
-		String sMethod = "parse";
+//		String sMethod = "parse";
+		String sMethod = "parseSamlMessage";
 		if (!sMessage.equals("")) {
 			try {
-				DOMParser parser = new DOMParser();
-				_systemLogger.log(Level.FINER, MODULE, sMethod, "PARSE message: " + sMessage);
-				StringReader sr = new StringReader(sMessage);
-				InputSource is = new InputSource(sr);
-				_systemLogger.log(Level.FINER, MODULE, sMethod, "parse: " + Tools.clipString(sMessage, 100, true));
-				parser.parse(is);
-				_systemLogger.log(Level.FINER, MODULE, sMethod, "parsed");
+				// RH, 20210930, so
+//				DOMParser parser = new DOMParser();
+//				_systemLogger.log(Level.FINER, MODULE, sMethod, "PARSE message: " + sMessage);
+//				StringReader sr = new StringReader(sMessage);
+//				InputSource is = new InputSource(sr);
+//				_systemLogger.log(Level.FINER, MODULE, sMethod, "parse: " + Tools.clipString(sMessage, 100, true));
+//				parser.parse(is);
+//				_systemLogger.log(Level.FINER, MODULE, sMethod, "parsed");
+//
+//				// Get root XML tag
+//				Document doc = (Document) parser.getDocument();
+				// RH, 20210930, eo
 
+				// RH, 20210930, sn
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "Parse message: " + Auxiliary.obfuscate(sMessage));
+				DocumentBuilderFactory dbFactory = Utils.createDocumentBuilderFactory(_systemLogger);
+				dbFactory.setNamespaceAware(true);
+				dbFactory.setIgnoringComments(true);
+
+				DocumentBuilder builder = dbFactory.newDocumentBuilder();
+				StringReader stringReader = new StringReader(sMessage);
+				InputSource inputSource = new InputSource(stringReader);
+				Document doc = builder.parse(inputSource);
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "parsed");
 				// Get root XML tag
-				Document doc = (Document) parser.getDocument();
+				// RH, 20210930, en
+				
 				Element elem = doc.getDocumentElement();
 				return elem;
 			}
@@ -1459,7 +1495,16 @@ public abstract class ProtoRequestHandler extends AbstractRequestHandler
 				sbBuffer.append(Errors.ERROR_ASELECT_IO);
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, sbBuffer.toString(), eIO);
 				throw new ASelectCommunicationException(Errors.ERROR_ASELECT_IO, eIO);
+				// RH, 20210930, sn
+			} catch (ParserConfigurationException e) {
+				StringBuffer sbBuffer = new StringBuffer("ParserConfigurationException: ");
+				sbBuffer.append(e.getMessage());
+				sbBuffer.append(" errorcode: ");
+				sbBuffer.append(Errors.ERROR_ASELECT_IO);
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, sbBuffer.toString(), e);
+				throw new ASelectCommunicationException(Errors.ERROR_ASELECT_IO, e);
 			}
+			// RH, 20210930, en
 		}
 		return elBody;
 	}

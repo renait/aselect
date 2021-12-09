@@ -27,8 +27,8 @@ import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
 
-import org.apache.xml.serialize.OutputFormat;
-import org.apache.xml.serialize.XMLSerializer;
+//import org.apache.xml.serialize.OutputFormat;
+//import org.apache.xml.serialize.XMLSerializer;
 import org.aselect.server.request.RequestState;
 import org.aselect.server.request.handler.xsaml20.SoapManager;
 import org.aselect.server.request.handler.xsaml20.Saml20_BaseHandler;
@@ -36,6 +36,7 @@ import org.aselect.server.request.handler.xsaml20.SamlTools;
 import org.aselect.server.request.handler.xsaml20.ServiceProvider;
 import org.aselect.server.tgt.TGTManager;
 import org.aselect.system.error.Errors;
+//import org.aselect.system.exception.ASelectCommunicationException;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.utils.Utils;
 import org.aselect.system.utils.crypto.Auxiliary;
@@ -660,13 +661,19 @@ public class Xsaml20_SessionSync extends Saml20_BaseHandler
 			Document docReceivedSoap = builder.parse(inputSource);
 
 			// print document
+			// RH, 20210930, so
 			// Serialize the document
-			OutputFormat format = new OutputFormat(docReceivedSoap);
-			format.setLineWidth(65);
-			format.setIndenting(true);
-			format.setIndent(2);
-			XMLSerializer serializer = new XMLSerializer(System.out, format);
-			serializer.serialize(docReceivedSoap);
+//			OutputFormat format = new OutputFormat(docReceivedSoap);
+//			format.setLineWidth(65);
+//			format.setIndenting(true);
+//			format.setIndent(2);
+//			XMLSerializer serializer = new XMLSerializer(System.out, format);
+//			serializer.serialize(docReceivedSoap);
+			// RH, 20210930, eo
+			// RH, 20210930, sn
+			String sDoc = XMLHelper.prettyPrintXML(docReceivedSoap);
+			_systemLogger.log(Level.FINEST, MODULE, _sMethod, "docReceivedSoap: " + Auxiliary.obfuscate(sDoc));
+			// RH, 20210930, en
 
 			// Get AuthzDecision obj
 			Node node = docReceivedSoap.getFirstChild();

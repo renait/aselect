@@ -81,13 +81,14 @@ import java.text.DateFormat;
 import java.util.Date;
 import java.util.logging.Level;
 
-import javax.xml.XMLConstants;
+//import javax.xml.XMLConstants;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.TransformerException;
 
-import org.apache.xml.serialize.OutputFormat;
-import org.apache.xml.serialize.XMLSerializer;
+//import org.apache.xml.serialize.OutputFormat;
+//import org.apache.xml.serialize.XMLSerializer;
 import org.aselect.system.configmanager.IConfigHandler;
 import org.aselect.system.db.SQLDatabaseConnector;
 import org.aselect.system.error.Errors;
@@ -95,6 +96,7 @@ import org.aselect.system.exception.ASelectCommunicationException;
 import org.aselect.system.exception.ASelectConfigException;
 import org.aselect.system.exception.ASelectDatabaseException;
 import org.aselect.system.logging.SystemLogger;
+import org.aselect.system.utils.Tools;
 import org.aselect.system.utils.Utils;
 import org.w3c.dom.DOMException;
 import org.w3c.dom.Document;
@@ -1188,23 +1190,37 @@ public class XMLConfigHandler implements IConfigHandler
 		String sMethod = "serializeTo";
 
 		try {
+			// RH, 20210930, so
 			// create output format which uses new lines and tabs
-			OutputFormat oFormat = new OutputFormat(_oDomDocument);
-			oFormat.setIndenting(true);
-			oFormat.setLineWidth(80);
-
-			// Create serializer
-			XMLSerializer oSerializer = new XMLSerializer(osOutput, oFormat);
-			oSerializer.setNamespaces(true);
-
-			// serialize outputmessage to the writer object
-			oSerializer.serialize(_oDomDocument.getDocumentElement());
+//			OutputFormat oFormat = new OutputFormat(_oDomDocument);
+//			oFormat.setIndenting(true);
+//			oFormat.setLineWidth(80);
+//
+//			// Create serializer
+//			XMLSerializer oSerializer = new XMLSerializer(osOutput, oFormat);
+//			oSerializer.setNamespaces(true);
+//
+//			// serialize outputmessage to the writer object
+//			oSerializer.serialize(_oDomDocument.getDocumentElement());
+			// RH, 20210930, eo
+			
+			Tools.document2stream(_oDomDocument, osOutput);	// RH, 20210930, n
+		// RH, 20210930, so
+//		}
+//		catch (IOException eIO) // I/O error while serializing, should not occur
+//		{
+//			_oSystemLogger.log(Level.WARNING, MODULE, sMethod, "Error serializing XML data.", eIO);
+//			throw new ASelectConfigException(Errors.ERROR_ASELECT_IO, eIO);
+		// RH, 20210930, eo
+		// RH, 20210930, sn
+		} catch (TransformerException e) {
+			StringBuffer sbBuffer = new StringBuffer("DOM object could not be transformed: ");
+			sbBuffer.append(e.getMessage());
+			sbBuffer.append(", cause: ").append(Errors.ERROR_ASELECT_IO);
+			_oSystemLogger.log(Level.WARNING, MODULE, sMethod, sbBuffer.toString(), e);
+			throw new ASelectConfigException(Errors.ERROR_ASELECT_IO);
 		}
-		catch (IOException eIO) // I/O error while serializing, should not occur
-		{
-			_oSystemLogger.log(Level.WARNING, MODULE, sMethod, "Error serializing XML data.", eIO);
-			throw new ASelectConfigException(Errors.ERROR_ASELECT_IO, eIO);
-		}
+		// RH, 20210930, en
 	}
 
 	/**

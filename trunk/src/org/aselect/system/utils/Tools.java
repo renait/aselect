@@ -20,6 +20,7 @@ import java.io.ByteArrayOutputStream;
 import java.io.DataInputStream;
 import java.io.IOException;
 import java.io.InputStream;
+import java.io.OutputStream;
 import java.io.UnsupportedEncodingException;
 import java.net.InetAddress;
 import java.net.URLDecoder;
@@ -33,6 +34,13 @@ import java.util.TimeZone;
 import java.util.TreeSet;
 import java.util.logging.Level;
 
+import javax.xml.transform.OutputKeys;
+import javax.xml.transform.Transformer;
+import javax.xml.transform.TransformerException;
+import javax.xml.transform.TransformerFactory;
+import javax.xml.transform.dom.DOMSource;
+import javax.xml.transform.stream.StreamResult;
+
 import org.aselect.system.communication.client.IClientCommunicator;
 import org.aselect.system.communication.client.raw.RawCommunicator;
 import org.aselect.system.communication.client.soap11.SOAP11Communicator;
@@ -41,7 +49,12 @@ import org.aselect.system.configmanager.ConfigManager;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectException;
 import org.aselect.system.logging.SystemLogger;
-import org.w3c.dom.*;
+import org.w3c.dom.Attr;
+import org.w3c.dom.Document;
+import org.w3c.dom.Element;
+import org.w3c.dom.NamedNodeMap;
+import org.w3c.dom.Node;
+import org.w3c.dom.NodeList;
 
 //
 public class Tools
@@ -790,4 +803,16 @@ public class Tools
 		}
 		return s;
 	}
+	
+	   public static OutputStream document2stream(Document document, OutputStream os) throws TransformerException {
+	            // write the XML document OutputStream
+	            TransformerFactory fact = TransformerFactory.newInstance();
+	            Transformer transformer = fact.newTransformer();
+	            transformer.setOutputProperty(OutputKeys.INDENT, "yes");
+
+	            DOMSource source = new DOMSource(document);
+	            StreamResult result = new StreamResult(os);
+	            transformer.transform(source, result);
+	            return os;
+	    }
 }

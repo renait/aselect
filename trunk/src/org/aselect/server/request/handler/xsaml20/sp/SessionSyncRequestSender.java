@@ -12,7 +12,7 @@
 package org.aselect.server.request.handler.xsaml20.sp;
 
 import java.io.StringReader;
-import java.security.PrivateKey;
+//import java.security.PrivateKey;
 import java.security.PublicKey;
 import java.util.Date;
 import java.util.HashMap;
@@ -22,8 +22,8 @@ import java.util.logging.Level;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 
-import org.apache.xml.serialize.OutputFormat;
-import org.apache.xml.serialize.XMLSerializer;
+//import org.apache.xml.serialize.OutputFormat;
+//import org.apache.xml.serialize.XMLSerializer;
 import org.aselect.server.config.ASelectConfigManager;
 import org.aselect.server.log.ASelectSystemLogger;
 import org.aselect.server.request.handler.xsaml20.PartnerData;
@@ -778,13 +778,20 @@ public class SessionSyncRequestSender
 			Document docReceivedSoap = builder.parse(inputSource);
 
 			// print document
-			// Serialize the document
-			OutputFormat format = new OutputFormat(docReceivedSoap);
-			format.setLineWidth(65);
-			format.setIndenting(true);
-			format.setIndent(2);
-			XMLSerializer serializer = new XMLSerializer(System.out, format);
-			serializer.serialize(docReceivedSoap);
+			// RH, 20210930, so
+//			// Serialize the document
+//			OutputFormat format = new OutputFormat(docReceivedSoap);
+//			format.setLineWidth(65);
+//			format.setIndenting(true);
+//			format.setIndent(2);
+//			XMLSerializer serializer = new XMLSerializer(System.out, format);
+//			serializer.serialize(docReceivedSoap);
+			// RH, 20210930, eo
+
+			// RH, 20210930, sn
+			String sDoc = XMLHelper.prettyPrintXML(docReceivedSoap);
+			_oSystemLogger.log(Level.FINEST, MODULE, _sMethod, "docReceivedSoap: " + Auxiliary.obfuscate(sDoc));
+			// RH, 20210930, en
 
 			// Get AuthzDecision obj
 
