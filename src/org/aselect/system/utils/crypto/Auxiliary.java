@@ -628,23 +628,24 @@ public  final class Auxiliary
 	}
 	
 	// Experimental
-	public static PublicKey parsePubKey(byte[] pubKeyBytes) throws  IOException{
+//	public static PublicKey parsePubKey(byte[] pubKeyBytes) throws  IOException{
+	public static PublicKey parsePubKey(byte[] pubKeyBytes) throws NoSuchAlgorithmException, InvalidKeySpecException {
 		
 		X509EncodedKeySpec mySidePubKeySpec = new X509EncodedKeySpec(pubKeyBytes);
 		 KeyFactory keyFactory = null;
 		 PublicKey mySidePubKey = null;
-		try {
+//		try {
 			keyFactory = KeyFactory.getInstance("RSA");
 			mySidePubKey = keyFactory.generatePublic(mySidePubKeySpec);
-		}
-		catch (NoSuchAlgorithmException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
-		catch (InvalidKeySpecException e) {
-			// TODO Auto-generated catch block
-			e.printStackTrace();
-		}
+//		}
+//		catch (NoSuchAlgorithmException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
+//		catch (InvalidKeySpecException e) {
+//			// TODO Auto-generated catch block
+//			e.printStackTrace();
+//		}
 		
 		return mySidePubKey;
 	}
