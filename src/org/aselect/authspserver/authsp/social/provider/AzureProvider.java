@@ -201,8 +201,12 @@ AuthProvider, Serializable {
 		String uid_claim = (config.getCustomProperties().get("uid_claim") != null) ? config.getCustomProperties().get("uid_claim") : "emails";
 		
 		LOG.debug("getProfile using uid_claim : " + uid_claim);
-		
-		p.setEmail(grant.getAttribute(uid_claim).toString());
+
+		if (grant.getAttribute(uid_claim) != null) {
+			p.setEmail(grant.getAttribute(uid_claim).toString());
+		} else {
+			LOG.debug("Claim is null, not settting claim");
+		}
 		
 		p.setProviderId(grant.getProviderId());
 		userProfile = p;
