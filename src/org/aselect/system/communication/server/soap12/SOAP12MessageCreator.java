@@ -59,19 +59,22 @@ import java.util.logging.Level;
 import javax.xml.parsers.DocumentBuilder;
 import javax.xml.parsers.DocumentBuilderFactory;
 import javax.xml.parsers.ParserConfigurationException;
+import javax.xml.transform.TransformerException;
 
-import org.apache.xerces.dom.DocumentImpl;
-import org.apache.xml.serialize.LineSeparator;
-import org.apache.xml.serialize.OutputFormat;
-import org.apache.xml.serialize.XMLSerializer;
+//import org.apache.xerces.dom.DocumentImpl;
+//import org.apache.xml.serialize.LineSeparator;
+//import org.apache.xml.serialize.OutputFormat;
+//import org.apache.xml.serialize.XMLSerializer;
 import org.aselect.system.communication.server.IMessageCreatorInterface;
 import org.aselect.system.communication.server.IProtocolRequest;
 import org.aselect.system.communication.server.IProtocolResponse;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectCommunicationException;
 import org.aselect.system.logging.SystemLogger;
+import org.aselect.system.utils.Tools;
 import org.aselect.system.utils.Utils;
 import org.aselect.system.utils.crypto.Auxiliary;
+//import org.opensaml.xml.util.XMLHelper;
 import org.w3c.dom.Document;
 import org.w3c.dom.Element;
 import org.w3c.dom.Node;
@@ -525,25 +528,29 @@ public class SOAP12MessageCreator implements IMessageCreatorInterface
 	public boolean soapSend()
 	throws ASelectCommunicationException
 	{
-		String sMethod = "send";
+//		String sMethod = "send";
+		String sMethod = "soapSend";
 		if (_oOutputMessage == null) {
 			_systemLogger.log(Level.WARNING, MODULE, sMethod,
 					"Message is already sent, there is no output message, cause: " + Errors.ERROR_ASELECT_USE_ERROR);
 			throw new ASelectCommunicationException(Errors.ERROR_ASELECT_USE_ERROR);
 		}
 		try {
-			// create output format which uses new lines and tabs
-			OutputFormat oFormat = new OutputFormat(_oOutputMessage);
-			oFormat.setLineSeparator(LineSeparator.Web);
-			oFormat.setIndenting(true);
-			oFormat.setLineWidth(80);
-			// Create serializer
-			_systemLogger.log(Level.FINEST, MODULE, sMethod, "getOutPutStream");
-			XMLSerializer oSerializer = new XMLSerializer(_oResponse.getOutputStream(), oFormat);
-			oSerializer.setNamespaces(true);
-			// serialize outputmessage to outputstream
-			oSerializer.serialize(_oOutputMessage.getDocumentElement());
-
+			// RH, 20210930, so
+//			// create output format which uses new lines and tabs
+//			OutputFormat oFormat = new OutputFormat(_oOutputMessage);
+//			oFormat.setLineSeparator(LineSeparator.Web);
+//			oFormat.setIndenting(true);
+//			oFormat.setLineWidth(80);
+//			// Create serializer
+//			_systemLogger.log(Level.FINEST, MODULE, sMethod, "getOutPutStream");
+//			XMLSerializer oSerializer = new XMLSerializer(_oResponse.getOutputStream(), oFormat);
+//			oSerializer.setNamespaces(true);
+//			// serialize outputmessage to outputstream
+//			oSerializer.serialize(_oOutputMessage.getDocumentElement());
+			// RH, 20210930, eo
+			
+			Tools.document2stream(_oOutputMessage,_oResponse.getOutputStream());	// RH, 20210930, n
 			_oOutputMessage = null;
 			_elOutputBody = null;
 			_elOutputRPCBody = null;
@@ -556,7 +563,15 @@ public class SOAP12MessageCreator implements IMessageCreatorInterface
 			sbBuffer.append(", cause: ").append(Errors.ERROR_ASELECT_IO);
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, sbBuffer.toString(), eIO);
 			throw new ASelectCommunicationException(Errors.ERROR_ASELECT_IO);
+		// RH, 20210930, sn
+		} catch (TransformerException e) {
+			StringBuffer sbBuffer = new StringBuffer("DOM object could not be transformed: ");
+			sbBuffer.append(e.getMessage());
+			sbBuffer.append(", cause: ").append(Errors.ERROR_ASELECT_IO);
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, sbBuffer.toString(), e);
+			throw new ASelectCommunicationException(Errors.ERROR_ASELECT_IO);
 		}
+		// RH, 20210930, en
 	}
 
 	/**
@@ -696,11 +711,23 @@ public class SOAP12MessageCreator implements IMessageCreatorInterface
 	 */
 	private void createOutputMessage()
 	{
+		String sMethod = "createOutputMessage";	// RH, 20210930, n
+
 		// set Content type of response
 		_oResponse.setProperty("Content-Type", SOAPConstants.CONTENT_TYPE);
 		// Create IOutputMessage
-		_oOutputMessage = new DocumentImpl();
+//		_oOutputMessage = new DocumentImpl();	// RH, 20210930, o
 
+		// RH, 20210930, sn
+		DocumentBuilderFactory factory =
+		        DocumentBuilderFactory.newInstance();
+		
+		DocumentBuilder builder;
+		try {
+			builder = factory.newDocumentBuilder();
+			_oOutputMessage = builder.newDocument();
+		// RH, 20210930, en
+		
 		// create envelope
 		Element elEnvelope = _oOutputMessage.createElementNS(SOAPConstants.URI_SOAP12_ENV,
 				SOAPConstants.NS_PREFIX_SOAP_ENV + ":" + SOAPConstants.ELEM_ENVELOPE);
@@ -722,6 +749,11 @@ public class SOAP12MessageCreator implements IMessageCreatorInterface
 				+ ":" + SOAPConstants.ELEM_BODY);
 		// add body
 		elEnvelope.appendChild(_elOutputBody);
+		// RH, 20210930, sn
+		} catch (ParserConfigurationException e) {
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not create documentbuilder, this should not happen", e);
+		}
+		// RH, 20210930, en
 	}
 
 	/**
@@ -906,11 +938,23 @@ public class SOAP12MessageCreator implements IMessageCreatorInterface
 	 */
 	private void createSOAP11UpdateFault(String sFaultString, String sReasonString)
 	{
+		String sMethod = "createSOAP11UpdateFault";	// RH, 20210930, n
+
 		// set SOAP 1.1 content type.
 		_oResponse.setProperty("Content-Type", "" + SOAPConstants.CONTENT_TYPE_11);
 
 		// Create IOutputMessage
-		_oOutputMessage = new DocumentImpl();
+//		_oOutputMessage = new DocumentImpl();	// RH, 20210930, o
+
+		// RH, 20210930, sn
+		DocumentBuilderFactory factory =
+		        DocumentBuilderFactory.newInstance();
+		
+		DocumentBuilder builder;
+		try {
+			builder = factory.newDocumentBuilder();
+			_oOutputMessage = builder.newDocument();
+		// RH, 20210930, en
 
 		// create envelope
 		Element elEnvelope = _oOutputMessage.createElementNS(SOAPConstants.URI_SOAP11_ENV,
@@ -965,6 +1009,12 @@ public class SOAP12MessageCreator implements IMessageCreatorInterface
 
 		// add FaultString
 		elFault.appendChild(elFaultStringElement);
+		// RH, 20210930, sn
+		} catch (ParserConfigurationException e) {
+			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Could not create documentbuilder, this should not happen", e);
+		}
+		// RH, 20210930, en
+
 	}
 
 	/**
