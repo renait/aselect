@@ -1596,7 +1596,7 @@ public class Utils
 		DocumentBuilderFactory dbFactory = DocumentBuilderFactory.newInstance();
 		dbFactory.setNamespaceAware(true);
 		dbFactory.setExpandEntityReferences(false);
-		// dbFactory.setIgnoringComments(true);
+		dbFactory.setIgnoringComments(true);	// RH, 20210930, n
 		// RH, 20210318, sn
 //		dbFactory.setXIncludeAware(false);	// defaults to false
 		// RH, 20210318, en
