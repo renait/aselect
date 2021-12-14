@@ -183,6 +183,14 @@ public class AttributeGatherer
 	 */
 	private HashMap<String, HashMap<String, Pattern>> _htManAttributes;
 
+	// RH, 20211108, sn
+	/**
+	 * Contains the set of errorcodes to be returned on specific mandatory attribute failure
+	 */
+	private HashMap<String, HashMap<String, String>> _htManAttributesErrorCodes;
+	// RH, 20211108, en
+
+	
 	/**
 	 * Contains the set of release policies that merges attributes if they already exist
 	 */
@@ -355,6 +363,7 @@ public class AttributeGatherer
 				_htReleasePolicies = new HashMap();
 
 				_htManAttributes = new HashMap();
+				_htManAttributesErrorCodes = new HashMap();	// RH, 20211108, n
 				_htSkippPolicies = new HashMap();
 
 				_vReleasePolicies = new Vector();
@@ -395,9 +404,19 @@ public class AttributeGatherer
 					try {
 						Object oManAttribute = _configManager.getSection(oReleasePolicyConfig, sConfigItem = "mandatory_attribute");
 						HashMap<String, Pattern> htManAttributes = new HashMap<String, Pattern>();
+						HashMap<String, String> htManAttributesErrorsCodes = new HashMap<String, String>();	// RH, 20211108, n
 						while (oManAttribute != null) {
 							String sAttribute = _configManager.getParam(oManAttribute, sConfigItem = "id");
 							String sRegex = _configManager.getParam(oManAttribute, sConfigItem = "regex");
+							// RH, 20211108, sn
+							String sErrorCode =  null;
+							try {
+								sErrorCode = _configManager.getParam(oManAttribute, sConfigItem = "errorcode");
+								htManAttributesErrorsCodes.put(sAttribute, sErrorCode);
+							} catch (ASelectConfigException e) {
+								_systemLogger.log(Level.FINER, _MODULE, sMethod, "No specific 'errorcode' found for attribute: " + sAttribute);
+							}
+							// RH, 20211108, en
 
 							try {
 								Pattern pattern = Pattern.compile(sRegex);
@@ -415,6 +434,7 @@ public class AttributeGatherer
 							}
 						}
 						_htManAttributes.put(sID, htManAttributes);
+						_htManAttributesErrorCodes.put(sID, htManAttributesErrorsCodes);	// RH, 20211108, n
 					} catch (ASelectConfigException ece) {
 						_systemLogger.log(Level.FINER, _MODULE, sMethod, "No section mandatory_attribute found in: " + sID);
 					}
@@ -697,7 +717,7 @@ public class AttributeGatherer
 					HashMap htAttrsFromAR = null;
 					try {
 						// 20120627, Bauke: added attributes gathered so far, allows us to use a gathered attribute later on
-						htAttrsFromAR = attributeRequestor.getAttributes(htTGTContext, vAttributes, htAttributes);
+						htAttrsFromAR = attributeRequestor.getAttributes(htTGTContext, vAttributes, htAttributes);						
 					}
 					catch (ASelectAttributesException eA) {
 						StringBuffer sb = new StringBuffer("Could not gather attributes for user \"").append(Auxiliary.obfuscate(sUid)).append("\"");
@@ -844,9 +864,17 @@ public class AttributeGatherer
 				if ( htAttributes.get(key) != null && manAttrributes.get(key).matcher((String)htAttributes.get(key)).matches() ) {
 					_systemLogger.log(Level.INFO, _MODULE, sMethod, "Gatherer matches mandatory parameter: " + key);
 				} else {
+					// RH, 20211108, en
+					if (_htManAttributesErrorCodes.get(sReleasePolicy).get(key) != null) {
+						_systemLogger.log(Level.WARNING, _MODULE, sMethod, _htManAttributesErrorCodes.get(sReleasePolicy).get(key) + ": Gatherer failed to match required parameter: " + key);
+						htTGTContext.put("result_code", _htManAttributesErrorCodes.get(sReleasePolicy).get(key));
+						throw new ASelectException(_htManAttributesErrorCodes.get(sReleasePolicy).get(key));						
+					}else {	// Like we used to
+						// RH, 20211108, en
 					_systemLogger.log(Level.WARNING, _MODULE, sMethod, Errors.ERROR_ASELECT_GATHERER_PARAMETER + ": Gatherer failed to match required parameter: " + key);
 					htTGTContext.put("result_code", Errors.ERROR_ASELECT_GATHERER_PARAMETER);
 					throw new ASelectException(Errors.ERROR_ASELECT_GATHERER_PARAMETER);
+					}// RH, 20211108, n
 				}
 			}
 		} else {
