@@ -156,6 +156,7 @@ public class OPEndpointHandler extends org.aselect.server.request.handler.oauth2
 				
 				if (createOK) {
 					String extractedrefresh_credentials = CryptoEngine.getHandle().encryptTGT(baRandomBytes);
+					tokenMachine.setKid(generateKeyID());	// RH, 20211014, n
 			 		String refresh_token = tokenMachine.createRefreshToken(extractedrefresh_credentials, tgt, ASelectConfigManager.getHandle().getDefaultPrivateKey());
 					tokenMachine.setParameter("refresh_token", refresh_token);
 				} else {

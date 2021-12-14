@@ -24,7 +24,9 @@ import java.net.URLEncoder;
 import java.security.MessageDigest;
 import java.security.NoSuchAlgorithmException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Set;
 import java.util.StringTokenizer;
 import java.util.Vector;
@@ -89,6 +91,8 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 	private HashMap<String, String> _client_ids = null;
 	
 	private String oauthEndpointUrl =  null;
+	private String allowedResponseTypes = null; // BW, 20211125, n
+	private List<String> allowed_repons_type = null; // BW, 20211206, n
 
 	private String defaultUID = null;
 	private boolean verifyRedirectURI = true;
@@ -137,6 +141,23 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 				_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config item 'oauthendpointurl' found", e);
 				throw new ASelectException(Errors.ERROR_ASELECT_INIT_ERROR, e);
 			}
+			
+			// BW, 20211125, sn
+			try {
+				allowedResponseTypes = _configManager.getParam(oConfig, "allowed_response_types");
+			}
+			catch (ASelectConfigException e) {
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "No config item 'allowed_response_types' found");
+			} 
+  			
+			if(allowedResponseTypes == null || allowedResponseTypes.isEmpty()) {  // default to code and id_token
+				_systemLogger.log(Level.FINEST, MODULE, sMethod, "No or empty allowed response type configured, default to code & id_token");
+				allowed_repons_type.add("code");
+				allowed_repons_type.add("id_token");
+			} else {
+				allowed_repons_type = Arrays.asList(allowedResponseTypes.toLowerCase().trim().split(" "));
+			} 
+			// BW, 2021206, en
 
 			// RH, 20180828, sn
 			HashMap<String, String> _htClientIds = new HashMap<String, String>(); // contains level -> urn
@@ -555,6 +576,8 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 							    			tokenMachine.setParameter("client_id", saved_client_id);
 								   			tokenMachine.setParameter("appidacr", appidacr);
 	
+								   			tokenMachine.setKid(generateKeyID());	// RH, 20211014, n
+								   			
 								    		access_token = tokenMachine.createAccessToken(new_extractedAselect_credentials, hmExtractedAttributes, ASelectConfigManager.getHandle().getDefaultPrivateKey());
 							    		}
 										catch (UnsupportedEncodingException e) {
@@ -576,6 +599,7 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 											String saved_nonce = (String)previous_token.get("oauthsessionnonce");
 	
 											try {
+												tokenMachine.setKid(generateKeyID());	// RH, 20211014, n
 												String id_token = tokenMachine.createIDToken(hmExtractedAttributes, (String)(hmExtractedAttributes.get("uid")), getIssuer(), 
 																							saved_client_id, saved_nonce, appidacr, ASelectConfigManager.getHandle().getDefaultPrivateKey(), 
 														null );	// no code for refresh_token
@@ -791,6 +815,8 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 								    			tokenMachine.setParameter("client_id", client_id);
 									   			tokenMachine.setParameter("appidacr", appidacr);
 		
+									   			tokenMachine.setKid(generateKeyID());	// RH, 20211014, n
+									   			
 									    		access_token = tokenMachine.createAccessToken(new_extractedAselect_credentials, hmExtractedAttributes, ASelectConfigManager.getHandle().getDefaultPrivateKey());
 								    		}
 											catch (UnsupportedEncodingException e) {
@@ -810,6 +836,8 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 
 											if (scope != null && scope.contains("openid")) {
 												try {
+													tokenMachine.setKid(generateKeyID());	// RH, 20211014, n
+													
 													String id_token = tokenMachine.createIDToken(hmExtractedAttributes, (String)(hmExtractedAttributes.get("uid")), getIssuer(), 
 																								client_id, nonce, appidacr, ASelectConfigManager.getHandle().getDefaultPrivateKey(), 
 															null );	// no code for refresh_token
@@ -954,7 +982,8 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 	    		String ridResponse = "";
 	    		// First get request parameters
 	    		String response_type = servletRequest.getParameter("response_type");
-	       		String scopesRequested =  servletRequest.getParameter("scope");
+	       			    		   		
+	    		String scopesRequested =  servletRequest.getParameter("scope");
     	   		// deserialize scope to Set
 	       		Set<String> scopes	 =  deserializeScopes(scopesRequested);
 	       		
@@ -1022,19 +1051,30 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 						throw new ASelectCommunicationException(Errors.ERROR_ASELECT_IO);
 					}
     			}
-				// RH, 20191206, sn
-				
-	    		if ( response_type != null ) {
-	           		// Allow response_type 'id_token' and/or 'code'
-	           		// We do not support response_type 'token'
-	    			StringTokenizer tkn = new StringTokenizer(response_type);	// allow various sepraraors, not only space
+    			
+				// RH, 20191206, sn  // BW, 20211128, sn	 			  			
+    			if (response_type == null || response_type.isEmpty()) { // default to code 
+    				_systemLogger.log(Level.FINER, MODULE, sMethod, "No or empty response type received, default to code");
+					resp_types.add("code"); // default because of Facebook but rfc says REQUIRED
+    			} else  {
+	           		StringTokenizer tkn = new StringTokenizer(response_type);	// allow various separators, not only space
 	    			while (tkn.hasMoreTokens()) {
 	    				resp_types.add(tkn.nextToken());
 	    			}
-	    			if ( !(resp_types.contains("code") || resp_types.contains("id_token")) ) {
-						_systemLogger.log(Level.WARNING, MODULE, sMethod, "Missing valid response_type, allowed are code and/or id_token but received response_type: " + response_type);
-						String error_redirect = null;
-						try {
+	    			
+	    			if (!(resp_types.contains("code") || resp_types.contains("id_token")) || !compareAllowedResponseTypes(resp_types, allowed_repons_type)) {
+						
+	    				if(!(resp_types.contains("code") || resp_types.contains("id_token"))) {
+	    					_systemLogger.log(Level.WARNING, MODULE, sMethod, "Missing valid response_type, allowed are code and/or id_token but received response_type: " + response_type);
+	    				}
+	    				
+	    				if(!compareAllowedResponseTypes(resp_types, allowed_repons_type)){
+		    				_systemLogger.log(Level.WARNING, MODULE, sMethod, allowedResponseTypesMessage(resp_types, allowed_repons_type) + " - Allowed response types: code and/or id_token ");
+	    				}
+	    										
+	    				String error_redirect = null;
+						
+	    				try {
 				        	String error = "unsupported_response_type";
 							error_redirect = redirectURI.toString() + (redirectURI.toString().contains("?") ? "&" : "?") + "error=" + error 
 //									+ ( ( state != null ) ? ("&state=" + state) : "");
@@ -1046,11 +1086,8 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 							throw new ASelectCommunicationException(Errors.ERROR_ASELECT_IO);
 						}
 	    			}
-	    		} else {
-					_systemLogger.log(Level.FINER, MODULE, sMethod, "No or empty response type received, default to code");
-	    			resp_types.add("code"); 	// default because of Facebook but rfc says REQUIRED
-	    		}
-					
+	    		}  
+	   					
 				if ( (validateClientID && !client_id_valid(client_id)) || (validateRedirectURI && !is_redirect_uri_valid(redirectURI, validURIs)) ) {	// we do not verify redirect_uri yet, but we should
 					// 3.1.2.4.  Invalid Endpoint and 4.1.2.1.  Error Response
 					// MUST NOT automatically redirect
@@ -1349,6 +1386,8 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 		    			tokenMachine.setParameter("client_id", saved_client_id);
 		    			tokenMachine.setParameter("appidacr", appidacr);
 
+		    			tokenMachine.setKid(generateKeyID());	// RH, 20211014, n
+		    			
 			    		access_token = tokenMachine.createAccessToken(extractedAselect_credentials, hmExtractedAttributes, ASelectConfigManager.getHandle().getDefaultPrivateKey());
 					}
 					catch (UnsupportedEncodingException e) {
@@ -1405,6 +1444,7 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 						//	generate the id_token using extractedAttributes
 						try {
 //							id_token = createIDToken(hmExtractedAttributes, (String)(hmExtractedAttributes.get("uid")), _sMyServerID, saved_client_id, saved_nonce, appidacr );	// RH, 20181114, o
+							tokenMachine.setKid(generateKeyID());	// RH, 20211014, n
 							id_token = tokenMachine.createIDToken(hmExtractedAttributes, (String)(hmExtractedAttributes.get("uid")), getIssuer(), 
 																		saved_client_id, saved_nonce, appidacr, ASelectConfigManager.getHandle().getDefaultPrivateKey(), 
 //									saved_resp_types.contains("id_token") ? generated_authorization_code : null );	// RH, 20181114, n	// RH, 20181129, o
@@ -1710,6 +1750,7 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 				
 				if (createOK) {
 					String extractedrefresh_credentials = CryptoEngine.getHandle().encryptTGT(baRandomBytes);
+					tokenMachine.setKid(generateKeyID());	// RH, 20211014, n
 			 		String refresh_token = tokenMachine.createRefreshToken(extractedrefresh_credentials, tgt, ASelectConfigManager.getHandle().getDefaultPrivateKey());	// still to generate refresh token
 					//	return_parameters.put("refresh_token", refresh_token);
 					tokenMachine.setParameter("refresh_token", refresh_token);
@@ -2180,5 +2221,29 @@ public class OPEndpointHandler extends OPBaseHandler	// RH, 20200210, n
 		return;
 	}
 	// RH, 20190905, en
-
+	
+	// BW, 20211117, sn
+	private static boolean compareAllowedResponseTypes(List<String> response_type, List<String> allowed_reponse_type) {
+		for (String str : response_type) {
+			if (!allowed_reponse_type.contains(str)) {
+				return false;
+			}
+		}
+		return true;
+	}	
+	
+	private String allowedResponseTypesMessage(List<String> response_type, List<String> allowed_reponse_type) {
+		StringBuilder message = new StringBuilder();
+		for (String str : response_type) {
+			if (!allowed_reponse_type.contains(str)) {
+				message.append(str + " ");
+			}
+		}
+		if (message.length() != 0) {
+			message.insert(0, "Response type(s) not allowed: ");
+			return message.toString();
+		} else {
+			return "Response type(s) allowed";
+		}	
+	} // BW, 20211128, en
 }

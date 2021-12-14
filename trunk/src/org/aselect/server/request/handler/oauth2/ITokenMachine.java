@@ -20,6 +20,9 @@ public interface ITokenMachine {
 	public Object getParameter (String key);
 	public void setStatus (int status);
 	public int getStatus ();
+	public String getKid();
+	public void setKid(String kid);
+
 	
 	public String toJSONString();
 }

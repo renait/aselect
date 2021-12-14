@@ -74,6 +74,7 @@ public class OPBaseHandler extends ProtoRequestHandler
 	protected Pattern scopePattern = Pattern.compile("[\\x21\\x23-\\x5B\\x5D-\\x7E]+");
 	protected final static String[] HANDLERDEFAULTSCOPES = {"openid", "offline_access"};   
 	protected Set<String> handlerDefaultScopes =  new HashSet<String>();
+	protected boolean suppressKeyID = false;			// RH, 20211014, n
 
 
 	/* @param oServletConfig
@@ -131,6 +132,18 @@ public class OPBaseHandler extends ProtoRequestHandler
 					issuer = getMyServerID();
 				}
 			}
+			
+			// RH, 20211014, sn
+			try {
+				String sSuppressKeyID = _configManager.getParam(oConfig, "suppresskeyid");
+				suppressKeyID = Boolean.parseBoolean(sSuppressKeyID);
+			}
+			catch (ASelectConfigException e) {
+				suppressKeyID = false;
+				_systemLogger.log(Level.WARNING, MODULE, sMethod, "No config item 'suppresskeyid' found, using default: " + suppressKeyID);
+			}
+			// RH, 20211014, en
+
 			
 			handlerDefaultScopes.addAll(Arrays.asList(HANDLERDEFAULTSCOPES));
 		}
@@ -206,6 +219,20 @@ public class OPBaseHandler extends ProtoRequestHandler
 	}
 
 	/**
+	 * @return the suppressKeyID
+	 */
+	public boolean isSuppressKeyID() {
+		return suppressKeyID;
+	}
+
+	/**
+	 * @param suppressKeyID the suppressKeyID to set
+	 */
+	public void setSuppressKeyID(boolean suppressKeyID) {
+		this.suppressKeyID = suppressKeyID;
+	}
+
+	/**
 	 * 
 	 * Splits scopes in Set and validates scope-tokens
 	 * @param scopeRequested
@@ -230,6 +257,21 @@ public class OPBaseHandler extends ProtoRequestHandler
 		return scopes;
 	}
 
+	// RH, 20211014, sn
+	protected String generateKeyID() {
+		String sMethod = "generateKeyID";
+		String keyID = null;
+		
+		if (!isSuppressKeyID()) {
+			// For now we use the most simple version
+			keyID = _configManager.getDefaultCertId();
+			_systemLogger.log(Level.FINEST, MODULE, sMethod,
+					"Returning KeyID:" + keyID);
+		}
+		return keyID;
+	}
+	// RH, 20211014, en
+	
 	protected String serializeScopes(Set<String> scopes) {
 		String sScopes = null;
 		if (scopes != null) {
@@ -296,6 +338,7 @@ public class OPBaseHandler extends ProtoRequestHandler
 		}
 		return purifiedScopes;
 	}
+
 
 
 }

@@ -31,7 +31,7 @@ public class TokenMachine implements ITokenMachine {
 	
 	HashMap<String, Object> return_parameters = null;
 	int return_status = 400; // default
-
+	String kid = null;
 
 	public TokenMachine() {
 		return_parameters = new HashMap<String, Object>();
@@ -52,6 +52,21 @@ public class TokenMachine implements ITokenMachine {
 	public int getStatus () {
 		return return_status;
 	}
+	
+	/**
+	 * @return the kid
+	 */
+	public String getKid() {
+		return kid;
+	}
+
+	/**
+	 * @param kid the kid to set
+	 */
+	public void setKid(String kid) {
+		this.kid = kid;
+	}
+
 	
 	public String toJSONString() {
 		return ((JSONObject) JSONSerializer.toJSON( return_parameters )).toString(0); 
@@ -163,8 +178,14 @@ public class TokenMachine implements ITokenMachine {
 	    // Sign using the private key
 	//        jws.setKey(ASelectConfigManager.getHandle().getDefaultPrivateKey());	// RH, 20181114, o
 	    jws.setKey(pk);	// RH, 20181114, n
-	
+	    // RH, 20211014, sn
+	    if (getKid() != null) {
+		    jws.setKeyIdHeaderValue(getKid());
+	    }
+	    // RH, 20211014, sn
+
 	    return jws.getCompactSerialization();
 	}
+
 
 }
