@@ -63,7 +63,12 @@ public class TokenMachine extends org.aselect.server.request.handler.oauth2.Toke
 	    jws.setAlgorithmHeaderValue(AlgorithmIdentifiers.RSA_USING_SHA256);
 	    // Sign using the private key
 	    jws.setKey(pk);
-	
+	    // RH, 20211014, sn
+	    if (getKid() != null) {
+		    jws.setKeyIdHeaderValue(getKid());
+	    }
+	    // RH, 20211014, sn
+
 	    return jws.getCompactSerialization();
 	}
 
@@ -111,6 +116,11 @@ public class TokenMachine extends org.aselect.server.request.handler.oauth2.Toke
 	    jws.setAlgorithmHeaderValue(AlgorithmIdentifiers.RSA_USING_SHA256);
 	    // Sign using the private key
 	    jws.setKey(pk);
+	    // RH, 20211014, sn
+	    if (getKid() != null) {
+		    jws.setKeyIdHeaderValue(getKid());
+	    }
+	    // RH, 20211014, sn
 
 	    return jws.getCompactSerialization();
 	}
@@ -186,6 +196,11 @@ public class TokenMachine extends org.aselect.server.request.handler.oauth2.Toke
 	    // Sign using the private key
 	//    jws.setKey(ASelectConfigManager.getHandle().getDefaultPrivateKey());	// RH, 20181114, o
 	    jws.setKey(pk);	// RH, 20181114, n
+	    // RH, 20211014, sn
+	    if (getKid() != null) {
+		    jws.setKeyIdHeaderValue(getKid());
+	    }
+	    // RH, 20211014, sn
 	
 	    return jws.getCompactSerialization();
 	}

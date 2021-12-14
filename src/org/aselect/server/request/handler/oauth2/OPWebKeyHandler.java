@@ -128,8 +128,12 @@ public class OPWebKeyHandler extends OPBaseHandler
 			keyJwk = PublicJsonWebKey.Factory.newPublicJwk(pub_key);
 			keyJwk.setUse("sig");
 //			keyJwk.setKeyId(keyJwk.calculateBase64urlEncodedThumbprint(pub_key.getAlgorithm()));	// not working because of "RSA", must be RSA-256
-			keyJwk.setKeyId(keyJwk.calculateBase64urlEncodedThumbprint(org.jose4j.lang.HashUtil.SHA_256));
-			keyJwk.setKeyId(_configManager.getDefaultCertId());
+			// We should only set this once, we choose the CertId for now (sha-1 thumbprint)
+//			keyJwk.setKeyId(keyJwk.calculateBase64urlEncodedThumbprint(org.jose4j.lang.HashUtil.SHA_256));
+//			keyJwk.setKeyId(_configManager.getDefaultCertId());	// RH, 20211014, o
+			String generatedKey = generateKeyID();	// RH, 20211014, n
+			keyJwk.setKeyId( generatedKey != null ? generatedKey : "");	// RH, 20211014, n
+			
 		} catch (JoseException e) {
 			_systemLogger.log(Level.WARNING, MODULE, sMethod, "Problem generating webkey from public key: " + e.getMessage());
 			keyJwk = null;
