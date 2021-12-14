@@ -54,11 +54,11 @@ import java.util.logging.Level;
 import org.apache.commons.codec.binary.Base64;
 import org.aselect.server.attributes.requestors.GenericAttributeRequestor;
 import org.aselect.server.config.ASelectConfigManager;
+import org.aselect.server.crypto.CryptoEngine;
 import org.aselect.system.error.Errors;
 import org.aselect.system.exception.ASelectAttributesException;
 import org.aselect.system.exception.ASelectException;
-import org.aselect.system.utils.BASE64Decoder;
-import org.aselect.system.utils.BASE64Encoder;
+import org.aselect.system.utils.BaseMultiEncDec;
 import org.aselect.system.utils.Utils;
 import org.aselect.system.utils.crypto.Auxiliary;
 
@@ -128,7 +128,11 @@ public class OpaqueAttributeRequestor extends GenericAttributeRequestor
 			} else if ("MSIMMUTABLEID".equalsIgnoreCase(_precoding)) {
 				digest_input = Base64.decodeBase64(sUID);	// looks good. supports URL safe base64
 				digest_input = SwapMSImmutable(digest_input);
-			} else { 
+			} else if ("VKBASE85DECODE".equalsIgnoreCase(_precoding)) { // BW, 20210927, n
+				digest_input = BaseMultiEncDec.decodeVeryKreative85(sUID);
+			} else if ("FROMHEX".equalsIgnoreCase(_precoding) || "FROMHEXSTRING".equalsIgnoreCase(_precoding)) {	// RH, 20210906, sn
+				digest_input = Utils.hexStringToByteArray(sUID);
+			} else { 	// RH, 20210906, en
 				digest_input = sUID.getBytes("UTF-8");
 			}
 			
@@ -150,7 +154,13 @@ public class OpaqueAttributeRequestor extends GenericAttributeRequestor
 				digested = new byte[byteLen];
 				SecureRandom.getInstance("SHA1PRNG").nextBytes(digested);
 			// RH, 20190716, en
-			} else {
+			} else if (_algorithm != null && _algorithm.startsWith("ENCRYPT")) {	// RH, 20210906, sn
+				// for future extension we'll use startsWith()
+				CryptoEngine cEngine = CryptoEngine.getHandle();
+				String encrypted = cEngine.encryptTGT(digest_input);
+				// We need a byte[] to continue
+				digested = encrypted.getBytes("UTF-8");
+			} else {	// RH, 20210906, en
 				MessageDigest md = MessageDigest.getInstance(_algorithm);
 				md.update(digest_input);
 				digested = md.digest();
@@ -173,6 +183,8 @@ public class OpaqueAttributeRequestor extends GenericAttributeRequestor
 				} else {
 					sHandle = Base64.encodeBase64String(digested);
 				}
+			} else if ("VKBASE85ENCODE".equalsIgnoreCase(_format)) { // BW, 20210927, n
+				sHandle = BaseMultiEncDec.encodeVeryKreative85(digested);
 			} else if ("PLAIN".equalsIgnoreCase(_format)) {
 				sHandle = new String(digested, "UTF-8");
 			} else {
