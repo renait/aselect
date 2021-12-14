@@ -113,6 +113,12 @@ public class TGTManager extends StorageManager
 	private long _lTGTCounter;
 
 	/**
+	 * Should the tgt number be stored in the tgt session itself
+	 */
+	private boolean _exposeTGT = false;	// RH, 20210902, n
+
+	
+	/**
 	 * Method to return an instance of the <code>TGTManager</code> instead of using the constructor. <br>
 	 * 
 	 * @return always the same <code>TGTManager</code> instance.
@@ -165,6 +171,10 @@ public class TGTManager extends StorageManager
 				throw e;
 			}
 
+			// RH, 20210902, sn
+			String sExposeTGT = oASelectConfigManager.getSimpleParam(oTicketSection, "expose_tgt", false);
+			_exposeTGT = Boolean.parseBoolean(sExposeTGT);
+			// RH, 20210902, en
 			_systemLogger.log(Level.INFO, MODULE, sMethod, "ConfigManager=" + oASelectConfigManager + " id=tgt"+
 					" Section=" + oTicketSection);
 			super.init(oTicketSection, oASelectConfigManager, _systemLogger, ASelectSAMAgent.getHandle());
@@ -236,6 +246,12 @@ public class TGTManager extends StorageManager
 			///////////////////////////////////////////
 
 //			_systemLogger.log(Level.INFO, MODULE, sMethod, "New TGT=" + Utils.firstPartOf(sTGT, 30));	// RH, 209111121, o
+			// RH, 20210902, sn
+			if (_exposeTGT) {
+				htTGTContext.put("tgt", sTGT);
+			}
+			// RH, 20210902, en
+
 			String sNameID = (String) htTGTContext.get("name_id");
 			if (sNameID == null)
 				htTGTContext.put("name_id", sTGT);
@@ -244,6 +260,11 @@ public class TGTManager extends StorageManager
 			while ( !create(sTGT, htTGTContext) ) {
 				CryptoEngine.nextRandomBytes(baTGT);
 				sTGT = Utils.byteArrayToHexString(baTGT);
+				// RH, 20210902, sn
+				if (_exposeTGT) {
+					htTGTContext.put("tgt", sTGT);
+				}
+				// RH, 20210902, en
 				if (sNameID == null)
 					htTGTContext.put("name_id", sTGT);
 			}
